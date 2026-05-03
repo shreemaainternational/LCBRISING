@@ -2,12 +2,14 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
+import { isSupabaseConfigured } from '@/lib/env';
 import { formatDate, formatINR } from '@/lib/utils';
 import { Heart, Users, Activity as ActivityIcon, Award } from 'lucide-react';
 
 export const revalidate = 300; // ISR: refresh every 5 min
 
 async function getStats() {
+  if (!isSupabaseConfigured()) return { members: 0, activities: 0, donations: 0 };
   try {
     const supabase = await createClient();
     const [{ count: members }, { count: activities }, { data: donationsAgg }] =
@@ -28,6 +30,7 @@ async function getStats() {
 }
 
 async function getRecentActivities() {
+  if (!isSupabaseConfigured()) return [];
   try {
     const supabase = await createClient();
     const { data } = await supabase

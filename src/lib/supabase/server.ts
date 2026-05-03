@@ -1,18 +1,19 @@
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { env } from '@/lib/env';
+import { env, requireSupabaseEnv } from '@/lib/env';
 
 /**
  * Server-side Supabase client bound to the user's auth cookies.
  * Use inside Server Components, Route Handlers, and Server Actions.
  */
 export async function createClient() {
+  const { url, anonKey } = requireSupabaseEnv();
   const cookieStore = await cookies();
 
   return createServerClient(
-    env.NEXT_PUBLIC_SUPABASE_URL,
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
@@ -41,8 +42,9 @@ export function createAdminClient() {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for admin client');
   }
+  const { url } = requireSupabaseEnv();
   return createServiceClient(
-    env.NEXT_PUBLIC_SUPABASE_URL,
+    url,
     env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
