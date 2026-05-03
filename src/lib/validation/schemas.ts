@@ -103,6 +103,54 @@ export const socialPostSchema = z.object({
   donation_id: z.string().uuid().optional(),
 });
 
+// =====================================================================
+// Accounting
+// =====================================================================
+export const journalLineSchema = z.object({
+  account_id: z.string().uuid().optional(),
+  account_code: z.string().optional(),
+  debit: z.number().nonnegative().optional(),
+  credit: z.number().nonnegative().optional(),
+  memo: z.string().optional(),
+}).refine((l) => !!(l.account_id || l.account_code), { message: 'account_id or account_code required' })
+  .refine((l) => Number(l.debit ?? 0) > 0 ? Number(l.credit ?? 0) === 0 : Number(l.credit ?? 0) > 0,
+          { message: 'each line needs exactly one of debit or credit' });
+
+export const postJournalSchema = z.object({
+  date: z.string().optional(),
+  description: z.string().min(2).max(500),
+  reference_type: z.enum(['donation','payment','expense','manual','reversal']).default('manual'),
+  reference_id: z.string().optional(),
+  lines: z.array(journalLineSchema).min(2).max(50),
+});
+
+export const expenseSchema = z.object({
+  vendor_id: z.string().uuid().optional(),
+  expense_account_id: z.string().uuid(),
+  amount: z.number().positive(),
+  tax_amount: z.number().nonnegative().default(0),
+  category: z.string().optional(),
+  description: z.string().optional(),
+  expense_date: z.string(),
+  bill_url: z.string().url().optional(),
+});
+
+export const vendorSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  gstin: z.string().regex(/^\d{2}[A-Z]{5}\d{4}[A-Z]\d[A-Z]\d$/).optional(),
+  pan: z.string().regex(/^[A-Z]{5}\d{4}[A-Z]$/).optional(),
+  address: z.string().optional(),
+});
+
+export const budgetSchema = z.object({
+  fiscal_period_id: z.string().uuid(),
+  account_id: z.string().uuid(),
+  amount: z.number(),
+  notes: z.string().optional(),
+});
+
 export const videoGenerateSchema = z.object({
   title: z.string().min(2).max(200),
   script: z.string().min(20).max(4000),

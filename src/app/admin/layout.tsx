@@ -5,20 +5,21 @@ import { LogoutButton } from '@/components/admin/LogoutButton';
 import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
   Activity as ActivityIcon, Calendar, Mail, Settings,
-  Sparkles, Megaphone,
+  Sparkles, Megaphone, BookOpen,
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/admin',             label: 'Dashboard',     icon: LayoutDashboard },
-  { href: '/admin/members',     label: 'Members',       icon: Users },
-  { href: '/admin/dues',        label: 'Dues',          icon: Banknote },
-  { href: '/admin/donations',   label: 'Donations',     icon: HeartHandshake },
-  { href: '/admin/activities',  label: 'Activities',    icon: ActivityIcon },
-  { href: '/admin/events',      label: 'Events',        icon: Calendar },
-  { href: '/admin/creative',    label: 'Creative',      icon: Sparkles },
-  { href: '/admin/social',      label: 'Social',        icon: Megaphone },
+  { href: '/admin',                label: 'Dashboard',  icon: LayoutDashboard },
+  { href: '/admin/members',        label: 'Members',    icon: Users },
+  { href: '/admin/dues',           label: 'Dues',       icon: Banknote },
+  { href: '/admin/donations',      label: 'Donations',  icon: HeartHandshake },
+  { href: '/admin/activities',     label: 'Activities', icon: ActivityIcon },
+  { href: '/admin/events',         label: 'Events',     icon: Calendar },
+  { href: '/admin/accounting',     label: 'Accounting', icon: BookOpen },
+  { href: '/admin/creative',       label: 'Creative',   icon: Sparkles },
+  { href: '/admin/social',         label: 'Social',     icon: Megaphone },
   { href: '/admin/communications', label: 'Comms',      icon: Mail },
-  { href: '/admin/automation',  label: 'Automation',    icon: Settings },
+  { href: '/admin/automation',     label: 'Automation', icon: Settings },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

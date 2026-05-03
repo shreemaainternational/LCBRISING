@@ -7,6 +7,10 @@ import { generateContent } from '@/lib/ai/openai';
 import { createAutofillJob, getAutofillJob, exportDesign, getExportJob } from '@/lib/canva/client';
 import { dispatchToPlatform, type Platform } from '@/lib/social/dispatcher';
 import { integrations } from '@/lib/env';
+import {
+  postDonationJournal, postDuesPaymentJournal,
+  postExpenseApprovalJournal, postExpensePaymentJournal,
+} from '@/lib/accounting/automation';
 
 type JobHandler = (payload: Record<string, unknown>) => Promise<void>;
 
@@ -306,6 +310,22 @@ const handlers: Record<string, JobHandler> = {
    * Daily birthday sweep — generates birthday creative + sends WhatsApp
    * to each member whose dob matches today.
    */
+  // ==================================================================
+  // Accounting handlers
+  // ==================================================================
+  post_donation_journal: async (payload) => {
+    await postDonationJournal(String(payload.donation_id));
+  },
+  post_dues_payment_journal: async (payload) => {
+    await postDuesPaymentJournal(String(payload.payment_id));
+  },
+  post_expense_approval_journal: async (payload) => {
+    await postExpenseApprovalJournal(String(payload.expense_id));
+  },
+  post_expense_payment_journal: async (payload) => {
+    await postExpensePaymentJournal(String(payload.expense_id));
+  },
+
   daily_birthday_sweep: async () => {
     const supabase = createAdminClient();
     const { data: members } = await supabase
