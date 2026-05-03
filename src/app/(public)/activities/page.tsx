@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
+import { isSupabaseConfigured } from '@/lib/env';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/utils';
@@ -11,12 +12,13 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function ActivitiesPage() {
-  const supabase = await createClient();
-  const { data: activities } = await supabase
-    .from('activities')
-    .select('*')
-    .order('date', { ascending: false })
-    .limit(60);
+  let activities: { id: string; title: string; description: string | null; category: string | null; beneficiaries: number; service_hours: number; date: string; location: string | null }[] = [];
+  if (isSupabaseConfigured()) {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('activities').select('*').order('date', { ascending: false }).limit(60);
+    activities = data ?? [];
+  }
 
   return (
     <section className="container-page py-16">

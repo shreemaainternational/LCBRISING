@@ -1,18 +1,27 @@
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
+import { isSupabaseConfigured } from '@/lib/env';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Events' };
 export const revalidate = 60;
 
+type EventRow = { id: string; title: string; description: string | null; date: string; location: string | null };
+
 export default async function EventsPage() {
-  const supabase = await createClient();
-  const now = new Date().toISOString();
-  const { data: upcoming } = await supabase
-    .from('events').select('*').eq('is_public', true).gte('date', now).order('date');
-  const { data: past } = await supabase
-    .from('events').select('*').eq('is_public', true).lt('date', now).order('date', { ascending: false }).limit(12);
+  let upcoming: EventRow[] = [];
+  let past: EventRow[] = [];
+  if (isSupabaseConfigured()) {
+    const supabase = await createClient();
+    const now = new Date().toISOString();
+    const [u, p] = await Promise.all([
+      supabase.from('events').select('*').eq('is_public', true).gte('date', now).order('date'),
+      supabase.from('events').select('*').eq('is_public', true).lt('date', now).order('date', { ascending: false }).limit(12),
+    ]);
+    upcoming = (u.data ?? []) as EventRow[];
+    past = (p.data ?? []) as EventRow[];
+  }
 
   return (
     <section className="container-page py-16">

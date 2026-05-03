@@ -1,16 +1,41 @@
 # Deployment Guide — Lions Club Baroda Rising Star
 
-## 1. Provision Supabase
+## 0. Quick reference (this project)
 
-1. Create a project at https://supabase.com (Mumbai region recommended).
-2. Open **SQL Editor** → paste `supabase/migrations/0001_initial_schema.sql` → run.
-3. Optionally seed: paste `supabase/seed.sql`.
-4. From **Project Settings → API** copy:
-   - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
-   - `anon public` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `service_role` → `SUPABASE_SERVICE_ROLE_KEY`
-5. **Auth → Providers** → enable Email/Password.
-6. **Auth → URL Configuration** → set Site URL to your Vercel domain.
+```
+Org:           LCBRISING
+Project:       BarodaRisingStar
+Project URL:   https://mvtqqlfzawyhntnsavbx.supabase.co
+Region:        ap-southeast-2 (Sydney)
+Tier:          Free / Nano
+Dashboard:     https://supabase.com/dashboard/project/mvtqqlfzawyhntnsavbx
+```
+
+> **Status note:** the dashboard currently reports the project as
+> *Unhealthy*. Open the dashboard and resume / restart the project before
+> running the migration below. (Free-tier projects auto-pause after a
+> week of inactivity and need a manual unpause.)
+
+## 1. Apply the schema
+
+1. Open the **SQL Editor**:
+   https://supabase.com/dashboard/project/mvtqqlfzawyhntnsavbx/sql/new
+2. Paste the contents of `supabase/migrations/0001_initial_schema.sql`
+   and run.
+3. (Optional) paste `supabase/seed.sql` to insert the default club row.
+
+## 2. Grab the keys
+
+Open **Project Settings → API**:
+https://supabase.com/dashboard/project/mvtqqlfzawyhntnsavbx/settings/api
+
+Copy these into your local `.env.local` and into Vercel env vars:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://mvtqqlfzawyhntnsavbx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<copy from "Project API keys" → anon public>
+SUPABASE_SERVICE_ROLE_KEY=<copy from "Project API keys" → service_role>
+```
 
 ## 2. Configure Razorpay
 

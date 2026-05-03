@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { activitySchema } from '@/lib/validation/schemas';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
+import { enqueueJob } from '@/lib/automation/engine';
 
 export const runtime = 'nodejs';
 
@@ -24,5 +25,6 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data, error } = await supabase.from('activities').insert(parsed.data).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await enqueueJob('on_activity_created', { activity_id: data.id });
   return NextResponse.json({ activity: data }, { status: 201 });
 }
