@@ -63,3 +63,54 @@ export const paymentVerifySchema = z.object({
   razorpay_signature: z.string(),
   payment_record_id: z.string().uuid(),
 });
+
+// =====================================================================
+// Social + Creative
+// =====================================================================
+export const aiGenerateSchema = z.object({
+  type: z.enum([
+    'social_post','article','press_release','flyer_text','invitation',
+    'birthday','video_script','blog_article',
+  ]),
+  title: z.string().min(2).max(200),
+  description: z.string().max(2000).optional(),
+  location: z.string().max(120).optional(),
+  language: z.enum(['en','gu','hi']).default('en'),
+  platform: z.enum(['facebook','instagram','linkedin','whatsapp','twitter','youtube']).optional(),
+  tone: z.enum(['inspirational','formal','friendly','urgent','celebratory']).default('inspirational'),
+  extra: z.record(z.unknown()).optional(),
+});
+
+export const canvaDesignSchema = z.object({
+  template_type: z.enum(['flyer','invitation','birthday','certificate','post','press_release']),
+  template_id: z.string().optional(),
+  data: z.record(z.unknown()),
+  format: z.enum(['png','jpg','pdf','mp4']).default('png'),
+  activity_id: z.string().uuid().optional(),
+  event_id: z.string().uuid().optional(),
+  member_id: z.string().uuid().optional(),
+});
+
+export const socialPostSchema = z.object({
+  platforms: z.array(z.enum(['facebook','instagram','linkedin','whatsapp'])).min(1),
+  caption: z.string().min(1).max(4000),
+  hashtags: z.array(z.string()).max(30).default([]),
+  media_urls: z.array(z.string().url()).max(10).default([]),
+  scheduled_at: z.string().datetime().optional(),
+  creative_id: z.string().uuid().optional(),
+  activity_id: z.string().uuid().optional(),
+  event_id: z.string().uuid().optional(),
+  donation_id: z.string().uuid().optional(),
+});
+
+export const videoGenerateSchema = z.object({
+  title: z.string().min(2).max(200),
+  script: z.string().min(20).max(4000),
+  scenes: z.array(z.object({
+    text: z.string(),
+    image_url: z.string().url().optional(),
+    duration_seconds: z.number().min(0.5).max(15).default(3),
+  })).min(1).max(20),
+  aspect_ratio: z.enum(['9:16','1:1','16:9']).default('9:16'),
+  audio_url: z.string().url().optional(),
+});

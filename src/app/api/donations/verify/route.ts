@@ -49,6 +49,7 @@ export async function POST(req: Request) {
 
   if (payment.donation_id) {
     await enqueueJob('send_donation_receipt', { donation_id: payment.donation_id });
+    await enqueueJob('on_donation_received', { donation_id: payment.donation_id });
   }
 
   return NextResponse.json({ ok: true, receipt_no: payment.receipt_no });

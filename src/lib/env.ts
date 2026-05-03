@@ -25,6 +25,44 @@ const schema = z.object({
 
   CRON_SECRET: z.string().optional(),
   ADMIN_BOOTSTRAP_EMAIL: z.string().email().optional(),
+
+  // --- AI ---
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+
+  // --- Canva ---
+  CANVA_CLIENT_ID: z.string().optional(),
+  CANVA_CLIENT_SECRET: z.string().optional(),
+  CANVA_API_KEY: z.string().optional(),
+  CANVA_REDIRECT_URI: z.string().url().optional(),
+
+  // --- Meta (FB + IG) ---
+  META_APP_ID: z.string().optional(),
+  META_APP_SECRET: z.string().optional(),
+  META_ACCESS_TOKEN: z.string().optional(),
+  FACEBOOK_PAGE_ID: z.string().optional(),
+  INSTAGRAM_BUSINESS_ID: z.string().optional(),
+
+  // --- LinkedIn ---
+  LINKEDIN_CLIENT_ID: z.string().optional(),
+  LINKEDIN_CLIENT_SECRET: z.string().optional(),
+  LINKEDIN_ACCESS_TOKEN: z.string().optional(),
+  LINKEDIN_ORGANIZATION_URN: z.string().optional(),
+
+  // --- WhatsApp Business (Cloud API alt to Twilio) ---
+  WHATSAPP_BUSINESS_PHONE_ID: z.string().optional(),
+  WHATSAPP_BUSINESS_TOKEN: z.string().optional(),
+
+  // --- Cloudinary ---
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
+  CLOUDINARY_UPLOAD_PRESET: z.string().default('lcbrs_default'),
+
+  // --- Branding (public) ---
+  NEXT_PUBLIC_BRAND_PRIMARY: z.string().default('#1e3a8a'),
+  NEXT_PUBLIC_BRAND_ACCENT: z.string().default('#fbbf24'),
+  NEXT_PUBLIC_BRAND_LOGO_URL: z.string().optional(),
 });
 
 const parsed = schema.parse({
@@ -44,6 +82,30 @@ const parsed = schema.parse({
   TWILIO_WHATSAPP_FROM: process.env.TWILIO_WHATSAPP_FROM,
   CRON_SECRET: process.env.CRON_SECRET,
   ADMIN_BOOTSTRAP_EMAIL: process.env.ADMIN_BOOTSTRAP_EMAIL,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  OPENAI_MODEL: process.env.OPENAI_MODEL,
+  CANVA_CLIENT_ID: process.env.CANVA_CLIENT_ID,
+  CANVA_CLIENT_SECRET: process.env.CANVA_CLIENT_SECRET,
+  CANVA_API_KEY: process.env.CANVA_API_KEY,
+  CANVA_REDIRECT_URI: process.env.CANVA_REDIRECT_URI,
+  META_APP_ID: process.env.META_APP_ID,
+  META_APP_SECRET: process.env.META_APP_SECRET,
+  META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN,
+  FACEBOOK_PAGE_ID: process.env.FACEBOOK_PAGE_ID,
+  INSTAGRAM_BUSINESS_ID: process.env.INSTAGRAM_BUSINESS_ID,
+  LINKEDIN_CLIENT_ID: process.env.LINKEDIN_CLIENT_ID,
+  LINKEDIN_CLIENT_SECRET: process.env.LINKEDIN_CLIENT_SECRET,
+  LINKEDIN_ACCESS_TOKEN: process.env.LINKEDIN_ACCESS_TOKEN,
+  LINKEDIN_ORGANIZATION_URN: process.env.LINKEDIN_ORGANIZATION_URN,
+  WHATSAPP_BUSINESS_PHONE_ID: process.env.WHATSAPP_BUSINESS_PHONE_ID,
+  WHATSAPP_BUSINESS_TOKEN: process.env.WHATSAPP_BUSINESS_TOKEN,
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+  CLOUDINARY_UPLOAD_PRESET: process.env.CLOUDINARY_UPLOAD_PRESET,
+  NEXT_PUBLIC_BRAND_PRIMARY: process.env.NEXT_PUBLIC_BRAND_PRIMARY,
+  NEXT_PUBLIC_BRAND_ACCENT: process.env.NEXT_PUBLIC_BRAND_ACCENT,
+  NEXT_PUBLIC_BRAND_LOGO_URL: process.env.NEXT_PUBLIC_BRAND_LOGO_URL,
 });
 
 export const env = parsed;
@@ -71,4 +133,11 @@ export const integrations = {
   razorpay: Boolean(parsed.RAZORPAY_KEY_ID && parsed.RAZORPAY_SECRET),
   resend: Boolean(parsed.RESEND_API_KEY),
   twilio: Boolean(parsed.TWILIO_ACCOUNT_SID && parsed.TWILIO_AUTH_TOKEN),
+  openai: Boolean(parsed.OPENAI_API_KEY),
+  canva: Boolean(parsed.CANVA_API_KEY || (parsed.CANVA_CLIENT_ID && parsed.CANVA_CLIENT_SECRET)),
+  facebook: Boolean(parsed.META_ACCESS_TOKEN && parsed.FACEBOOK_PAGE_ID),
+  instagram: Boolean(parsed.META_ACCESS_TOKEN && parsed.INSTAGRAM_BUSINESS_ID),
+  linkedin: Boolean(parsed.LINKEDIN_ACCESS_TOKEN && parsed.LINKEDIN_ORGANIZATION_URN),
+  whatsappBusiness: Boolean(parsed.WHATSAPP_BUSINESS_TOKEN && parsed.WHATSAPP_BUSINESS_PHONE_ID),
+  cloudinary: Boolean(parsed.CLOUDINARY_CLOUD_NAME && parsed.CLOUDINARY_API_KEY && parsed.CLOUDINARY_API_SECRET),
 };
