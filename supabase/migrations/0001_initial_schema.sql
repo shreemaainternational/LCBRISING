@@ -166,10 +166,12 @@ create table if not exists public.donations (
 create index if not exists idx_donations_campaign on public.donations(campaign);
 create index if not exists idx_donations_created on public.donations(created_at);
 
-alter table public.payments
-  add constraint fk_payment_donation
-  foreign key (donation_id) references public.donations(id) on delete set null
-  not valid;
+do $$ begin
+  alter table public.payments
+    add constraint fk_payment_donation
+    foreign key (donation_id) references public.donations(id) on delete set null
+    not valid;
+exception when duplicate_object then null; end $$;
 
 -- ---------------------------------------------------------------------
 -- Events
@@ -305,7 +307,24 @@ language sql stable security definer set search_path = public as $$
   );
 $$;
 
--- Clubs: readable by anyone authenticated, writable by admins
+-- Drop any pre-existing policies so the script is fully re-runnable.
+do $$
+declare r record;
+begin
+  for r in
+    select schemaname, tablename, policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename in ('clubs','members','dues','payments','activities',
+                        'donations','events','event_rsvps',
+                        'communications','automation_jobs')
+  loop
+    execute format('drop policy if exists %I on %I.%I',
+                   r.policyname, r.schemaname, r.tablename);
+  end loop;
+end $$;
+
+-- Clubs: readable by anyone, writable by admins
 create policy "clubs_read"  on public.clubs for select using (true);
 create policy "clubs_write" on public.clubs for all   using (public.is_admin()) with check (public.is_admin());
 
@@ -337,8 +356,7 @@ create policy "activities_public_read" on public.activities for select using (tr
 create policy "activities_admin_all"   on public.activities for all
   using (public.is_admin()) with check (public.is_admin());
 
--- Donations: insertable publicly (anonymous donor), admin read all,
--- donor cannot read others; receipt is provided via API by donation id.
+-- Donations: admin read/write only; public inserts go through service role
 create policy "donations_admin_read" on public.donations for select using (public.is_admin());
 create policy "donations_admin_all"  on public.donations for all
   using (public.is_admin()) with check (public.is_admin());
