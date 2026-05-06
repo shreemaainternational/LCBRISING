@@ -33,7 +33,7 @@ GitHub push  ──webhook──►  https://barodarisingstar.com/deploy.php
 ```bash
 ssh barodari@barodarisingstar.com
 cd ~
-git clone https://github.com/shreemaainternational/lcbrising.git
+git clone https://github.com/LCBRISING/lcbrising.git
 cd lcbrising
 git checkout main
 ```
