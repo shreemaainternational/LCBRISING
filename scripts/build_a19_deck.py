@@ -93,6 +93,7 @@ PAGES = [
         ],
         "strip": [
             "Lion Portal", "LLC Course", "District Website",
+            "MyLion App", "Brand Kit", "Officer Training",
         ],
     },
     {
@@ -117,6 +118,7 @@ PAGES = [
         ],
         "strip": [
             "Cabinet Meet", "IT Roadmap", "Dashboard",
+            "Quarterly Review", "Audit Report", "Goal Tracker",
         ],
     },
     {
@@ -141,6 +143,7 @@ PAGES = [
         ],
         "strip": [
             "E-Directory", "E-Club House", "Multimedia Reel",
+            "Club Website", "Photo Archive", "Template Pack",
         ],
     },
     {
@@ -165,6 +168,7 @@ PAGES = [
         ],
         "strip": [
             "Instagram Grid", "YouTube Reel", "Convention Live",
+            "Facebook Page", "LinkedIn Post", "Hashtag Campaign",
         ],
     },
     {
@@ -189,6 +193,7 @@ PAGES = [
         ],
         "strip": [
             "Award Moment", "Metrics Dashboard", "Press Feature",
+            "Convention Stage", "Certificate", "Milestone Post",
         ],
     },
 ]
@@ -889,11 +894,21 @@ def render_content(c: canvas.Canvas, slide: dict) -> None:
     next_y = title_block(c, slide["page_label"], slide["title"],
                          slide["subtitle"], top)
 
-    # Glass panel with bullets
+    # ---- 2 x 3 image grid at the bottom (6 images) ----
+    margin = 0.5 * inch
+    pad = 0.13 * inch
+    cols, rows = 3, 2
+    grid_bottom = 0.65 * inch + 0.15 * inch
+    cell_w = (PAGE_W - 2 * margin - pad * (cols - 1)) / cols
+    cell_h = 1.85 * inch
+    grid_h = rows * cell_h + (rows - 1) * pad
+    grid_top = grid_bottom + grid_h
+
+    # ---- glass panel with bullets fills the space between title and grid ----
     panel_x = 0.5 * inch
     panel_w = PAGE_W - 1.0 * inch
     panel_top = next_y - 0.1 * inch
-    panel_bottom = 3.4 * inch
+    panel_bottom = grid_top + 0.4 * inch  # space above grid heading
     panel_h = panel_top - panel_bottom
     glass_panel(c, panel_x, panel_bottom, panel_w, panel_h, opacity=0.86)
 
@@ -908,7 +923,7 @@ def render_content(c: canvas.Canvas, slide: dict) -> None:
 
     # Bullets fill the panel exactly
     bullets_top = panel_top - 0.7 * inch
-    bullets_bottom = panel_bottom + 0.3 * inch
+    bullets_bottom = panel_bottom + 0.25 * inch
     available_h = bullets_top - bullets_bottom
     items = slide["bullets"]
     block_h = available_h / max(len(items), 1)
@@ -919,32 +934,27 @@ def render_content(c: canvas.Canvas, slide: dict) -> None:
         x0=panel_x + 0.35 * inch,
         y_top=bullets_top,
         max_w=panel_w - 0.8 * inch,
-        head_size=12,
-        sub_size=10,
+        head_size=11,
+        sub_size=9,
         block_h=block_h,
     )
 
-    # Bottom image strip — 3 supporting images
+    # ---- Image grid heading ----
     strip = slide.get("strip", [])
-    if strip:
-        margin = 0.5 * inch
-        pad = 0.15 * inch
-        cols = len(strip)
-        sw = (PAGE_W - 2 * margin - pad * (cols - 1)) / cols
-        sh = 2.2 * inch
-        sy = 0.65 * inch + 0.15 * inch
+    c.setFillColor(white)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margin, grid_top + 0.12 * inch, "IMPACT IN ACTION")
+    c.setFillColor(LIONS_GOLD)
+    c.rect(margin, grid_top + 0.07 * inch, 1.3 * inch, 0.03 * inch,
+           fill=1, stroke=0)
 
-        # strip heading
-        c.setFillColor(white)
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(margin, sy + sh + 0.15 * inch, "IMPACT IN ACTION")
-        c.setFillColor(LIONS_GOLD)
-        c.rect(margin, sy + sh + 0.10 * inch, 1.3 * inch, 0.03 * inch,
-               fill=1, stroke=0)
-
-        for i, label in enumerate(strip):
-            x = margin + i * (sw + pad)
-            image_box(c, x, sy, sw, sh, label, index_label=f"IMG {i + 1}")
+    # ---- 6 image placeholders in 2 rows of 3 ----
+    for i in range(min(6, len(strip))):
+        r = i // cols
+        col = i % cols
+        x = margin + col * (cell_w + pad)
+        y = grid_bottom + (rows - 1 - r) * (cell_h + pad)
+        image_box(c, x, y, cell_w, cell_h, strip[i], index_label=f"IMG {i + 1}")
 
 
 # ---------- BUILD ----------
