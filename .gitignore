@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python bytecode
+__pycache__/
+*.pyc
+
+# intermediate page renders for the docx builder
+docs/_pages/
