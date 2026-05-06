@@ -25,6 +25,8 @@ LIONS_BLUE_DARK = HexColor("#011E47")
 LIONS_GOLD = HexColor("#FFC72C")
 LIGHT_GREY = HexColor("#F4F6FA")
 DARK_GREY = HexColor("#2B2B2B")
+MD_PURPLE = HexColor("#3B1E5E")
+MD_PURPLE_DARK = HexColor("#28133F")
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "A19_IT_CHAIRPERSON_DECK.pdf"
 
@@ -349,6 +351,111 @@ def draw_lions_emblem(c: canvas.Canvas, cx: float, cy: float, r: float) -> None:
     c.drawCentredString(cx, cy - r * 0.32, "L")
 
 
+def _arc_text(c: canvas.Canvas, cx: float, cy: float, radius: float,
+              text: str, font: str, font_size: float,
+              start_deg: float, end_deg: float,
+              fill, facing: str = "out") -> None:
+    """Render text along a circular arc.
+
+    facing="out" puts the baseline along the arc with letters facing
+    outward (used for the top of a badge). facing="in" flips letters
+    inward (used for the bottom)."""
+    n = len(text)
+    if n == 0:
+        return
+    sweep = end_deg - start_deg
+    c.setFillColor(fill)
+    c.setFont(font, font_size)
+    for i, ch in enumerate(text):
+        t = i / max(n - 1, 1)
+        ang_deg = start_deg + sweep * t
+        ang = math.radians(ang_deg)
+        x = cx + radius * math.cos(ang)
+        y = cy + radius * math.sin(ang)
+        # rotation so glyph baseline is tangent to the circle
+        if facing == "out":
+            rot = ang_deg - 90
+        else:
+            rot = ang_deg + 90
+        c.saveState()
+        c.translate(x, y)
+        c.rotate(rot)
+        c.drawCentredString(0, 0, ch)
+        c.restoreState()
+
+
+def draw_md_emblem(c: canvas.Canvas, cx: float, cy: float, r: float) -> None:
+    """Vector approximation of the Multiple District 3232 'Mission 1.5' badge.
+
+    Purple disc · gold rim · top arc 'LEAD TO SERVE · SERVE TO LEAD',
+    bottom arc 'MISSION 1.5 · 3232', central gold clover with the small
+    Lions emblem.
+    """
+    # outer gold ring
+    c.setFillColor(LIONS_GOLD)
+    c.circle(cx, cy, r, fill=1, stroke=0)
+    # purple body
+    c.setFillColor(MD_PURPLE)
+    c.circle(cx, cy, r * 0.93, fill=1, stroke=0)
+    # inner gold hairline
+    c.setStrokeColor(LIONS_GOLD)
+    c.setLineWidth(max(0.4, r * 0.04))
+    c.circle(cx, cy, r * 0.78, fill=0, stroke=1)
+    c.setLineWidth(max(0.3, r * 0.02))
+    c.circle(cx, cy, r * 0.74, fill=0, stroke=1)
+
+    # decorative dot ring
+    c.setFillColor(LIONS_GOLD)
+    for i in range(36):
+        ang = math.radians(i * 10)
+        dx = cx + r * 0.84 * math.cos(ang)
+        dy = cy + r * 0.84 * math.sin(ang)
+        c.circle(dx, dy, r * 0.018, fill=1, stroke=0)
+
+    # ---- arc text ----
+    # top text on outer arc
+    top_text = "LEAD TO SERVE  •  SERVE TO LEAD"
+    _arc_text(c, cx, cy, r * 0.86, top_text, "Helvetica-Bold",
+              r * 0.13, start_deg=160, end_deg=20,
+              fill=LIONS_GOLD, facing="out")
+
+    # bottom text
+    bot_text = "MISSION 1.5  •  MD 3232"
+    _arc_text(c, cx, cy, r * 0.86, bot_text, "Helvetica-Bold",
+              r * 0.13, start_deg=200, end_deg=340,
+              fill=LIONS_GOLD, facing="in")
+
+    # ---- central gold clover (4 petals) ----
+    petal_r = r * 0.30
+    for ang_deg in (45, 135, 225, 315):
+        ang = math.radians(ang_deg)
+        px = cx + r * 0.28 * math.cos(ang)
+        py = cy + r * 0.28 * math.sin(ang)
+        c.setFillColor(LIONS_GOLD)
+        c.circle(px, py, petal_r, fill=1, stroke=0)
+        c.setStrokeColor(MD_PURPLE_DARK)
+        c.setLineWidth(max(0.3, r * 0.02))
+        c.circle(px, py, petal_r, fill=0, stroke=1)
+
+    # central white-ish disc with mini Lions emblem
+    c.setFillColor(LIONS_GOLD)
+    c.circle(cx, cy, r * 0.30, fill=1, stroke=0)
+    c.setStrokeColor(MD_PURPLE_DARK)
+    c.setLineWidth(max(0.4, r * 0.03))
+    c.circle(cx, cy, r * 0.30, fill=0, stroke=1)
+
+    # mini "LIONS" cap
+    c.setFillColor(MD_PURPLE_DARK)
+    c.setFont("Helvetica-Bold", r * 0.10)
+    c.drawCentredString(cx, cy + r * 0.16, "LIONS")
+    # central L
+    c.setFont("Helvetica-Bold", r * 0.32)
+    c.drawCentredString(cx, cy - r * 0.10, "L")
+    # mini "INTERNATIONAL"
+    c.setFont("Helvetica-Bold", r * 0.06)
+    c.drawCentredString(cx, cy - r * 0.20, "INTERNATIONAL")
+
+
 def draw_logo(c: canvas.Canvas, cx: float, cy: float, r: float, label: str) -> None:
     # outer ring
     c.setFillColor(white)
@@ -378,12 +485,17 @@ def draw_header(c: canvas.Canvas) -> None:
     lions_cx = 0.55 * inch + lions_r
     draw_lions_emblem(c, lions_cx, y, lions_r)
 
-    # Remaining 3 logos distributed across the right portion of the header
-    others = HEADER_LOGOS[1:]
-    right_start = lions_cx + lions_r + 0.5 * inch
+    # 2nd logo — Multiple District 3232 'Mission 1.5' badge
+    md_r = 0.5 * inch
+    md_cx = lions_cx + lions_r + 0.35 * inch + md_r
+    draw_md_emblem(c, md_cx, y, md_r)
+
+    # Remaining 2 logos distributed across the right portion of the header
+    others = HEADER_LOGOS[2:]
+    right_start = md_cx + md_r + 0.5 * inch
     right_end = PAGE_W - 0.5 * inch
     span = right_end - right_start
-    step = span / len(others)
+    step = span / max(len(others), 1)
     for i, label in enumerate(others):
         cx = right_start + step * (i + 0.5)
         draw_logo(c, cx, y, 0.35 * inch, label)
