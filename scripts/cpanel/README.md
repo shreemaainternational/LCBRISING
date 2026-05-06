@@ -7,7 +7,7 @@ Lions Club Baroda Rising Star Next.js app.
 GitHub push  ──webhook──►  https://barodarisingstar.com/deploy.php
                                     │
                                     ▼
-                       /home/<user>/lcbrising/scripts/cpanel/deploy.sh
+                       /home/barodari/lcbrising/scripts/cpanel/deploy.sh
                                     │
                               git pull → npm ci → next build
                                     │
@@ -31,7 +31,7 @@ GitHub push  ──webhook──►  https://barodarisingstar.com/deploy.php
 ### 1. SSH in and clone
 
 ```bash
-ssh <CPANEL_USER>@barodarisingstar.com
+ssh barodari@barodarisingstar.com
 cd ~
 git clone https://github.com/shreemaainternational/lcbrising.git
 cd lcbrising
@@ -64,8 +64,8 @@ Also set:
 | Variable          | Value                                                  |
 | ----------------- | ------------------------------------------------------ |
 | `CPANEL_USER`     | your cPanel username                                   |
-| `PROJECT_PATH`    | `/home/<user>/lcbrising`                               |
-| `PUBLIC_PATH`     | `/home/<user>/public_html`                             |
+| `PROJECT_PATH`    | `/home/barodari/lcbrising`                               |
+| `PUBLIC_PATH`     | `/home/barodari/public_html`                             |
 | `BRANCH`          | `main`                                                 |
 | `WEBHOOK_TOKEN`   | a long random string (used by `deploy.php`)            |
 | `WEBHOOK_SECRET`  | optional — GitHub webhook secret for HMAC verification |
@@ -103,7 +103,7 @@ GitHub repo → **Settings → Webhooks → Add webhook**:
 cPanel → **Cron Jobs**:
 
 ```
-*/5 * * * * /home/<user>/lcbrising/scripts/cpanel/deploy.sh
+*/5 * * * * /home/barodari/lcbrising/scripts/cpanel/deploy.sh
 ```
 
 Pulls the latest `main` every 5 minutes in case a webhook is missed.

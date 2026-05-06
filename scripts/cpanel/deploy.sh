@@ -11,7 +11,7 @@
 set -euo pipefail
 
 # ---------- CONFIG ----------
-CPANEL_USER="${CPANEL_USER:-yourcpanelusername}"
+CPANEL_USER="${CPANEL_USER:-barodari}"
 PROJECT_PATH="${PROJECT_PATH:-/home/${CPANEL_USER}/lcbrising}"
 PUBLIC_PATH="${PUBLIC_PATH:-/home/${CPANEL_USER}/public_html}"
 BRANCH="${BRANCH:-main}"

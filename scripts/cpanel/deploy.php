@@ -23,7 +23,7 @@ declare(strict_types=1);
 $WEBHOOK_TOKEN  = getenv('WEBHOOK_TOKEN')  ?: 'REPLACE_WITH_RANDOM_TOKEN';
 $WEBHOOK_SECRET = getenv('WEBHOOK_SECRET') ?: '';
 $DEPLOY_SCRIPT  = getenv('DEPLOY_SCRIPT')
-    ?: '/home/yourcpanelusername/lcbrising/scripts/cpanel/deploy.sh';
+    ?: '/home/barodari/lcbrising/scripts/cpanel/deploy.sh';
 $ALLOWED_BRANCH = getenv('DEPLOY_BRANCH') ?: 'main';
 // ----------------------------
 
