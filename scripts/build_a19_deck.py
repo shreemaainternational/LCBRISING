@@ -262,6 +262,93 @@ def draw_background(c: canvas.Canvas, theme: str) -> None:
 
 # ---------- HEADER ----------
 
+def draw_lions_emblem(c: canvas.Canvas, cx: float, cy: float, r: float) -> None:
+    """Vector approximation of the official Lions International emblem.
+
+    Composition matches the public emblem: top banner reading "LIONS",
+    two lion heads in profile flanking a central blue + gold disc with
+    the letter L, and a bottom banner reading "INTERNATIONAL".
+    """
+    # ---- top banner ("LIONS") ----
+    bx, by, bw, bh = cx - r * 1.05, cy + r * 0.55, r * 2.10, r * 0.55
+    c.setFillColor(LIONS_GOLD)
+    c.roundRect(bx, by, bw, bh, bh * 0.45, fill=1, stroke=0)
+    c.setStrokeColor(LIONS_BLUE)
+    c.setLineWidth(max(0.4, r * 0.06))
+    c.roundRect(bx, by, bw, bh, bh * 0.45, fill=0, stroke=1)
+    c.setFillColor(LIONS_BLUE)
+    c.setFont("Helvetica-Bold", r * 0.55)
+    c.drawCentredString(cx, by + bh * 0.30, "LIONS")
+
+    # ---- bottom banner ("INTERNATIONAL") ----
+    bx2, by2 = cx - r * 1.05, cy - r * 1.10
+    bw2, bh2 = r * 2.10, r * 0.50
+    c.setFillColor(LIONS_GOLD)
+    c.roundRect(bx2, by2, bw2, bh2, bh2 * 0.45, fill=1, stroke=0)
+    c.setStrokeColor(LIONS_BLUE)
+    c.roundRect(bx2, by2, bw2, bh2, bh2 * 0.45, fill=0, stroke=1)
+    c.setFillColor(LIONS_BLUE)
+    c.setFont("Helvetica-Bold", r * 0.32)
+    c.drawCentredString(cx, by2 + bh2 * 0.32, "INTERNATIONAL")
+
+    # ---- side lion silhouettes (stylised, gold) ----
+    c.setFillColor(LIONS_GOLD)
+    c.setStrokeColor(LIONS_BLUE)
+    c.setLineWidth(max(0.5, r * 0.05))
+
+    def lion_head(side: int) -> None:
+        # side: -1 = left (faces right), +1 = right (faces left)
+        ox = cx + side * r * 0.92
+        oy = cy
+        # mane (large irregular shape made of overlapping circles)
+        for dx, dy, rr in [
+            (-0.15, 0.25, 0.45),
+            (0.05, 0.35, 0.40),
+            (-0.30, 0.10, 0.42),
+            (0.10, -0.10, 0.42),
+            (-0.25, -0.25, 0.40),
+            (0.05, -0.35, 0.38),
+        ]:
+            c.circle(ox + side * dx * r, oy + dy * r, rr * r, fill=1, stroke=0)
+        # face (slightly darker gold area is just gold)
+        c.setFillColor(LIONS_GOLD)
+        c.circle(ox + side * 0.05 * r, oy, r * 0.32, fill=1, stroke=1)
+        # eye
+        c.setFillColor(LIONS_BLUE)
+        c.circle(ox + side * 0.18 * r, oy + 0.06 * r, r * 0.04, fill=1, stroke=0)
+        # snout shading
+        c.setStrokeColor(LIONS_BLUE)
+        c.setLineWidth(max(0.5, r * 0.04))
+        c.line(
+            ox + side * 0.20 * r, oy - 0.05 * r,
+            ox + side * 0.30 * r, oy - 0.10 * r,
+        )
+        c.line(
+            ox + side * 0.20 * r, oy - 0.12 * r,
+            ox + side * 0.30 * r, oy - 0.16 * r,
+        )
+        # ear tufts at top of mane
+        c.setFillColor(LIONS_GOLD)
+        c.circle(ox - side * 0.20 * r, oy + 0.42 * r, r * 0.07, fill=1, stroke=1)
+        c.circle(ox + side * 0.05 * r, oy + 0.50 * r, r * 0.07, fill=1, stroke=1)
+        c.setFillColor(LIONS_GOLD)
+
+    lion_head(-1)
+    lion_head(+1)
+
+    # ---- central blue disc with gold ring ----
+    c.setFillColor(LIONS_BLUE)
+    c.circle(cx, cy, r * 0.55, fill=1, stroke=0)
+    c.setStrokeColor(LIONS_GOLD)
+    c.setLineWidth(max(0.7, r * 0.10))
+    c.circle(cx, cy, r * 0.55, fill=0, stroke=1)
+
+    # ---- central "L" ----
+    c.setFillColor(LIONS_GOLD)
+    c.setFont("Helvetica-Bold", r * 0.95)
+    c.drawCentredString(cx, cy - r * 0.32, "L")
+
+
 def draw_logo(c: canvas.Canvas, cx: float, cy: float, r: float, label: str) -> None:
     # outer ring
     c.setFillColor(white)
@@ -284,27 +371,36 @@ def draw_logo(c: canvas.Canvas, cx: float, cy: float, r: float, label: str) -> N
 
 
 def draw_header(c: canvas.Canvas) -> None:
-    # transparent strip — only the gold divider visible
-    n = len(HEADER_LOGOS)
     y = PAGE_H - 0.85 * inch
-    spacing = PAGE_W / (n + 1)
-    for i, label in enumerate(HEADER_LOGOS):
-        cx = spacing * (i + 1)
+
+    # 1st logo — Lions International emblem anchored TOP-LEFT
+    lions_r = 0.5 * inch
+    lions_cx = 0.55 * inch + lions_r
+    draw_lions_emblem(c, lions_cx, y, lions_r)
+
+    # Remaining 3 logos distributed across the right portion of the header
+    others = HEADER_LOGOS[1:]
+    right_start = lions_cx + lions_r + 0.5 * inch
+    right_end = PAGE_W - 0.5 * inch
+    span = right_end - right_start
+    step = span / len(others)
+    for i, label in enumerate(others):
+        cx = right_start + step * (i + 0.5)
         draw_logo(c, cx, y, 0.35 * inch, label)
 
     # Gold divider line
     c.setFillColor(LIONS_GOLD)
-    c.rect(0.5 * inch, PAGE_H - 1.32 * inch, PAGE_W - 1.0 * inch, 0.04 * inch,
+    c.rect(0.5 * inch, PAGE_H - 1.42 * inch, PAGE_W - 1.0 * inch, 0.04 * inch,
            fill=1, stroke=0)
 
     # Sub-header text
     c.setFillColor(white)
     c.setFont("Helvetica-Bold", 11)
-    c.drawCentredString(PAGE_W / 2, PAGE_H - 1.55 * inch,
+    c.drawCentredString(PAGE_W / 2, PAGE_H - 1.65 * inch,
                         "LIONS INTERNATIONAL · DISTRICT 3232F1")
     c.setFont("Helvetica-Oblique", 9)
     c.setFillColor(LIONS_GOLD)
-    c.drawCentredString(PAGE_W / 2, PAGE_H - 1.72 * inch,
+    c.drawCentredString(PAGE_W / 2, PAGE_H - 1.82 * inch,
                         "A-19 District Information Technology Chairperson · 2025–26")
 
 
