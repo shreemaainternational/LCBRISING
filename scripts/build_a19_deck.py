@@ -27,6 +27,11 @@ LIGHT_GREY = HexColor("#F4F6FA")
 DARK_GREY = HexColor("#2B2B2B")
 MD_PURPLE = HexColor("#3B1E5E")
 MD_PURPLE_DARK = HexColor("#28133F")
+DIYA_ORANGE = HexColor("#E8A33D")
+DIYA_DEEP = HexColor("#C77A21")
+RUBY_RED = HexColor("#B8002D")
+RUBY_DARK = HexColor("#6B011A")
+BANNER_MAROON = HexColor("#6B1F1F")
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "A19_IT_CHAIRPERSON_DECK.pdf"
 
@@ -456,6 +461,121 @@ def draw_md_emblem(c: canvas.Canvas, cx: float, cy: float, r: float) -> None:
     c.drawCentredString(cx, cy - r * 0.20, "INTERNATIONAL")
 
 
+def draw_district_emblem(c: canvas.Canvas, cx: float, cy: float, r: float) -> None:
+    """Vector approximation of the District 3232 F1 'Shine For Better
+    Tomorrow' diya emblem.
+
+    Composition: lotus / scalloped orange base ring, dark maroon banner
+    band carrying '3232 F1 • 2025-26' (with mini Lions emblem on top)
+    and 'SHINE FOR BETTER TOMORROW' arc, gold diya bowl, ruby flame.
+    """
+    # ---- scalloped base (lotus petals) ----
+    petal_n = 14
+    base_r = r
+    inner_r = r * 0.78
+    c.setFillColor(DIYA_ORANGE)
+    for i in range(petal_n):
+        ang = math.radians(i * 360 / petal_n - 90)
+        px = cx + inner_r * 0.92 * math.cos(ang)
+        py = cy + inner_r * 0.92 * math.sin(ang) - r * 0.05
+        c.circle(px, py, r * 0.18, fill=1, stroke=0)
+    c.setStrokeColor(DIYA_DEEP)
+    c.setLineWidth(max(0.4, r * 0.04))
+    for i in range(petal_n):
+        ang = math.radians(i * 360 / petal_n - 90)
+        px = cx + inner_r * 0.92 * math.cos(ang)
+        py = cy + inner_r * 0.92 * math.sin(ang) - r * 0.05
+        c.circle(px, py, r * 0.18, fill=0, stroke=1)
+
+    # ---- maroon banner disc (carries the text) ----
+    c.setFillColor(BANNER_MAROON)
+    c.circle(cx, cy - r * 0.05, inner_r * 0.92, fill=1, stroke=0)
+    c.setStrokeColor(DIYA_ORANGE)
+    c.setLineWidth(max(0.5, r * 0.05))
+    c.circle(cx, cy - r * 0.05, inner_r * 0.92, fill=0, stroke=1)
+
+    # ---- gold diya bowl (top half ellipse) ----
+    bowl_w = r * 1.20
+    bowl_h = r * 0.42
+    c.setFillColor(DIYA_ORANGE)
+    c.ellipse(cx - bowl_w / 2, cy + r * 0.05,
+              cx + bowl_w / 2, cy + r * 0.05 + bowl_h,
+              fill=1, stroke=1)
+    c.setStrokeColor(DIYA_DEEP)
+    c.setLineWidth(max(0.5, r * 0.05))
+    c.ellipse(cx - bowl_w / 2, cy + r * 0.05,
+              cx + bowl_w / 2, cy + r * 0.05 + bowl_h,
+              fill=0, stroke=1)
+    # bowl interior shadow (smaller darker ellipse on top)
+    c.setFillColor(DIYA_DEEP)
+    c.ellipse(cx - bowl_w * 0.45, cy + r * 0.27,
+              cx + bowl_w * 0.45, cy + r * 0.40,
+              fill=1, stroke=0)
+
+    # ---- flame (red teardrop) ----
+    flame_cx = cx
+    flame_base_y = cy + r * 0.32
+    flame_w = r * 0.55
+    flame_h = r * 0.95
+    # teardrop = circle + triangle pointing up
+    c.setFillColor(RUBY_RED)
+    c.circle(flame_cx, flame_base_y + flame_h * 0.30, flame_w * 0.55,
+             fill=1, stroke=0)
+    p = c.beginPath()
+    p.moveTo(flame_cx - flame_w * 0.55, flame_base_y + flame_h * 0.30)
+    p.lineTo(flame_cx + flame_w * 0.55, flame_base_y + flame_h * 0.30)
+    p.lineTo(flame_cx, flame_base_y + flame_h)
+    p.close()
+    c.drawPath(p, fill=1, stroke=0)
+    # gold rim on flame
+    c.setStrokeColor(DIYA_ORANGE)
+    c.setLineWidth(max(0.5, r * 0.04))
+    c.circle(flame_cx, flame_base_y + flame_h * 0.30, flame_w * 0.55,
+             fill=0, stroke=1)
+    p2 = c.beginPath()
+    p2.moveTo(flame_cx - flame_w * 0.55, flame_base_y + flame_h * 0.30)
+    p2.lineTo(flame_cx, flame_base_y + flame_h)
+    p2.lineTo(flame_cx + flame_w * 0.55, flame_base_y + flame_h * 0.30)
+    c.drawPath(p2, fill=0, stroke=1)
+    # ruby gem highlight
+    c.setFillColor(RUBY_DARK)
+    p3 = c.beginPath()
+    p3.moveTo(flame_cx - flame_w * 0.20, flame_base_y + flame_h * 0.55)
+    p3.lineTo(flame_cx + flame_w * 0.20, flame_base_y + flame_h * 0.55)
+    p3.lineTo(flame_cx, flame_base_y + flame_h * 0.85)
+    p3.close()
+    c.drawPath(p3, fill=1, stroke=0)
+
+    # ---- mini Lions emblem badge on banner top ----
+    mini_r = r * 0.20
+    mini_cy = cy - r * 0.05
+    c.setFillColor(LIONS_GOLD)
+    c.circle(cx, mini_cy, mini_r, fill=1, stroke=0)
+    c.setStrokeColor(LIONS_BLUE)
+    c.setLineWidth(max(0.4, r * 0.03))
+    c.circle(cx, mini_cy, mini_r, fill=0, stroke=1)
+    c.setFillColor(LIONS_BLUE)
+    c.setFont("Helvetica-Bold", mini_r * 0.45)
+    c.drawCentredString(cx, mini_cy + mini_r * 0.30, "LIONS")
+    c.setFont("Helvetica-Bold", mini_r * 0.95)
+    c.drawCentredString(cx, mini_cy - mini_r * 0.40, "L")
+
+    # ---- arc text on banner ----
+    # top arc — district + lionistic year (under the bowl)
+    _arc_text(c, cx, cy - r * 0.05, inner_r * 0.78,
+              "3232 F1  •  2025-26",
+              "Helvetica-Bold", r * 0.14,
+              start_deg=200, end_deg=340,
+              fill=white, facing="in")
+
+    # outer arc — slogan
+    _arc_text(c, cx, cy - r * 0.05, inner_r * 0.92,
+              "SHINE FOR BETTER TOMORROW",
+              "Helvetica-Bold", r * 0.10,
+              start_deg=215, end_deg=325,
+              fill=LIONS_BLUE, facing="in")
+
+
 def draw_logo(c: canvas.Canvas, cx: float, cy: float, r: float, label: str) -> None:
     # outer ring
     c.setFillColor(white)
@@ -490,15 +610,18 @@ def draw_header(c: canvas.Canvas) -> None:
     md_cx = lions_cx + lions_r + 0.35 * inch + md_r
     draw_md_emblem(c, md_cx, y, md_r)
 
-    # Remaining 2 logos distributed across the right portion of the header
-    others = HEADER_LOGOS[2:]
-    right_start = md_cx + md_r + 0.5 * inch
-    right_end = PAGE_W - 0.5 * inch
-    span = right_end - right_start
-    step = span / max(len(others), 1)
-    for i, label in enumerate(others):
-        cx = right_start + step * (i + 0.5)
-        draw_logo(c, cx, y, 0.35 * inch, label)
+    # 4th logo — District 3232 F1 'Shine For Better Tomorrow' diya, TOP-RIGHT
+    dist_r = 0.55 * inch
+    dist_cx = PAGE_W - 0.55 * inch - dist_r
+    draw_district_emblem(c, dist_cx, y, dist_r)
+
+    # 3rd logo — middle slot between MD and District emblems
+    mid_label = HEADER_LOGOS[2]
+    mid_r = 0.35 * inch
+    left_edge = md_cx + md_r
+    right_edge = dist_cx - dist_r
+    mid_cx = (left_edge + right_edge) / 2
+    draw_logo(c, mid_cx, y, mid_r, mid_label)
 
     # Gold divider line
     c.setFillColor(LIONS_GOLD)
