@@ -277,66 +277,82 @@ def draw_cover(c: canvas.Canvas, slide: dict) -> None:
 
     # Title
     c.setFillColor(LIONS_BLUE)
-    c.setFont("Helvetica-Bold", 30)
-    c.drawString(0.4 * inch, top - 0.55 * inch, slide["title"])
+    c.setFont("Helvetica-Bold", 24)
+    c.drawString(0.4 * inch, top - 0.5 * inch, slide["title"])
 
     # Subtitle
     c.setFillColor(DARK_GREY)
-    c.setFont("Helvetica-Oblique", 13)
-    c.drawString(0.4 * inch, top - 0.85 * inch, slide["subtitle"])
+    c.setFont("Helvetica-Oblique", 12)
+    c.drawString(0.4 * inch, top - 0.78 * inch, slide["subtitle"])
 
-    # Lead paragraph (small box)
-    c.setFillColor(LIGHT_GREY)
-    c.rect(0.4 * inch, top - 1.7 * inch, PAGE_W - 0.8 * inch, 0.7 * inch, fill=1, stroke=0)
-    c.setFillColor(LIONS_GOLD)
-    c.rect(0.4 * inch, top - 1.7 * inch, 0.08 * inch, 0.7 * inch, fill=1, stroke=0)
-    c.setFillColor(DARK_GREY)
-    c.setFont("Helvetica", 11)
-    lead = slide["lead"]
-    # naive wrap to 2 lines
-    words = lead.split()
-    half = len(words) // 2
-    line1 = " ".join(words[:half])
-    line2 = " ".join(words[half:])
-    c.drawString(0.6 * inch, top - 1.25 * inch, line1)
-    c.drawString(0.6 * inch, top - 1.5 * inch, line2)
-
-    # Bullets — left column
-    bullets_top = top - 2.0 * inch
-    draw_bullets(
-        c,
-        slide["bullets"],
-        x0=0.45 * inch,
-        y_top=bullets_top,
-        max_width=PAGE_W * 0.50 - 0.6 * inch,
-        font_size=11,
-        bullet_gap=0.36 * inch,
-    )
-
-    # 4 governor photos — right column, 2x2 grid
-    gx0 = PAGE_W * 0.55
-    gy_top = top - 1.95 * inch
-    gw_total = PAGE_W - gx0 - 0.4 * inch
-    gh_total = gy_top - bottom - 0.3 * inch
-    cell_pad = 0.15 * inch
-    cell_w = (gw_total - cell_pad) / 2
-    cell_h = (gh_total - cell_pad) / 2
+    # 4 governor photos — horizontal row across full width
+    gov_top = top - 1.0 * inch
+    gov_h = 1.55 * inch
+    margin = 0.4 * inch
+    pad = 0.15 * inch
+    cols = 4
+    cell_w = (PAGE_W - 2 * margin - pad * (cols - 1)) / cols
 
     # Section heading for governors
     c.setFillColor(LIONS_BLUE)
-    c.setFont("Helvetica-Bold", 13)
-    c.drawString(gx0, gy_top + 0.15 * inch, "Leadership · 2025–26")
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(margin, gov_top + 0.1 * inch, "Leadership · 2025–26")
 
     for i, (role, scope) in enumerate(GOVERNORS):
-        r = i // 2
-        col = i % 2
-        x = gx0 + col * (cell_w + cell_pad)
-        y = gy_top - (r + 1) * cell_h - r * cell_pad
-        draw_image_placeholder(c, x, y, cell_w, cell_h, role, index_label=f"GOV {i + 1}")
-        # scope caption below the label band
+        x = margin + i * (cell_w + pad)
+        y = gov_top - gov_h
+        draw_image_placeholder(c, x, y, cell_w, gov_h, role, index_label=f"GOV {i + 1}")
         c.setFillColor(DARK_GREY)
         c.setFont("Helvetica-Oblique", 8)
         c.drawCentredString(x + cell_w / 2, y - 0.14 * inch, scope)
+
+    # Chairperson photo (centered) + bullets to the right
+    chair_top = gov_top - gov_h - 0.45 * inch
+    chair_h = 2.4 * inch
+    chair_w = 2.6 * inch
+    chair_x = margin
+    chair_y = chair_top - chair_h
+
+    # heading
+    c.setFillColor(LIONS_BLUE)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(chair_x, chair_top + 0.1 * inch, "District IT Chairperson")
+
+    draw_image_placeholder(c, chair_x, chair_y, chair_w, chair_h,
+                           "IT Chairperson", index_label="CHAIR")
+    c.setFillColor(DARK_GREY)
+    c.setFont("Helvetica-Oblique", 8)
+    c.drawCentredString(chair_x + chair_w / 2, chair_y - 0.14 * inch,
+                        "District 3232F1 · A-19")
+
+    # Lead paragraph + bullets to the right of the chairperson photo
+    text_x = chair_x + chair_w + 0.4 * inch
+    text_w = PAGE_W - text_x - margin
+
+    # Lead box
+    c.setFillColor(LIGHT_GREY)
+    c.rect(text_x, chair_top - 0.6 * inch, text_w, 0.6 * inch, fill=1, stroke=0)
+    c.setFillColor(LIONS_GOLD)
+    c.rect(text_x, chair_top - 0.6 * inch, 0.07 * inch, 0.6 * inch, fill=1, stroke=0)
+    c.setFillColor(DARK_GREY)
+    c.setFont("Helvetica", 10)
+    lead = slide["lead"]
+    words = lead.split()
+    half = len(words) // 2
+    c.drawString(text_x + 0.2 * inch, chair_top - 0.25 * inch, " ".join(words[:half]))
+    c.drawString(text_x + 0.2 * inch, chair_top - 0.45 * inch, " ".join(words[half:]))
+
+    # Bullets
+    draw_bullets(
+        c,
+        slide["bullets"],
+        x0=text_x + 0.05 * inch,
+        y_top=chair_top - 0.85 * inch,
+        max_width=text_w - 0.3 * inch,
+        font_size=10,
+        bullet_gap=0.30 * inch,
+        line_h=0.20 * inch,
+    )
 
 
 def draw_content(c: canvas.Canvas, slide: dict) -> None:
@@ -405,9 +421,10 @@ def build() -> Path:
         # background
         c.setFillColor(white)
         c.rect(0, 0, PAGE_W, PAGE_H, fill=1, stroke=0)
-        # subtle side band on left for content area
-        c.setFillColor(LIGHT_GREY)
-        c.rect(0, 0.45 * inch, PAGE_W * 0.41, PAGE_H - 1.25 * inch, fill=1, stroke=0)
+        # subtle side band on left for content pages only
+        if slide["kind"] != "cover":
+            c.setFillColor(LIGHT_GREY)
+            c.rect(0, 0.45 * inch, PAGE_W * 0.41, PAGE_H - 1.25 * inch, fill=1, stroke=0)
 
         logos = COVER_LOGOS if slide["kind"] == "cover" else ["DIST 3232F1", "LCI"]
         draw_header(c, logos)

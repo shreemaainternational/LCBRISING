@@ -257,24 +257,42 @@ def _placeholder_cell(cell, label: str, index_label: str) -> None:
     _add_run(p3, label, bold=True, size=11, color=LIONS_BLUE)
 
 
-def _add_governor_grid(doc: Document) -> None:
+def _add_governor_row(doc: Document) -> None:
     h = doc.add_paragraph()
     _add_run(h, "Leadership · 2025–26", bold=True, size=13, color=LIONS_BLUE)
 
-    table = doc.add_table(rows=2, cols=2)
+    # 1 row x 4 cols horizontal strip
+    table = doc.add_table(rows=1, cols=4)
     table.autofit = False
-    for r in range(2):
-        for col in range(2):
-            cell = table.cell(r, col)
-            _set_cell_width(cell, 11.5)
-            idx = r * 2 + col
-            role, scope = GOVERNORS[idx]
-            _placeholder_cell(cell, role, f"GOV {idx + 1}")
-            p = cell.add_paragraph()
-            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            _add_run(p, scope, italic=True, size=9, color=DARK_GREY)
-            # set row height
-        table.rows[r].height = Cm(5.0)
+    cell_w = 25.0 / 4
+    for col in range(4):
+        cell = table.cell(0, col)
+        _set_cell_width(cell, cell_w)
+        role, scope = GOVERNORS[col]
+        _placeholder_cell(cell, role, f"GOV {col + 1}")
+        p = cell.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _add_run(p, scope, italic=True, size=9, color=DARK_GREY)
+    table.rows[0].height = Cm(4.5)
+
+
+def _add_chairperson_photo(doc: Document) -> None:
+    h = doc.add_paragraph()
+    _add_run(h, "District IT Chairperson · 2025–26",
+             bold=True, size=13, color=LIONS_BLUE)
+
+    # Centered single-cell table for the chairperson photo
+    table = doc.add_table(rows=1, cols=3)
+    table.autofit = False
+    # left + right spacers, centre cell holds the photo
+    _set_cell_width(table.cell(0, 0), 7.5)
+    _set_cell_width(table.cell(0, 1), 10.0)
+    _set_cell_width(table.cell(0, 2), 7.5)
+    _placeholder_cell(table.cell(0, 1), "IT Chairperson", "CHAIR")
+    p = table.cell(0, 1).add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _add_run(p, "District 3232F1 · A-19", italic=True, size=9, color=DARK_GREY)
+    table.rows[0].height = Cm(5.0)
 
 
 def _add_gallery_2x3(doc: Document, labels: list[str]) -> None:
@@ -328,8 +346,9 @@ def build() -> Path:
 
         if page["kind"] == "cover":
             _add_lead(doc, page["lead"])
+            _add_governor_row(doc)
+            _add_chairperson_photo(doc)
             _add_bullets(doc, page["bullets"])
-            _add_governor_grid(doc)
         else:
             _add_bullets(doc, page["bullets"])
             _add_gallery_2x3(doc, page["gallery"])
