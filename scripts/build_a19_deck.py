@@ -602,9 +602,33 @@ def draw_logo(c: canvas.Canvas, cx: float, cy: float, r: float, label: str) -> N
         c.drawCentredString(cx, cy - 0.07 * inch, lines[1])
 
 
+def draw_logo_slot(c: canvas.Canvas, cx: float, cy: float, r: float,
+                   label: str | None = None) -> None:
+    """Empty circular logo button — gold ring, white interior, optional caption."""
+    c.setFillColor(white)
+    c.circle(cx, cy, r, fill=1, stroke=0)
+    c.setStrokeColor(LIONS_GOLD)
+    c.setLineWidth(2)
+    c.circle(cx, cy, r, fill=0, stroke=1)
+    c.setStrokeColor(LIONS_BLUE)
+    c.setLineWidth(0.6)
+    c.setDash(2, 2)
+    c.circle(cx, cy, r * 0.78, fill=0, stroke=1)
+    c.setDash()
+    if label:
+        c.setFillColor(LIONS_BLUE)
+        c.setFont("Helvetica", 6)
+        c.drawCentredString(cx, cy - r - 0.13 * inch, label)
+
+
 def draw_header(c: canvas.Canvas) -> None:
-    # Logos intentionally omitted — header band is left blank for the user
-    # to drop in official artwork later.
+    # 4 empty logo buttons — user fills these in manually
+    y = PAGE_H - 0.85 * inch
+    n = 4
+    spacing = PAGE_W / (n + 1)
+    for i in range(n):
+        cx = spacing * (i + 1)
+        draw_logo_slot(c, cx, y, 0.45 * inch)
 
     # Gold divider line
     c.setFillColor(LIONS_GOLD)
