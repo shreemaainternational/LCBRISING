@@ -1,32 +1,40 @@
-"""Generate the A-19 District IT Chairperson 6-page 16:9 PDF deck.
+"""Generate the A-19 District IT Chairperson 6-page A4 PORTRAIT PDF deck.
 
-Page 1 (cover): topic 1 content, 4 logos in header, 4 governor photo
-placeholders. Pages 2-6: topics 2-6, each with a 2x3 image gallery.
+Premium layout: full-page themed background with blue overlay & gradient,
+4 centred logos + gold divider header, glass-effect content panel,
+bottom image strip. Page 1 carries 4 governor photos in a horizontal
+row plus a centred IT Chairperson photo.
 
 Run:  python3 scripts/build_a19_deck.py
 Output: docs/A19_IT_CHAIRPERSON_DECK.pdf
 """
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
-from reportlab.lib.colors import HexColor, white, black
+from reportlab.lib.colors import HexColor, white, black, Color
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
-# 16:9 widescreen page
-PAGE_W, PAGE_H = 13.333 * inch, 7.5 * inch
+# A4 portrait
+PAGE_W, PAGE_H = 8.27 * inch, 11.69 * inch
+
 LIONS_BLUE = HexColor("#003F87")
+LIONS_BLUE_DARK = HexColor("#011E47")
 LIONS_GOLD = HexColor("#FFC72C")
 LIGHT_GREY = HexColor("#F4F6FA")
 DARK_GREY = HexColor("#2B2B2B")
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "A19_IT_CHAIRPERSON_DECK.pdf"
 
-# Four logo labels for the cover page header
-COVER_LOGOS = ["LCI", "MD 3232", "DIST 3232F1", "A-19"]
+HEADER_LOGOS = [
+    "LIONS\nINT'L",
+    "MULTIPLE\nDISTRICT 3232",
+    "LCIF\nFOUNDATION",
+    "DISTRICT\n3232F1",
+]
 
-# Four governor photo labels for the cover page
 GOVERNORS = [
     ("Int'l President", "Lions International"),
     ("Council Chair", "Multiple District 3232"),
@@ -34,42 +42,38 @@ GOVERNORS = [
     ("IPDG / VDG", "District 3232F1"),
 ]
 
-SLIDES = [
+PAGES = [
     {
         "kind": "cover",
         "page_label": "PAGE 1 · TOPIC 1",
-        "title": "Roles & Responsibilities",
-        "subtitle": "District Information Technology Chairperson · 3232F1",
-        "lead": (
-            "Lions International IT Chairperson — Job Duties, "
-            "Responsibilities & Benefits. Branding Lionism for impact at "
-            "District and Club levels."
-        ),
+        "title": "Knowledge of Roles & Responsibilities",
+        "subtitle": "District Information Technology Chairperson",
+        "background_theme": "service",
         "bullets": [
-            "Digital leader for the District Cabinet & 100+ clubs",
-            "Governance: digital policy, data privacy, brand standards",
-            "Systems: MyLion · MyLCI · Lion Portal · District website",
-            "Club support: onboarding, training, helpdesk for every club",
-            "Security: RLS, backups, HMAC webhooks, DPDP Act 2023",
-            "Reporting: monthly MMR · dashboards · Annual Activity Report",
+            "District IT strategy & execution",
+            "Website & digital platform management",
+            "Lion Portal reporting & database",
+            "Club IT training & support",
+            "Digital leadership & innovation",
+            "Communication & coordination",
         ],
     },
     {
         "kind": "content",
         "page_label": "PAGE 2 · TOPIC 2",
         "title": "Knowledge of Lionism, Website, Portal & LLC",
-        "subtitle": "Lion Portal · Website · Lions Learning Center · Digital Ecosystem",
+        "subtitle": "Lionism · Website · Lion Portal · Lions Learning Center",
+        "background_theme": "learning",
         "bullets": [
-            "Lionism — 'We Serve' · 5 Global Causes · 1.4M+ Lions",
-            "Lion Portal — SSO, officer reporting, dues, MMR",
-            "Website — Next.js, SEO, WCAG 2.1 AA, mobile-first",
-            "Lions Learning Center — courses for every officer",
-            "MyLion / MyLCI — service activities & membership",
-            "Brand: Lions Blue #003F87 · Gold #FFC72C · We Serve voice",
+            "Lionism mission & structure",
+            "Website management",
+            "Lion Portal usage",
+            "Member data & reporting",
+            "Lions Learning Center training",
+            "Digital ecosystem understanding",
         ],
-        "gallery": [
-            "Lion Portal", "Lionism", "LLC Course",
-            "District Website", "MyLion App", "Brand Kit",
+        "strip": [
+            "Lion Portal", "LLC Course", "District Website",
         ],
     },
     {
@@ -77,35 +81,35 @@ SLIDES = [
         "page_label": "PAGE 3 · TOPIC 3",
         "title": "Preparation & Implementation of District IT Goals",
         "subtitle": "Plan · Execute · Monitor",
+        "background_theme": "strategy",
         "bullets": [
-            "Annual IT roadmap aligned to DG's theme",
-            "Quarterly milestones with club-level targets",
-            "100% MMR compliance across every club",
-            "Every club onboarded with website + social presence",
-            "Real-time dashboards for the Cabinet",
-            "Zero data incidents — security & backups audited",
+            "IT roadmap & vision",
+            "Planning & execution",
+            "Monitoring & reporting",
+            "Standardization",
+            "Performance tracking",
+            "Continuous improvement",
         ],
-        "gallery": [
-            "Cabinet Meet", "IT Goals Chart", "Roadmap",
-            "Dashboard", "Quarterly Review", "Audit Report",
+        "strip": [
+            "Cabinet Meet", "IT Roadmap", "Dashboard",
         ],
     },
     {
         "kind": "content",
         "page_label": "PAGE 4 · TOPIC 4",
-        "title": "E-Directory · Website · E-Club House · Multimedia",
-        "subtitle": "Club · Zone · Region · District Level",
+        "title": "Efforts to Promote & Develop Digital Platforms",
+        "subtitle": "E-Directory · Website · E-Club House · Multimedia",
+        "background_theme": "digital",
         "bullets": [
-            "E-Directory — searchable, role-aware, mobile-ready",
-            "Website — district + 50+ club micro-sites, unified brand",
-            "E-Club House — virtual meets, RSVPs, QR check-ins",
-            "Multimedia — photo & video archive at every level",
-            "Brand-safe templates: posters, certificates, social cards",
-            "Self-service publishing: clubs go live in minutes",
+            "E-Directory system",
+            "Website development",
+            "E-Club House",
+            "Multimedia content",
+            "Club to District integration",
+            "Technology adoption",
         ],
-        "gallery": [
-            "E-Directory", "Club Website", "E-Club House",
-            "Photo Archive", "Video Reel", "Template Pack",
+        "strip": [
+            "E-Directory", "E-Club House", "Multimedia Reel",
         ],
     },
     {
@@ -113,17 +117,17 @@ SLIDES = [
         "page_label": "PAGE 5 · TOPIC 5",
         "title": "Social Media Promotion at Digital Platforms",
         "subtitle": "Reach · Engagement · Branding of Lionism",
+        "background_theme": "social",
         "bullets": [
-            "Platforms: Facebook · Instagram · LinkedIn · YouTube · X",
-            "10,000+ combined followers — +180% YoY growth",
-            "Weekly campaign: #WeServeWednesday",
-            "Reels & shorts for every major activity",
-            "Live coverage of District Convention",
-            "Bilingual content — English + regional language",
+            "Facebook · Instagram · YouTube",
+            "Campaign strategy",
+            "Engagement growth",
+            "Branding consistency",
+            "Event promotions",
+            "Content system",
         ],
-        "gallery": [
-            "Instagram", "Facebook", "LinkedIn",
-            "YouTube Reel", "Convention Live", "Hashtag Campaign",
+        "strip": [
+            "Instagram Grid", "YouTube Reel", "Convention Live",
         ],
     },
     {
@@ -131,308 +135,434 @@ SLIDES = [
         "page_label": "PAGE 6 · TOPIC 6",
         "title": "Achievements During the Year",
         "subtitle": "Impact · Growth · Recognition",
+        "background_theme": "achievement",
         "bullets": [
-            "100% MMR compliance for 8 consecutive months",
-            "50+ club websites launched under district umbrella",
-            "₹50L+ donations processed online — full audit trail",
-            "5,000+ service hours digitally logged on MyLion",
-            "Recognised at MD 3232 IT Forum",
-            "District benefits: transparency · faster comms · trust",
+            "Digital growth metrics",
+            "Website & portal performance",
+            "Social media reach",
+            "IT initiatives success",
+            "Recognition & awards",
+            "District & club impact",
         ],
-        "gallery": [
-            "Award Moment", "Convention Stage", "Certificate",
-            "Metrics Dashboard", "Milestone Post", "Press Feature",
+        "strip": [
+            "Award Moment", "Metrics Dashboard", "Press Feature",
         ],
     },
 ]
 
 
-def draw_logo_badge(c: canvas.Canvas, cx: float, cy: float, r: float, label: str) -> None:
-    c.setFillColor(LIONS_GOLD)
-    c.circle(cx, cy, r, fill=1, stroke=0)
-    c.setStrokeColor(LIONS_BLUE)
-    c.setLineWidth(1.2)
-    c.circle(cx, cy, r, fill=0, stroke=1)
-    c.setFillColor(LIONS_BLUE)
-    c.setFont("Helvetica-Bold", 7 if len(label) > 5 else 8)
-    c.drawCentredString(cx, cy - 0.04 * inch, label)
+# ---------- BACKGROUND ----------
+
+THEME_TINTS = {
+    "service":     [HexColor("#0B3D7A"), HexColor("#0E5BAA"), HexColor("#FFC72C")],
+    "learning":    [HexColor("#0A2F66"), HexColor("#1E5FA8"), HexColor("#7FB3E6")],
+    "strategy":    [HexColor("#102A52"), HexColor("#244F8C"), HexColor("#FFC72C")],
+    "digital":     [HexColor("#062B59"), HexColor("#0F4F9E"), HexColor("#7DB7F2")],
+    "social":      [HexColor("#0E2D63"), HexColor("#2B6BB8"), HexColor("#FF8A3D")],
+    "achievement": [HexColor("#0A1F4A"), HexColor("#1E4FA0"), HexColor("#FFC72C")],
+}
 
 
-def draw_header(c: canvas.Canvas, logos: list[str]) -> None:
-    # Top blue bar
-    c.setFillColor(LIONS_BLUE)
-    c.rect(0, PAGE_H - 0.7 * inch, PAGE_W, 0.7 * inch, fill=1, stroke=0)
-    # Gold accent line
-    c.setFillColor(LIONS_GOLD)
-    c.rect(0, PAGE_H - 0.78 * inch, PAGE_W, 0.07 * inch, fill=1, stroke=0)
+def draw_background(c: canvas.Canvas, theme: str) -> None:
+    tints = THEME_TINTS.get(theme, THEME_TINTS["service"])
 
-    n = len(logos)
-    if n == 2:
-        positions = [0.55 * inch, PAGE_W - 0.55 * inch]
-    elif n == 4:
-        positions = [
-            0.55 * inch,
-            1.55 * inch,
-            PAGE_W - 1.55 * inch,
-            PAGE_W - 0.55 * inch,
-        ]
-    else:
-        gap = PAGE_W / (n + 1)
-        positions = [(i + 1) * gap for i in range(n)]
+    # Base flood
+    c.setFillColor(tints[0])
+    c.rect(0, 0, PAGE_W, PAGE_H, fill=1, stroke=0)
 
-    for x, label in zip(positions, logos):
-        draw_logo_badge(c, x, PAGE_H - 0.35 * inch, 0.25 * inch, label)
+    # "Blurred" themed bands — soft horizontal gradient stripes
+    n_bands = 60
+    for i in range(n_bands):
+        t = i / (n_bands - 1)
+        # interpolate base -> mid colour
+        r = tints[0].red * (1 - t) + tints[1].red * t
+        g = tints[0].green * (1 - t) + tints[1].green * t
+        b = tints[0].blue * (1 - t) + tints[1].blue * t
+        c.setFillColorRGB(r, g, b)
+        y = PAGE_H * t
+        c.rect(0, y, PAGE_W, PAGE_H / n_bands + 1, fill=1, stroke=0)
 
-    # Center title strip
+    # Soft accent blobs (faux blurred shapes) — drawn with low alpha
+    c.saveState()
+    try:
+        c.setFillAlpha(0.18)
+    except AttributeError:
+        pass
+    c.setFillColor(tints[2])
+    for cx, cy, rad in [
+        (PAGE_W * 0.15, PAGE_H * 0.78, 2.3 * inch),
+        (PAGE_W * 0.85, PAGE_H * 0.30, 2.0 * inch),
+        (PAGE_W * 0.50, PAGE_H * 0.05, 3.0 * inch),
+    ]:
+        c.circle(cx, cy, rad, fill=1, stroke=0)
+    c.restoreState()
+
+    # Dark navy overlay for readability
+    c.saveState()
+    try:
+        c.setFillAlpha(0.55)
+    except AttributeError:
+        pass
+    c.setFillColor(LIONS_BLUE_DARK)
+    c.rect(0, 0, PAGE_W, PAGE_H, fill=1, stroke=0)
+    c.restoreState()
+
+    # Bottom soft gradient (dark to darker) for footer separation
+    c.saveState()
+    try:
+        c.setFillAlpha(0.35)
+    except AttributeError:
+        pass
+    c.setFillColor(black)
+    for i in range(40):
+        a = 0.025 * (40 - i) / 40
+        try:
+            c.setFillAlpha(a)
+        except AttributeError:
+            pass
+        c.rect(0, i * 0.04 * inch, PAGE_W, 0.05 * inch, fill=1, stroke=0)
+    c.restoreState()
+
+
+# ---------- HEADER ----------
+
+def draw_logo(c: canvas.Canvas, cx: float, cy: float, r: float, label: str) -> None:
+    # outer ring
     c.setFillColor(white)
-    c.setFont("Helvetica-Bold", 13)
-    c.drawCentredString(PAGE_W / 2, PAGE_H - 0.32 * inch, "LIONS INTERNATIONAL · DISTRICT 3232F1")
-    c.setFont("Helvetica", 9)
-    c.drawCentredString(PAGE_W / 2, PAGE_H - 0.5 * inch, "A-19 District Information Technology Chairperson")
+    c.circle(cx, cy, r, fill=1, stroke=0)
+    c.setStrokeColor(LIONS_GOLD)
+    c.setLineWidth(2)
+    c.circle(cx, cy, r, fill=0, stroke=1)
+    # inner gold
+    c.setFillColor(LIONS_GOLD)
+    c.circle(cx, cy, r * 0.7, fill=1, stroke=0)
+    # text
+    c.setFillColor(LIONS_BLUE)
+    c.setFont("Helvetica-Bold", 6)
+    lines = label.split("\n")
+    if len(lines) == 1:
+        c.drawCentredString(cx, cy - 0.04 * inch, lines[0])
+    else:
+        c.drawCentredString(cx, cy + 0.05 * inch, lines[0])
+        c.drawCentredString(cx, cy - 0.07 * inch, lines[1])
 
+
+def draw_header(c: canvas.Canvas) -> None:
+    # transparent strip — only the gold divider visible
+    n = len(HEADER_LOGOS)
+    y = PAGE_H - 0.85 * inch
+    spacing = PAGE_W / (n + 1)
+    for i, label in enumerate(HEADER_LOGOS):
+        cx = spacing * (i + 1)
+        draw_logo(c, cx, y, 0.35 * inch, label)
+
+    # Gold divider line
+    c.setFillColor(LIONS_GOLD)
+    c.rect(0.5 * inch, PAGE_H - 1.32 * inch, PAGE_W - 1.0 * inch, 0.04 * inch,
+           fill=1, stroke=0)
+
+    # Sub-header text
+    c.setFillColor(white)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawCentredString(PAGE_W / 2, PAGE_H - 1.55 * inch,
+                        "LIONS INTERNATIONAL · DISTRICT 3232F1")
+    c.setFont("Helvetica-Oblique", 9)
+    c.setFillColor(LIONS_GOLD)
+    c.drawCentredString(PAGE_W / 2, PAGE_H - 1.72 * inch,
+                        "A-19 District Information Technology Chairperson · 2025–26")
+
+
+# ---------- FOOTER ----------
 
 def draw_footer(c: canvas.Canvas, page_num: int, total: int) -> None:
-    c.setFillColor(LIONS_BLUE)
-    c.rect(0, 0, PAGE_W, 0.4 * inch, fill=1, stroke=0)
+    c.saveState()
+    try:
+        c.setFillAlpha(0.85)
+    except AttributeError:
+        pass
+    c.setFillColor(LIONS_BLUE_DARK)
+    c.rect(0, 0, PAGE_W, 0.45 * inch, fill=1, stroke=0)
+    c.restoreState()
+
     c.setFillColor(LIONS_GOLD)
-    c.rect(0, 0.4 * inch, PAGE_W, 0.05 * inch, fill=1, stroke=0)
+    c.rect(0, 0.45 * inch, PAGE_W, 0.04 * inch, fill=1, stroke=0)
 
     c.setFillColor(white)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawCentredString(PAGE_W / 2, 0.14 * inch, "We Serve — Powered by Technology")
-    c.setFont("Helvetica", 9)
-    c.drawRightString(PAGE_W - 0.3 * inch, 0.14 * inch, f"{page_num} / {total}")
-    c.drawString(0.3 * inch, 0.14 * inch, "A-19 · District IT Chairperson · 2025–26")
+    c.setFont("Helvetica-Bold", 9)
+    c.drawCentredString(PAGE_W / 2, 0.18 * inch,
+                        "We Serve — Powered by Technology")
+    c.setFont("Helvetica", 8)
+    c.drawRightString(PAGE_W - 0.4 * inch, 0.18 * inch, f"{page_num} / {total}")
+    c.drawString(0.4 * inch, 0.18 * inch, "A-19 · 2025–26")
 
 
-def draw_bullets(c: canvas.Canvas, bullets: list[str], x0: float, y_top: float,
-                 max_width: float, line_h: float = 0.22 * inch,
-                 bullet_gap: float = 0.42 * inch, font_size: int = 12) -> None:
-    by = y_top
-    c.setFont("Helvetica", font_size)
-    for bullet in bullets:
-        c.setFillColor(LIONS_GOLD)
-        c.circle(x0 + 0.05 * inch, by + 0.045 * inch, 0.05 * inch, fill=1, stroke=0)
-        c.setFillColor(DARK_GREY)
-        # rough wrap by char count for the available width
-        char_w = font_size * 0.52
-        max_chars = max(20, int(max_width / char_w))
-        text = bullet
-        if len(text) <= max_chars:
-            c.drawString(x0 + 0.25 * inch, by, text)
-            by -= bullet_gap
-        else:
-            cut = text.rfind(" ", 0, max_chars)
-            if cut == -1:
-                cut = max_chars
-            c.drawString(x0 + 0.25 * inch, by, text[:cut])
-            by -= line_h
-            c.drawString(x0 + 0.25 * inch, by, text[cut:].strip())
-            by -= bullet_gap
+# ---------- BUILDING BLOCKS ----------
+
+def glass_panel(c: canvas.Canvas, x: float, y: float, w: float, h: float,
+                opacity: float = 0.78) -> None:
+    c.saveState()
+    try:
+        c.setFillAlpha(opacity)
+    except AttributeError:
+        pass
+    c.setFillColor(white)
+    c.roundRect(x, y, w, h, 0.18 * inch, fill=1, stroke=0)
+    c.restoreState()
+    # gold accent left border
+    c.setFillColor(LIONS_GOLD)
+    c.rect(x, y, 0.10 * inch, h, fill=1, stroke=0)
 
 
-def draw_image_placeholder(c: canvas.Canvas, x: float, y: float, w: float, h: float,
-                           label: str, index_label: str | None = None) -> None:
-    c.setFillColor(LIGHT_GREY)
-    c.setStrokeColor(LIONS_BLUE)
-    c.setLineWidth(1.3)
-    c.rect(x, y, w, h, fill=1, stroke=1)
+def image_box(c: canvas.Canvas, x: float, y: float, w: float, h: float,
+              label: str, index_label: str | None = None) -> None:
+    c.setFillColor(white)
+    c.setStrokeColor(LIONS_GOLD)
+    c.setLineWidth(1.6)
+    c.roundRect(x, y, w, h, 0.08 * inch, fill=1, stroke=1)
 
+    # gold corner tag
     if index_label:
         c.setFillColor(LIONS_GOLD)
-        c.rect(x, y + h - 0.20 * inch, 0.7 * inch, 0.20 * inch, fill=1, stroke=0)
+        c.rect(x, y + h - 0.20 * inch, 0.65 * inch, 0.20 * inch, fill=1, stroke=0)
         c.setFillColor(LIONS_BLUE)
-        c.setFont("Helvetica-Bold", 9)
-        c.drawString(x + 0.08 * inch, y + h - 0.14 * inch, index_label)
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(x + 0.07 * inch, y + h - 0.14 * inch, index_label)
 
     # camera glyph
     cx = x + w / 2
-    cy = y + h / 2 + 0.05 * inch
-    glyph_w = min(1.0 * inch, w * 0.55)
-    glyph_h = min(0.55 * inch, h * 0.4)
+    cy = y + h / 2 + 0.08 * inch
+    gw = min(0.9 * inch, w * 0.55)
+    gh = min(0.45 * inch, h * 0.32)
     c.setStrokeColor(LIONS_BLUE)
-    c.setFillColor(white)
-    c.setLineWidth(1.4)
-    c.rect(cx - glyph_w / 2, cy - glyph_h / 2, glyph_w, glyph_h, fill=1, stroke=1)
-    c.circle(cx, cy, min(0.18 * inch, glyph_h * 0.35), fill=0, stroke=1)
+    c.setFillColor(LIGHT_GREY)
+    c.setLineWidth(1.3)
+    c.rect(cx - gw / 2, cy - gh / 2, gw, gh, fill=1, stroke=1)
+    c.circle(cx, cy, min(0.14 * inch, gh * 0.4), fill=0, stroke=1)
 
-    # label band
+    # bottom label band
     c.setFillColor(LIONS_BLUE)
-    c.rect(x, y, w, 0.32 * inch, fill=1, stroke=0)
+    c.rect(x, y, w, 0.30 * inch, fill=1, stroke=0)
     c.setFillColor(white)
-    c.setFont("Helvetica-Bold", 9)
-    c.drawCentredString(cx, y + 0.11 * inch, label)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawCentredString(cx, y + 0.10 * inch, label)
 
 
-def draw_cover(c: canvas.Canvas, slide: dict) -> None:
-    top = PAGE_H - 1.0 * inch
-    bottom = 0.55 * inch
+def bullets(c: canvas.Canvas, items: list[str], x0: float, y_top: float,
+            max_w: float, font_size: int = 11, gap: float = 0.32 * inch) -> None:
+    by = y_top
+    char_w = font_size * 0.52
+    max_chars = max(20, int(max_w / char_w))
+    for b in items:
+        c.setFillColor(LIONS_GOLD)
+        c.circle(x0 + 0.05 * inch, by + 0.045 * inch, 0.06 * inch, fill=1, stroke=0)
+        c.setFillColor(LIONS_BLUE)
+        c.setFont("Helvetica-Bold", font_size)
+        if len(b) <= max_chars:
+            c.drawString(x0 + 0.25 * inch, by, b)
+            by -= gap
+        else:
+            cut = b.rfind(" ", 0, max_chars)
+            if cut == -1:
+                cut = max_chars
+            c.drawString(x0 + 0.25 * inch, by, b[:cut])
+            by -= 0.20 * inch
+            c.drawString(x0 + 0.25 * inch, by, b[cut:].strip())
+            by -= gap
 
-    # Page label badge
+
+def title_block(c: canvas.Canvas, page_label: str, title: str,
+                subtitle: str, top: float) -> float:
+    # gold pill badge
     c.setFillColor(LIONS_GOLD)
-    c.rect(0.4 * inch, top - 0.1 * inch, 1.6 * inch, 0.28 * inch, fill=1, stroke=0)
+    c.roundRect(0.6 * inch, top - 0.05 * inch, 1.7 * inch, 0.28 * inch,
+                0.14 * inch, fill=1, stroke=0)
     c.setFillColor(LIONS_BLUE)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawCentredString(1.2 * inch, top - 0.02 * inch, slide["page_label"])
+    c.setFont("Helvetica-Bold", 9)
+    c.drawCentredString(1.45 * inch, top + 0.05 * inch, page_label)
 
     # Title
-    c.setFillColor(LIONS_BLUE)
-    c.setFont("Helvetica-Bold", 24)
-    c.drawString(0.4 * inch, top - 0.5 * inch, slide["title"])
+    c.setFillColor(white)
+    c.setFont("Helvetica-Bold", 17)
+    # wrap if too long
+    if len(title) > 40:
+        cut = title.rfind(" ", 0, 40)
+        c.drawString(0.6 * inch, top - 0.45 * inch, title[:cut])
+        c.drawString(0.6 * inch, top - 0.72 * inch, title[cut:].strip())
+        next_y = top - 1.0 * inch
+    else:
+        c.drawString(0.6 * inch, top - 0.45 * inch, title)
+        next_y = top - 0.75 * inch
 
-    # Subtitle
-    c.setFillColor(DARK_GREY)
-    c.setFont("Helvetica-Oblique", 12)
-    c.drawString(0.4 * inch, top - 0.78 * inch, slide["subtitle"])
+    c.setFillColor(LIONS_GOLD)
+    c.setFont("Helvetica-Oblique", 11)
+    c.drawString(0.6 * inch, next_y, subtitle)
+    return next_y - 0.2 * inch
 
-    # 4 governor photos — horizontal row across full width
-    gov_top = top - 1.0 * inch
-    gov_h = 1.55 * inch
-    margin = 0.4 * inch
+
+# ---------- PAGE TYPES ----------
+
+def render_cover(c: canvas.Canvas, slide: dict) -> None:
+    # 4 governor photos — horizontal row
+    sec_top = PAGE_H - 2.0 * inch
+    margin = 0.5 * inch
     pad = 0.15 * inch
+
+    # Section heading
+    c.setFillColor(white)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(margin, sec_top, "LEADERSHIP · 2025–26")
+    c.setFillColor(LIONS_GOLD)
+    c.rect(margin, sec_top - 0.05 * inch, 1.4 * inch, 0.03 * inch,
+           fill=1, stroke=0)
+
     cols = 4
     cell_w = (PAGE_W - 2 * margin - pad * (cols - 1)) / cols
-
-    # Section heading for governors
-    c.setFillColor(LIONS_BLUE)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(margin, gov_top + 0.1 * inch, "Leadership · 2025–26")
+    cell_h = 1.4 * inch
+    row_y = sec_top - 0.2 * inch - cell_h
 
     for i, (role, scope) in enumerate(GOVERNORS):
         x = margin + i * (cell_w + pad)
-        y = gov_top - gov_h
-        draw_image_placeholder(c, x, y, cell_w, gov_h, role, index_label=f"GOV {i + 1}")
+        image_box(c, x, row_y, cell_w, cell_h, role, index_label=f"GOV {i + 1}")
+        c.setFillColor(LIONS_GOLD)
+        c.setFont("Helvetica-Oblique", 7)
+        c.drawCentredString(x + cell_w / 2, row_y - 0.15 * inch, scope)
+
+    # Chairperson photo — centered, slightly larger
+    chair_top = row_y - 0.55 * inch
+    c.setFillColor(white)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawCentredString(PAGE_W / 2, chair_top, "DISTRICT IT CHAIRPERSON · 2025–26")
+    c.setFillColor(LIONS_GOLD)
+    c.rect(PAGE_W / 2 - 1.2 * inch, chair_top - 0.05 * inch,
+           2.4 * inch, 0.03 * inch, fill=1, stroke=0)
+
+    chair_w = 2.4 * inch
+    chair_h = 1.7 * inch
+    chair_x = (PAGE_W - chair_w) / 2
+    chair_y = chair_top - 0.2 * inch - chair_h
+    image_box(c, chair_x, chair_y, chair_w, chair_h, "IT Chairperson",
+              index_label="CHAIR")
+    c.setFillColor(LIONS_GOLD)
+    c.setFont("Helvetica-Oblique", 8)
+    c.drawCentredString(PAGE_W / 2, chair_y - 0.18 * inch, "District 3232F1 · A-19")
+
+    # Title + bullets in glass panel at the bottom
+    panel_y = 0.65 * inch
+    panel_h = chair_y - 0.45 * inch - panel_y
+    panel_x = 0.5 * inch
+    panel_w = PAGE_W - 1.0 * inch
+    glass_panel(c, panel_x, panel_y, panel_w, panel_h, opacity=0.85)
+
+    # Title inside the panel
+    c.setFillColor(LIONS_BLUE)
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(panel_x + 0.3 * inch, panel_y + panel_h - 0.4 * inch,
+                 slide["title"])
+    c.setFillColor(DARK_GREY)
+    c.setFont("Helvetica-Oblique", 9)
+    c.drawString(panel_x + 0.3 * inch, panel_y + panel_h - 0.6 * inch,
+                 slide["subtitle"])
+
+    # Bullets — two columns inside the panel
+    items = slide["bullets"]
+    half = (len(items) + 1) // 2
+    col_w = (panel_w - 0.7 * inch) / 2
+    col_y = panel_y + panel_h - 0.85 * inch
+    by1 = col_y
+    by2 = col_y
+    char_w = 9 * 0.52
+    max_chars = int(col_w / char_w)
+    for j, txt in enumerate(items[:half]):
+        c.setFillColor(LIONS_GOLD)
+        c.circle(panel_x + 0.35 * inch, by1 + 0.04 * inch,
+                 0.05 * inch, fill=1, stroke=0)
         c.setFillColor(DARK_GREY)
-        c.setFont("Helvetica-Oblique", 8)
-        c.drawCentredString(x + cell_w / 2, y - 0.14 * inch, scope)
+        c.setFont("Helvetica", 9)
+        c.drawString(panel_x + 0.5 * inch, by1, txt[:max_chars])
+        by1 -= 0.26 * inch
+    for j, txt in enumerate(items[half:]):
+        x = panel_x + 0.4 * inch + col_w + 0.2 * inch
+        c.setFillColor(LIONS_GOLD)
+        c.circle(x, by2 + 0.04 * inch, 0.05 * inch, fill=1, stroke=0)
+        c.setFillColor(DARK_GREY)
+        c.setFont("Helvetica", 9)
+        c.drawString(x + 0.15 * inch, by2, txt[:max_chars])
+        by2 -= 0.26 * inch
 
-    # Chairperson photo (centered) + bullets to the right
-    chair_top = gov_top - gov_h - 0.45 * inch
-    chair_h = 2.4 * inch
-    chair_w = 2.6 * inch
-    chair_x = margin
-    chair_y = chair_top - chair_h
 
-    # heading
+def render_content(c: canvas.Canvas, slide: dict) -> None:
+    top = PAGE_H - 2.0 * inch
+
+    # Title block (white text on dark background)
+    next_y = title_block(c, slide["page_label"], slide["title"],
+                         slide["subtitle"], top)
+
+    # Glass panel with bullets
+    panel_x = 0.5 * inch
+    panel_w = PAGE_W - 1.0 * inch
+    panel_top = next_y - 0.1 * inch
+    panel_bottom = 3.4 * inch
+    panel_h = panel_top - panel_bottom
+    glass_panel(c, panel_x, panel_bottom, panel_w, panel_h, opacity=0.86)
+
+    # Section header inside panel
     c.setFillColor(LIONS_BLUE)
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(chair_x, chair_top + 0.1 * inch, "District IT Chairperson")
-
-    draw_image_placeholder(c, chair_x, chair_y, chair_w, chair_h,
-                           "IT Chairperson", index_label="CHAIR")
-    c.setFillColor(DARK_GREY)
-    c.setFont("Helvetica-Oblique", 8)
-    c.drawCentredString(chair_x + chair_w / 2, chair_y - 0.14 * inch,
-                        "District 3232F1 · A-19")
-
-    # Lead paragraph + bullets to the right of the chairperson photo
-    text_x = chair_x + chair_w + 0.4 * inch
-    text_w = PAGE_W - text_x - margin
-
-    # Lead box
-    c.setFillColor(LIGHT_GREY)
-    c.rect(text_x, chair_top - 0.6 * inch, text_w, 0.6 * inch, fill=1, stroke=0)
-    c.setFillColor(LIONS_GOLD)
-    c.rect(text_x, chair_top - 0.6 * inch, 0.07 * inch, 0.6 * inch, fill=1, stroke=0)
-    c.setFillColor(DARK_GREY)
-    c.setFont("Helvetica", 10)
-    lead = slide["lead"]
-    words = lead.split()
-    half = len(words) // 2
-    c.drawString(text_x + 0.2 * inch, chair_top - 0.25 * inch, " ".join(words[:half]))
-    c.drawString(text_x + 0.2 * inch, chair_top - 0.45 * inch, " ".join(words[half:]))
+    c.drawString(panel_x + 0.35 * inch, panel_top - 0.4 * inch,
+                 "Key Focus Areas")
 
     # Bullets
-    draw_bullets(
+    bullets(
         c,
         slide["bullets"],
-        x0=text_x + 0.05 * inch,
-        y_top=chair_top - 0.85 * inch,
-        max_width=text_w - 0.3 * inch,
-        font_size=10,
-        bullet_gap=0.30 * inch,
-        line_h=0.20 * inch,
-    )
-
-
-def draw_content(c: canvas.Canvas, slide: dict) -> None:
-    top = PAGE_H - 1.0 * inch
-    bottom = 0.55 * inch
-    content_w = PAGE_W * 0.40
-    gallery_x = PAGE_W * 0.42
-    gallery_w = PAGE_W - gallery_x - 0.4 * inch
-
-    # Page label badge
-    c.setFillColor(LIONS_GOLD)
-    c.rect(0.4 * inch, top - 0.1 * inch, 1.6 * inch, 0.28 * inch, fill=1, stroke=0)
-    c.setFillColor(LIONS_BLUE)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawCentredString(1.2 * inch, top - 0.02 * inch, slide["page_label"])
-
-    # Title
-    c.setFillColor(LIONS_BLUE)
-    c.setFont("Helvetica-Bold", 22)
-    c.drawString(0.4 * inch, top - 0.55 * inch, slide["title"])
-
-    # Subtitle accent
-    c.setFillColor(LIONS_GOLD)
-    c.rect(0.4 * inch, top - 0.72 * inch, 0.6 * inch, 0.04 * inch, fill=1, stroke=0)
-    c.setFillColor(DARK_GREY)
-    c.setFont("Helvetica-Oblique", 11)
-    c.drawString(0.4 * inch, top - 0.95 * inch, slide["subtitle"])
-
-    # Bullets
-    draw_bullets(
-        c,
-        slide["bullets"],
-        x0=0.45 * inch,
-        y_top=top - 1.35 * inch,
-        max_width=content_w - 0.4 * inch,
+        x0=panel_x + 0.35 * inch,
+        y_top=panel_top - 0.8 * inch,
+        max_w=panel_w - 0.8 * inch,
         font_size=11,
-        bullet_gap=0.40 * inch,
+        gap=0.36 * inch,
     )
 
-    # 2x3 gallery
-    gallery_top = top - 0.05 * inch
-    gallery_bottom = bottom + 0.1 * inch
-    gallery_h = gallery_top - gallery_bottom
-    cols, rows = 3, 2
-    cell_pad = 0.12 * inch
-    cell_w = (gallery_w - cell_pad * (cols - 1)) / cols
-    cell_h = (gallery_h - cell_pad * (rows - 1)) / rows
+    # Bottom image strip — 3 supporting images
+    strip = slide.get("strip", [])
+    if strip:
+        margin = 0.5 * inch
+        pad = 0.15 * inch
+        cols = len(strip)
+        sw = (PAGE_W - 2 * margin - pad * (cols - 1)) / cols
+        sh = 2.2 * inch
+        sy = 0.65 * inch + 0.15 * inch
 
-    for i, label in enumerate(slide["gallery"]):
-        r = i // cols
-        col = i % cols
-        x = gallery_x + col * (cell_w + cell_pad)
-        y = gallery_top - (r + 1) * cell_h - r * cell_pad
-        draw_image_placeholder(c, x, y, cell_w, cell_h, label, index_label=f"IMG {i + 1}")
+        # strip heading
+        c.setFillColor(white)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(margin, sy + sh + 0.15 * inch, "IMPACT IN ACTION")
+        c.setFillColor(LIONS_GOLD)
+        c.rect(margin, sy + sh + 0.10 * inch, 1.3 * inch, 0.03 * inch,
+               fill=1, stroke=0)
 
+        for i, label in enumerate(strip):
+            x = margin + i * (sw + pad)
+            image_box(c, x, sy, sw, sh, label, index_label=f"IMG {i + 1}")
+
+
+# ---------- BUILD ----------
 
 def build() -> Path:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     c = canvas.Canvas(str(OUT), pagesize=(PAGE_W, PAGE_H))
     c.setTitle("A-19 District IT Chairperson — District 3232F1")
     c.setAuthor("Lions International · District 3232F1")
-    c.setSubject("A-19 Awards Submission · 6-page deck")
+    c.setSubject("A-19 Awards Submission · 6-page A4 portrait deck")
 
-    total = len(SLIDES)
-    for i, slide in enumerate(SLIDES, start=1):
-        # background
-        c.setFillColor(white)
-        c.rect(0, 0, PAGE_W, PAGE_H, fill=1, stroke=0)
-        # subtle side band on left for content pages only
-        if slide["kind"] != "cover":
-            c.setFillColor(LIGHT_GREY)
-            c.rect(0, 0.45 * inch, PAGE_W * 0.41, PAGE_H - 1.25 * inch, fill=1, stroke=0)
-
-        logos = COVER_LOGOS if slide["kind"] == "cover" else ["DIST 3232F1", "LCI"]
-        draw_header(c, logos)
+    total = len(PAGES)
+    for i, slide in enumerate(PAGES, start=1):
+        draw_background(c, slide.get("background_theme", "service"))
+        draw_header(c)
 
         if slide["kind"] == "cover":
-            draw_cover(c, slide)
+            render_cover(c, slide)
         else:
-            draw_content(c, slide)
+            render_content(c, slide)
 
         draw_footer(c, i, total)
         c.showPage()
