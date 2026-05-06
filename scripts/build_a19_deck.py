@@ -603,30 +603,8 @@ def draw_logo(c: canvas.Canvas, cx: float, cy: float, r: float, label: str) -> N
 
 
 def draw_header(c: canvas.Canvas) -> None:
-    y = PAGE_H - 0.85 * inch
-
-    # 1st logo — Lions International emblem anchored TOP-LEFT
-    lions_r = 0.5 * inch
-    lions_cx = 0.55 * inch + lions_r
-    draw_lions_emblem(c, lions_cx, y, lions_r)
-
-    # 2nd logo — Multiple District 3232 'Mission 1.5' badge
-    md_r = 0.5 * inch
-    md_cx = lions_cx + lions_r + 0.35 * inch + md_r
-    draw_md_emblem(c, md_cx, y, md_r)
-
-    # 4th logo — District 3232 F1 'Shine For Better Tomorrow' diya, TOP-RIGHT
-    dist_r = 0.55 * inch
-    dist_cx = PAGE_W - 0.55 * inch - dist_r
-    draw_district_emblem(c, dist_cx, y, dist_r)
-
-    # 3rd logo — middle slot between MD and District emblems
-    mid_label = HEADER_LOGOS[2]
-    mid_r = 0.35 * inch
-    left_edge = md_cx + md_r
-    right_edge = dist_cx - dist_r
-    mid_cx = (left_edge + right_edge) / 2
-    draw_logo(c, mid_cx, y, mid_r, mid_label)
+    # Logos intentionally omitted — header band is left blank for the user
+    # to drop in official artwork later.
 
     # Gold divider line
     c.setFillColor(LIONS_GOLD)
