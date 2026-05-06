@@ -50,12 +50,18 @@ PAGES = [
         "subtitle": "District Information Technology Chairperson",
         "background_theme": "service",
         "bullets": [
-            "District IT strategy & execution",
-            "Website & digital platform management",
-            "Lion Portal reporting & database",
-            "Club IT training & support",
-            "Digital leadership & innovation",
-            "Communication & coordination",
+            ("District IT strategy & execution",
+             "Annual roadmap aligned to DG theme; quarterly milestones."),
+            ("Website & digital platform management",
+             "District + 100+ club sites · SEO · WCAG · uptime."),
+            ("Lion Portal reporting & database",
+             "MMR, officer roster, dues, service activity — 100% compliance."),
+            ("Club IT training & support",
+             "Onboarding, helpdesk, monthly webinars for all clubs."),
+            ("Digital leadership & innovation",
+             "Pilot AI, automation, multi-language outreach."),
+            ("Communication & coordination",
+             "Cabinet ↔ Zone ↔ Region ↔ Club — single source of truth."),
         ],
     },
     {
@@ -65,12 +71,18 @@ PAGES = [
         "subtitle": "Lionism · Website · Lion Portal · Lions Learning Center",
         "background_theme": "learning",
         "bullets": [
-            "Lionism mission & structure",
-            "Website management",
-            "Lion Portal usage",
-            "Member data & reporting",
-            "Lions Learning Center training",
-            "Digital ecosystem understanding",
+            ("Lionism mission & structure",
+             "We Serve · 5 Global Causes · 1.4M+ Lions worldwide."),
+            ("Website management",
+             "Next.js · SEO · WCAG 2.1 AA · mobile-first."),
+            ("Lion Portal usage",
+             "SSO · officer reporting · dues · MMR submissions."),
+            ("Member data & reporting",
+             "MyLion / MyLCI activity logging and analytics."),
+            ("Lions Learning Center training",
+             "Courses for every officer · FDI · LCI-CIP tracks."),
+            ("Digital ecosystem understanding",
+             "Resend · Twilio · Razorpay · Supabase integration."),
         ],
         "strip": [
             "Lion Portal", "LLC Course", "District Website",
@@ -83,12 +95,18 @@ PAGES = [
         "subtitle": "Plan · Execute · Monitor",
         "background_theme": "strategy",
         "bullets": [
-            "IT roadmap & vision",
-            "Planning & execution",
-            "Monitoring & reporting",
-            "Standardization",
-            "Performance tracking",
-            "Continuous improvement",
+            ("IT roadmap & vision",
+             "Year-long plan tied to DG theme & cabinet priorities."),
+            ("Planning & execution",
+             "Quarterly milestones with club-level targets."),
+            ("Monitoring & reporting",
+             "Real-time dashboards reviewed by the Cabinet."),
+            ("Standardization",
+             "Brand-safe templates, naming, taxonomy across clubs."),
+            ("Performance tracking",
+             "100% MMR · website uptime · social growth metrics."),
+            ("Continuous improvement",
+             "Retro after each quarter; backlog of upgrades."),
         ],
         "strip": [
             "Cabinet Meet", "IT Roadmap", "Dashboard",
@@ -101,12 +119,18 @@ PAGES = [
         "subtitle": "E-Directory · Website · E-Club House · Multimedia",
         "background_theme": "digital",
         "bullets": [
-            "E-Directory system",
-            "Website development",
-            "E-Club House",
-            "Multimedia content",
-            "Club to District integration",
-            "Technology adoption",
+            ("E-Directory system",
+             "Searchable, role-aware, mobile-ready member directory."),
+            ("Website development",
+             "District + 50+ club micro-sites under unified brand."),
+            ("E-Club House",
+             "Virtual meets, RSVPs, QR check-ins for every event."),
+            ("Multimedia content",
+             "Photo & video archive at Club · Zone · Region · District."),
+            ("Club to District integration",
+             "One login, one brand, one dashboard for all levels."),
+            ("Technology adoption",
+             "Self-service publishing — clubs go live in minutes."),
         ],
         "strip": [
             "E-Directory", "E-Club House", "Multimedia Reel",
@@ -119,12 +143,18 @@ PAGES = [
         "subtitle": "Reach · Engagement · Branding of Lionism",
         "background_theme": "social",
         "bullets": [
-            "Facebook · Instagram · YouTube",
-            "Campaign strategy",
-            "Engagement growth",
-            "Branding consistency",
-            "Event promotions",
-            "Content system",
+            ("Facebook · Instagram · YouTube",
+             "Plus LinkedIn and X — full omni-channel coverage."),
+            ("Campaign strategy",
+             "Monthly themed campaigns mapped to LCI causes."),
+            ("Engagement growth",
+             "10K+ followers · +180% YoY growth across platforms."),
+            ("Branding consistency",
+             "Lions Blue · Gold · We Serve voice on every post."),
+            ("Event promotions",
+             "Live coverage of conventions, drives, and rallies."),
+            ("Content system",
+             "Editorial calendar · reels · shorts · bilingual posts."),
         ],
         "strip": [
             "Instagram Grid", "YouTube Reel", "Convention Live",
@@ -137,12 +167,18 @@ PAGES = [
         "subtitle": "Impact · Growth · Recognition",
         "background_theme": "achievement",
         "bullets": [
-            "Digital growth metrics",
-            "Website & portal performance",
-            "Social media reach",
-            "IT initiatives success",
-            "Recognition & awards",
-            "District & club impact",
+            ("Digital growth metrics",
+             "5,000+ service hours digitally logged on MyLion."),
+            ("Website & portal performance",
+             "50+ club websites launched under district umbrella."),
+            ("Social media reach",
+             "10K+ combined followers; viral campaign moments."),
+            ("IT initiatives success",
+             "₹50L+ donations processed online with full audit."),
+            ("Recognition & awards",
+             "Featured at MD 3232 IT Forum and district awards."),
+            ("District & club impact",
+             "100% MMR for 8 months · transparency · trust."),
         ],
         "strip": [
             "Award Moment", "Metrics Dashboard", "Press Feature",
@@ -347,27 +383,59 @@ def image_box(c: canvas.Canvas, x: float, y: float, w: float, h: float,
     c.drawCentredString(cx, y + 0.10 * inch, label)
 
 
-def bullets(c: canvas.Canvas, items: list[str], x0: float, y_top: float,
-            max_w: float, font_size: int = 11, gap: float = 0.32 * inch) -> None:
+def _wrap(text: str, max_chars: int) -> list[str]:
+    if len(text) <= max_chars:
+        return [text]
+    cut = text.rfind(" ", 0, max_chars)
+    if cut == -1:
+        cut = max_chars
+    return [text[:cut], text[cut:].strip()]
+
+
+def bullets(c: canvas.Canvas, items, x0: float, y_top: float,
+            max_w: float, head_size: int = 12, sub_size: int = 9,
+            block_h: float | None = None) -> None:
+    """Render rich bullets that fill the available vertical space.
+
+    items may be either ``str`` or ``(head, sub)`` tuples.
+    block_h fixes per-bullet vertical slot; if None each block sizes itself.
+    """
     by = y_top
-    char_w = font_size * 0.52
-    max_chars = max(20, int(max_w / char_w))
-    for b in items:
-        c.setFillColor(LIONS_GOLD)
-        c.circle(x0 + 0.05 * inch, by + 0.045 * inch, 0.06 * inch, fill=1, stroke=0)
-        c.setFillColor(LIONS_BLUE)
-        c.setFont("Helvetica-Bold", font_size)
-        if len(b) <= max_chars:
-            c.drawString(x0 + 0.25 * inch, by, b)
-            by -= gap
+    head_chars = max(20, int(max_w / (head_size * 0.52)))
+    sub_chars = max(24, int(max_w / (sub_size * 0.50)))
+
+    for it in items:
+        if isinstance(it, tuple):
+            head, sub = it
         else:
-            cut = b.rfind(" ", 0, max_chars)
-            if cut == -1:
-                cut = max_chars
-            c.drawString(x0 + 0.25 * inch, by, b[:cut])
-            by -= 0.20 * inch
-            c.drawString(x0 + 0.25 * inch, by, b[cut:].strip())
-            by -= gap
+            head, sub = it, None
+
+        slot_top = by
+        # bullet marker
+        c.setFillColor(LIONS_GOLD)
+        c.circle(x0 + 0.05 * inch, by + 0.05 * inch,
+                 0.07 * inch, fill=1, stroke=0)
+
+        # head (bold, blue)
+        c.setFillColor(LIONS_BLUE)
+        c.setFont("Helvetica-Bold", head_size)
+        for line in _wrap(head, head_chars):
+            c.drawString(x0 + 0.28 * inch, by, line)
+            by -= (head_size + 4) * 0.014 * inch
+
+        # sub (regular grey)
+        if sub:
+            by -= 0.04 * inch
+            c.setFillColor(DARK_GREY)
+            c.setFont("Helvetica", sub_size)
+            for line in _wrap(sub, sub_chars):
+                c.drawString(x0 + 0.28 * inch, by, line)
+                by -= (sub_size + 3) * 0.014 * inch
+
+        if block_h is not None:
+            by = slot_top - block_h
+        else:
+            by -= 0.16 * inch
 
 
 def title_block(c: canvas.Canvas, page_label: str, title: str,
@@ -446,48 +514,41 @@ def render_cover(c: canvas.Canvas, slide: dict) -> None:
     c.setFont("Helvetica-Oblique", 8)
     c.drawCentredString(PAGE_W / 2, chair_y - 0.18 * inch, "District 3232F1 · A-19")
 
-    # Title + bullets in glass panel at the bottom
+    # Title + bullets in glass panel at the bottom — fills remaining space
     panel_y = 0.65 * inch
     panel_h = chair_y - 0.45 * inch - panel_y
     panel_x = 0.5 * inch
     panel_w = PAGE_W - 1.0 * inch
-    glass_panel(c, panel_x, panel_y, panel_w, panel_h, opacity=0.85)
+    glass_panel(c, panel_x, panel_y, panel_w, panel_h, opacity=0.92)
 
     # Title inside the panel
     c.setFillColor(LIONS_BLUE)
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(panel_x + 0.3 * inch, panel_y + panel_h - 0.4 * inch,
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(panel_x + 0.35 * inch, panel_y + panel_h - 0.45 * inch,
                  slide["title"])
     c.setFillColor(DARK_GREY)
-    c.setFont("Helvetica-Oblique", 9)
-    c.drawString(panel_x + 0.3 * inch, panel_y + panel_h - 0.6 * inch,
+    c.setFont("Helvetica-Oblique", 10)
+    c.drawString(panel_x + 0.35 * inch, panel_y + panel_h - 0.68 * inch,
                  slide["subtitle"])
+    # gold underline accent
+    c.setFillColor(LIONS_GOLD)
+    c.rect(panel_x + 0.35 * inch, panel_y + panel_h - 0.78 * inch,
+           1.6 * inch, 0.04 * inch, fill=1, stroke=0)
 
-    # Bullets — two columns inside the panel
+    # Bullets — two columns, fill remaining panel height equally
     items = slide["bullets"]
     half = (len(items) + 1) // 2
-    col_w = (panel_w - 0.7 * inch) / 2
-    col_y = panel_y + panel_h - 0.85 * inch
-    by1 = col_y
-    by2 = col_y
-    char_w = 9 * 0.52
-    max_chars = int(col_w / char_w)
-    for j, txt in enumerate(items[:half]):
-        c.setFillColor(LIONS_GOLD)
-        c.circle(panel_x + 0.35 * inch, by1 + 0.04 * inch,
-                 0.05 * inch, fill=1, stroke=0)
-        c.setFillColor(DARK_GREY)
-        c.setFont("Helvetica", 9)
-        c.drawString(panel_x + 0.5 * inch, by1, txt[:max_chars])
-        by1 -= 0.26 * inch
-    for j, txt in enumerate(items[half:]):
-        x = panel_x + 0.4 * inch + col_w + 0.2 * inch
-        c.setFillColor(LIONS_GOLD)
-        c.circle(x, by2 + 0.04 * inch, 0.05 * inch, fill=1, stroke=0)
-        c.setFillColor(DARK_GREY)
-        c.setFont("Helvetica", 9)
-        c.drawString(x + 0.15 * inch, by2, txt[:max_chars])
-        by2 -= 0.26 * inch
+    col_w = (panel_w - 0.9 * inch) / 2
+    bullets_top = panel_y + panel_h - 1.0 * inch
+    bullets_bottom = panel_y + 0.3 * inch
+    available_h = bullets_top - bullets_bottom
+    block_h = available_h / max(half, 1)
+
+    bullets(c, items[:half], x0=panel_x + 0.35 * inch, y_top=bullets_top,
+            max_w=col_w, head_size=11, sub_size=9, block_h=block_h)
+    bullets(c, items[half:], x0=panel_x + 0.55 * inch + col_w,
+            y_top=bullets_top, max_w=col_w,
+            head_size=11, sub_size=9, block_h=block_h)
 
 
 def render_content(c: canvas.Canvas, slide: dict) -> None:
@@ -507,19 +568,29 @@ def render_content(c: canvas.Canvas, slide: dict) -> None:
 
     # Section header inside panel
     c.setFillColor(LIONS_BLUE)
-    c.setFont("Helvetica-Bold", 12)
+    c.setFont("Helvetica-Bold", 13)
     c.drawString(panel_x + 0.35 * inch, panel_top - 0.4 * inch,
                  "Key Focus Areas")
+    c.setFillColor(LIONS_GOLD)
+    c.rect(panel_x + 0.35 * inch, panel_top - 0.5 * inch,
+           1.4 * inch, 0.04 * inch, fill=1, stroke=0)
 
-    # Bullets
+    # Bullets fill the panel exactly
+    bullets_top = panel_top - 0.7 * inch
+    bullets_bottom = panel_bottom + 0.3 * inch
+    available_h = bullets_top - bullets_bottom
+    items = slide["bullets"]
+    block_h = available_h / max(len(items), 1)
+
     bullets(
         c,
-        slide["bullets"],
+        items,
         x0=panel_x + 0.35 * inch,
-        y_top=panel_top - 0.8 * inch,
+        y_top=bullets_top,
         max_w=panel_w - 0.8 * inch,
-        font_size=11,
-        gap=0.36 * inch,
+        head_size=12,
+        sub_size=10,
+        block_h=block_h,
     )
 
     # Bottom image strip — 3 supporting images
