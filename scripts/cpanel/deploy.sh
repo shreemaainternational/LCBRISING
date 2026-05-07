@@ -48,13 +48,38 @@ fi
 echo "[3/5] Building Next.js app..."
 npm run build
 
-# Static assets exposed by cPanel must live under public_html. We symlink
-# Next's static output and the /public folder so cPanel/Apache can serve them
-# directly without copying gigabytes on every deploy.
+# Static assets exposed by cPanel must live under public_html. Sync Next's
+# static output, then also wipe any legacy SPA build that may still be
+# squatting in public_html from a previous deploy (e.g. the old Vite build's
+# `index.html` + `assets/` that hard-coded demo credentials on the login page).
 echo "[4/5] Syncing static assets to ${PUBLIC_PATH}..."
 mkdir -p "${PUBLIC_PATH}/_next"
-rsync -a --delete "${PROJECT_PATH}/.next/static/"  "${PUBLIC_PATH}/_next/static/"
-rsync -a --delete --exclude '_next' "${PROJECT_PATH}/public/" "${PUBLIC_PATH}/"
+rsync -a --delete "${PROJECT_PATH}/.next/static/" "${PUBLIC_PATH}/_next/static/"
+
+if [ -d "${PROJECT_PATH}/public" ]; then
+  rsync -a \
+    --exclude '_next' \
+    --exclude 'deploy.php' \
+    --exclude '.htaccess' \
+    "${PROJECT_PATH}/public/" "${PUBLIC_PATH}/"
+fi
+
+# Purge known legacy SPA leftovers so Apache stops serving the old login page
+# (which displayed hard-coded demo credentials) ahead of the Next.js app.
+LEGACY_ARTIFACTS=(
+  "${PUBLIC_PATH}/index.html"
+  "${PUBLIC_PATH}/assets"
+  "${PUBLIC_PATH}/app"
+  "${PUBLIC_PATH}/dist"
+  "${PUBLIC_PATH}/static"
+  "${PUBLIC_PATH}/vite.svg"
+)
+for path in "${LEGACY_ARTIFACTS[@]}"; do
+  if [ -e "$path" ]; then
+    echo "  removing legacy artifact: $path"
+    rm -rf -- "$path"
+  fi
+done
 
 # Tell cPanel's Phusion Passenger / Node App Manager to reload the app.
 echo "[5/5] Restarting Node application..."
