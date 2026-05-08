@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ['pdfkit'],
+  async redirects() {
+    return [
+      { source: '/admin/dashboard', destination: '/admin', permanent: true },
+      { source: '/admin/dashboard/:path*', destination: '/admin/:path*', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
