@@ -3,6 +3,7 @@ import { sendEmail, emailTemplates } from '@/lib/email';
 import { sendWhatsApp, whatsappTemplates } from '@/lib/whatsapp';
 import { renderDonationReceipt } from '@/lib/pdf';
 import { formatDate } from '@/lib/utils';
+import { env } from '@/lib/env';
 import { generateContent } from '@/lib/ai/openai';
 import { createAutofillJob, getAutofillJob, exportDesign, getExportJob } from '@/lib/canva/client';
 import { dispatchToPlatform, type Platform } from '@/lib/social/dispatcher';
@@ -111,6 +112,59 @@ const handlers: Record<string, JobHandler> = {
         }
       }
     }
+  },
+
+  send_invoice_reminder: async (payload) => {
+    const invoiceId = String(payload.invoice_id);
+    const tier = Number(payload.tier ?? 0);
+    const supabase = createAdminClient();
+    const { data: inv } = await supabase
+      .from('invoices')
+      .select('id, invoice_no, customer_name, customer_email, customer_phone, amount, status')
+      .eq('id', invoiceId)
+      .maybeSingle();
+    if (!inv) return;
+    if (inv.status === 'paid' || inv.status === 'cancelled') return;
+
+    const payUrl = `${env.NEXT_PUBLIC_SITE_URL}/pay/${inv.id}`;
+
+    if (inv.customer_email) {
+      try {
+        await sendEmail({
+          to: inv.customer_email,
+          subject: `Reminder: invoice ${inv.invoice_no} – ₹${inv.amount}`,
+          html: `
+            <p>Dear ${inv.customer_name},</p>
+            <p>This is a friendly reminder that invoice <strong>${inv.invoice_no}</strong>
+            for <strong>₹${inv.amount}</strong> is awaiting payment.</p>
+            <p><a href="${payUrl}" style="display:inline-block;background:#1e3a8a;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none">Pay now</a></p>
+            <p>Thank you,<br/>Lions Club of Baroda Rising Star</p>
+          `,
+        });
+        await logComm(inv.customer_email, 'email', 'invoice_reminder', `tier=${tier}`);
+      } catch (err) {
+        console.error('invoice reminder email failed', err);
+      }
+    }
+
+    if (inv.customer_phone) {
+      try {
+        await sendWhatsApp(
+          inv.customer_phone,
+          whatsappTemplates.paymentRequest(inv.customer_name, Number(inv.amount), inv.invoice_no, payUrl),
+        );
+        await logComm(inv.customer_phone, 'whatsapp', 'invoice_reminder', `tier=${tier}`);
+      } catch (err) {
+        console.error('invoice reminder whatsapp failed', err);
+      }
+    }
+
+    await supabase.from('payment_audit_logs').insert({
+      invoice_id: inv.id,
+      actor_kind: 'system',
+      action: 'reminder_sent',
+      detail: { tier, payUrl },
+    });
   },
 
   // ==================================================================
@@ -423,4 +477,42 @@ export async function scheduleDuesReminders() {
     await enqueueJob('send_dues_reminder', { dues_id: d.id });
   }
   return dues?.length ?? 0;
+}
+
+/**
+ * Queue payment reminders for unpaid invoices.
+ * Sends at 1 / 3 / 7 days after creation, then weekly, then stops at 30 days.
+ */
+export async function schedulePaymentReminders() {
+  const supabase = createAdminClient();
+  const now = Date.now();
+  const cutoff30 = new Date(now - 30 * 86_400_000).toISOString();
+
+  const { data: invoices } = await supabase
+    .from('invoices')
+    .select('id, created_at, expires_at')
+    .in('status', ['sent', 'partial'])
+    .gte('created_at', cutoff30)
+    .is('deleted_at', null);
+
+  let queued = 0;
+  for (const inv of invoices ?? []) {
+    if (inv.expires_at && new Date(inv.expires_at).getTime() < now) continue;
+    const ageDays = Math.floor((now - new Date(inv.created_at).getTime()) / 86_400_000);
+    const tier = ageDays >= 21 ? 21 : ageDays >= 14 ? 14 : ageDays >= 7 ? 7 : ageDays >= 3 ? 3 : ageDays >= 1 ? 1 : null;
+    if (tier === null) continue;
+
+    const { data: existing } = await supabase
+      .from('payment_audit_logs')
+      .select('id')
+      .eq('invoice_id', inv.id)
+      .eq('action', 'reminder_sent')
+      .contains('detail', { tier })
+      .maybeSingle();
+    if (existing) continue;
+
+    await enqueueJob('send_invoice_reminder', { invoice_id: inv.id, tier });
+    queued += 1;
+  }
+  return queued;
 }
