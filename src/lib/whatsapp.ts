@@ -27,4 +27,29 @@ export const whatsappTemplates = {
   eventReminder(name: string, eventTitle: string, when: string, location: string) {
     return `🦁 Lions Club Baroda Rising Star\n\nHi ${name}, reminder for "${eventTitle}" on ${when} at ${location}. See you there!`;
   },
+  paymentRequest(name: string, amount: number, invoiceNo: string, payUrl: string) {
+    return [
+      '🦁 Lions Club Baroda Rising Star',
+      '',
+      `Dear ${name},`,
+      'Please complete your payment using the link below.',
+      '',
+      `Amount: ₹${amount}`,
+      `Invoice: ${invoiceNo}`,
+      '',
+      `Pay now: ${payUrl}`,
+      '',
+      'Scan the QR on the page using PhonePe, GPay, Paytm or any UPI app.',
+      'Thank you.',
+    ].join('\n');
+  },
+  paymentReceived(name: string, amount: number, invoiceNo: string, receiptNo: string) {
+    return [
+      '🦁 Lions Club Baroda Rising Star',
+      '',
+      `Thank you ${name}.`,
+      `Your payment of ₹${amount} for invoice ${invoiceNo} is confirmed.`,
+      `Receipt: ${receiptNo}`,
+    ].join('\n');
+  },
 };
