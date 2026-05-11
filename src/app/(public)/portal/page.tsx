@@ -42,7 +42,10 @@ export default async function PortalHomePage() {
             <h1 className="text-2xl font-bold">My invoices</h1>
             <p className="text-sm opacity-80">Signed in as {masked}</p>
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-4 text-xs">
+            <Link href="/portal/preferences" className="text-white/80 hover:text-white underline">Preferences</Link>
+            <LogoutButton />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

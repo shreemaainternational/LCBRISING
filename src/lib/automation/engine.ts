@@ -4,6 +4,7 @@ import { sendWhatsApp, whatsappTemplates } from '@/lib/whatsapp';
 import { renderDonationReceipt } from '@/lib/pdf';
 import { formatDate } from '@/lib/utils';
 import { env } from '@/lib/env';
+import { getPrefsForPhone } from '@/lib/customer-prefs';
 import { generateContent } from '@/lib/ai/openai';
 import { createAutofillJob, getAutofillJob, exportDesign, getExportJob } from '@/lib/canva/client';
 import { dispatchToPlatform, type Platform } from '@/lib/social/dispatcher';
@@ -126,9 +127,12 @@ const handlers: Record<string, JobHandler> = {
     if (!inv) return;
     if (inv.status === 'paid' || inv.status === 'cancelled') return;
 
+    const prefs = await getPrefsForPhone(inv.customer_phone);
+    if (!prefs.reminders_enabled) return;
+
     const payUrl = `${env.NEXT_PUBLIC_SITE_URL}/pay/${inv.id}`;
 
-    if (inv.customer_email) {
+    if (inv.customer_email && prefs.email_enabled) {
       try {
         await sendEmail({
           to: inv.customer_email,
@@ -147,7 +151,7 @@ const handlers: Record<string, JobHandler> = {
       }
     }
 
-    if (inv.customer_phone) {
+    if (inv.customer_phone && prefs.whatsapp_enabled) {
       try {
         await sendWhatsApp(
           inv.customer_phone,
