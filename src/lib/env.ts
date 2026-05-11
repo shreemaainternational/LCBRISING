@@ -65,16 +65,18 @@ const schema = z.object({
   NEXT_PUBLIC_BRAND_LOGO_URL: z.string().optional(),
 
   // --- UPI / PhonePe payment collection ---
-  UPI_VPA: z.string().optional(),
-  UPI_PAYEE_NAME: z.string().optional(),
+  // VPAs are not secrets — defaulting here so the payment module works
+  // out of the box. Override via env to change the merchant account.
+  UPI_VPA: z.string().default('9712299333@ybl'),
+  UPI_PAYEE_NAME: z.string().default('Lions Club of Baroda Rising Star'),
   UPI_MERCHANT_CODE: z.string().optional(),
   PHONEPE_MERCHANT_ID: z.string().optional(),
   PHONEPE_SALT_KEY: z.string().optional(),
   PHONEPE_SALT_INDEX: z.string().optional(),
   PHONEPE_WEBHOOK_USERNAME: z.string().optional(),
   PHONEPE_WEBHOOK_PASSWORD: z.string().optional(),
-  NEXT_PUBLIC_UPI_VPA: z.string().optional(),
-  NEXT_PUBLIC_UPI_PAYEE_NAME: z.string().optional(),
+  NEXT_PUBLIC_UPI_VPA: z.string().default('9712299333@ybl'),
+  NEXT_PUBLIC_UPI_PAYEE_NAME: z.string().default('Lions Club of Baroda Rising Star'),
   NEXT_PUBLIC_STATIC_QR_URL: z.string().url().optional(),
 });
 
