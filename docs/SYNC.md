@@ -23,11 +23,13 @@ data into the local CRM database.
 
 ## Built-in adapters
 
-| Source     | Entity   | Notes                                                  |
-|------------|----------|--------------------------------------------------------|
-| `csv`      | `members`| Columns: `email,name,phone,whatsapp,lions_member_id,club_id,district_id,lions_role,birthday`. Idempotent on `email`. |
-| `csv`      | `clubs`  | Columns: `name,club_number,district_id,zone_id,region_id,district,city,state,country,source_id`. Idempotent on `club_number`/`source_id`/`name`. |
-| `rest_api` | `members`| Paginated JSON via `endpoint` + `bearer_token` in payload. Idempotent on `lions_member_id`. |
+| Source     | Entity      | Notes                                                  |
+|------------|-------------|--------------------------------------------------------|
+| `csv`      | `members`   | Columns: `email,name,phone,whatsapp,lions_member_id,club_id,district_id,lions_role,birthday`. Idempotent on `email`. |
+| `csv`      | `clubs`     | Columns: `name,club_number,district_id,zone_id,region_id,district,city,state,country,source_id`. Idempotent on `club_number` / `source_id` / `name`. |
+| `csv`      | `officers`  | Columns: `member_email\|member_id,role,scope_kind,scope_id,term_start,term_end,status,source_id`. Idempotent on `source_id` or `(member_id, scope_kind, role, term_start)`. |
+| `csv`      | `attendance`| Columns: `member_email\|member_id,event_id,club_id,occurred_at,status,check_in_method,notes`. Idempotent on `(member_id, event_id)`. |
+| `rest_api` | `members`   | Paginated JSON via `endpoint` + `bearer_token` in payload. Idempotent on `lions_member_id`. |
 
 ## Adding an adapter
 

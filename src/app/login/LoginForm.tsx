@@ -1,0 +1,87 @@
+'use client';
+
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Input, Label } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { createClient } from '@/lib/supabase/client';
+
+export default function LoginForm() {
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const redirectTo = params.get('redirectTo') ?? '/admin';
+
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const supabase = createClient();
+    try {
+      if (mode === 'signin') {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { name } },
+        });
+        if (error) throw error;
+      }
+      router.replace(redirectTo);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <form onSubmit={submit} className="grid gap-3">
+        {mode === 'signup' && (
+          <div>
+            <Label>Full name</Label>
+            <Input required value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+        )}
+        <div>
+          <Label>Email</Label>
+          <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <div>
+          <Label>Password</Label>
+          <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Sign up'}
+        </Button>
+      </form>
+
+      <button
+        type="button"
+        onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+        className="text-sm text-navy-700 mt-4 w-full text-center hover:underline"
+      >
+        {mode === 'signin' ? 'Need an account? Sign up' : 'Have an account? Sign in'}
+      </button>
+    </>
+  );
+}
