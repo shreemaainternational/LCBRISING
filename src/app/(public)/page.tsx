@@ -54,7 +54,7 @@ export default async function HomePage() {
         <div className="container-page py-20 md:py-28 grid md:grid-cols-2 gap-10 items-center">
           <div>
             <span className="inline-block bg-brand-500 text-navy-900 px-3 py-1 rounded-full text-xs font-bold mb-4">
-              DISTRICT 323-E · INDIA
+              DISTRICT 3232-F1 · INDIA
             </span>
             <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
               We Serve.<br />
