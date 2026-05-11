@@ -5,6 +5,7 @@ import { formatINR, formatDate } from '@/lib/utils';
 import { getPaymentStats } from '@/lib/payment-stats';
 import { ReviewControls } from './ReviewControls';
 import { NewInvoiceCard } from './NewInvoiceCard';
+import { BulkInvoiceCard } from './BulkInvoiceCard';
 import { SendInvoiceButton } from './SendInvoiceButton';
 import { CollectionsChart } from './PaymentCharts';
 
@@ -92,7 +93,10 @@ export default async function AdminPaymentsPage() {
         </Card>
       )}
 
-      <NewInvoiceCard />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <NewInvoiceCard />
+        <BulkInvoiceCard />
+      </div>
 
       {pendingProofs.length > 0 && (
         <Card className="mt-6">
