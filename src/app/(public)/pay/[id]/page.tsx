@@ -48,6 +48,7 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
   const expired = isExpired(inv) || inv.status === 'expired';
   const paid = inv.status === 'paid';
   const cancelled = inv.status === 'cancelled';
+  const refunded = (inv.status as string) === 'refunded';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a0f3e] via-[#3b1a78] to-[#5b21b6] py-8 px-4">
@@ -70,6 +71,8 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
 
             {paid ? (
               <SuccessPanel invoiceNo={inv.invoice_no} amount={Number(inv.amount)} />
+            ) : refunded ? (
+              <ErrorPanel title="Refunded" message="The payment for this invoice has been refunded. Please check your account or contact us if you have questions." />
             ) : cancelled ? (
               <ErrorPanel title="Invoice cancelled" message="This invoice has been cancelled. Contact us for a new one." />
             ) : expired ? (

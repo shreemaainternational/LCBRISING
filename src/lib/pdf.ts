@@ -249,6 +249,53 @@ export async function renderPaymentReceiptPdf(data: PaymentReceiptData): Promise
   });
 }
 
+export interface RefundReceiptData {
+  refundId: string;
+  invoiceNo: string;
+  customerName: string;
+  paymentAmount: number;
+  refundAmount: number;
+  reason?: string | null;
+  utr?: string | null;
+  processedAt: string | Date;
+}
+
+export async function renderRefundReceiptPdf(data: RefundReceiptData): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const chunks: Buffer[] = [];
+    doc.on('data', (c) => chunks.push(c as Buffer));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    drawHeader(doc, 'Refund Receipt');
+
+    const left = 60;
+    let y = doc.y + 10;
+    const rows: [string, string][] = [
+      ['Refund ID', data.refundId],
+      ['Invoice', data.invoiceNo],
+      ['Customer', data.customerName],
+      ['Original payment', formatINR(data.paymentAmount)],
+      ['Refunded', formatINR(data.refundAmount)],
+      ['Processed on', formatDate(data.processedAt, { hour: '2-digit', minute: '2-digit' })],
+      ...(data.utr ? [['Refund UTR', data.utr]] as [string, string][] : []),
+      ...(data.reason ? [['Reason', data.reason]] as [string, string][] : []),
+    ];
+    doc.fontSize(11);
+    for (const [label, value] of rows) {
+      doc.fillColor('#666').text(label, left, y, { width: 130 });
+      doc.fillColor('#111').text(String(value), left + 140, y);
+      y += 22;
+    }
+    y += 16;
+    doc.fontSize(10).fillColor('#b45309')
+      .text('Refund processed. The amount will reflect in the original payment method.', left, y);
+
+    doc.end();
+  });
+}
+
 function drawHeader(doc: PDFKit.PDFDocument, title: string) {
   doc
     .fontSize(20)

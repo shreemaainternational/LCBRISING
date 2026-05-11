@@ -7,6 +7,7 @@ import { ReviewControls } from './ReviewControls';
 import { NewInvoiceCard } from './NewInvoiceCard';
 import { BulkInvoiceCard } from './BulkInvoiceCard';
 import { SendInvoiceButton } from './SendInvoiceButton';
+import { RefundButton } from './RefundButton';
 import { CollectionsChart } from './PaymentCharts';
 
 export const dynamic = 'force-dynamic';
@@ -40,18 +41,50 @@ export default async function AdminPaymentsPage() {
   await requireAdmin();
   const supabase = createAdminClient();
 
-  const [{ data: invoices }, stats] = await Promise.all([
+  const [{ data: invoices }, { data: capturedPayments }, { data: refunds }, stats] = await Promise.all([
     supabase
       .from('invoices')
       .select('id, invoice_no, customer_name, customer_email, customer_phone, amount, status, created_at, payment_proofs(id, status, method, utr, upi_vpa, amount_claimed, screenshot_url, notes, rejection_reason, created_at)')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(200),
+    supabase
+      .from('payments')
+      .select('id, amount, receipt_no, status, method, utr, created_at, invoices(invoice_no, customer_name)')
+      .in('status', ['captured', 'authorized'])
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('refunds')
+      .select('id, amount, status, reason, utr, created_at, processed_at, payment_id, invoices(invoice_no, customer_name)')
+      .order('created_at', { ascending: false })
+      .limit(50),
     getPaymentStats(),
   ]);
 
   const rows = (invoices ?? []) as InvoiceRow[];
   const pendingProofs = rows.flatMap((r) => r.payment_proofs.filter((p) => p.status === 'pending'));
+  const captured = (capturedPayments ?? []) as unknown as Array<{
+    id: string;
+    amount: number;
+    receipt_no: string | null;
+    status: string;
+    method: string | null;
+    utr: string | null;
+    created_at: string;
+    invoices: { invoice_no: string; customer_name: string } | null;
+  }>;
+  const refundRows = (refunds ?? []) as unknown as Array<{
+    id: string;
+    amount: number;
+    status: string;
+    reason: string | null;
+    utr: string | null;
+    created_at: string;
+    processed_at: string | null;
+    payment_id: string;
+    invoices: { invoice_no: string; customer_name: string } | null;
+  }>;
 
   return (
     <div>
@@ -63,6 +96,12 @@ export default async function AdminPaymentsPage() {
             <strong>{pendingProofs.length}</strong> proof(s) awaiting review
           </p>
         </div>
+        <a
+          href="/api/payments/reconciliation"
+          className="h-9 px-4 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-50 inline-flex items-center"
+        >
+          Export CSV
+        </a>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -137,6 +176,85 @@ export default async function AdminPaymentsPage() {
         </Card>
       )}
 
+      {captured.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader><CardTitle>Captured payments ({captured.length})</CardTitle></CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left p-3">Receipt</th>
+                  <th className="text-left p-3">Invoice</th>
+                  <th className="text-left p-3">Customer</th>
+                  <th className="text-right p-3">Amount</th>
+                  <th className="text-left p-3">Method</th>
+                  <th className="text-left p-3">UTR</th>
+                  <th className="text-left p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {captured.map((p) => (
+                  <tr key={p.id} className="border-t">
+                    <td className="p-3 font-mono text-xs">{p.receipt_no ?? '—'}</td>
+                    <td className="p-3 font-mono text-xs">{p.invoices?.invoice_no ?? '—'}</td>
+                    <td className="p-3">{p.invoices?.customer_name ?? '—'}</td>
+                    <td className="p-3 text-right">{formatINR(Number(p.amount))}</td>
+                    <td className="p-3 text-xs">{p.method ?? '—'}</td>
+                    <td className="p-3 font-mono text-xs">{p.utr ?? '—'}</td>
+                    <td className="p-3 whitespace-nowrap">
+                      <div className="flex items-center gap-3 text-xs">
+                        <a href={`/api/payments/${p.id}/receipt`} target="_blank" rel="noreferrer" className="text-purple-700 hover:underline">Receipt</a>
+                        <RefundButton paymentId={p.id} amount={Number(p.amount)} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+
+      {refundRows.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader><CardTitle>Refunds ({refundRows.length})</CardTitle></CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left p-3">Invoice</th>
+                  <th className="text-left p-3">Customer</th>
+                  <th className="text-right p-3">Refunded</th>
+                  <th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">UTR</th>
+                  <th className="text-left p-3">Reason</th>
+                  <th className="text-left p-3">When</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {refundRows.map((r) => (
+                  <tr key={r.id} className="border-t">
+                    <td className="p-3 font-mono text-xs">{r.invoices?.invoice_no ?? '—'}</td>
+                    <td className="p-3">{r.invoices?.customer_name ?? '—'}</td>
+                    <td className="p-3 text-right">{formatINR(Number(r.amount))}</td>
+                    <td className="p-3"><StatusBadge status={r.status} /></td>
+                    <td className="p-3 font-mono text-xs">{r.utr ?? '—'}</td>
+                    <td className="p-3 text-xs">{r.reason ?? '—'}</td>
+                    <td className="p-3 text-gray-500">{formatDate(r.processed_at ?? r.created_at)}</td>
+                    <td className="p-3 text-xs">
+                      {r.status === 'processed' && (
+                        <a href={`/api/refunds/${r.id}/receipt`} target="_blank" rel="noreferrer" className="text-purple-700 hover:underline">PDF</a>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="mt-6">
         <CardHeader><CardTitle>All invoices</CardTitle></CardHeader>
         <CardContent className="p-0 overflow-x-auto">
@@ -204,6 +322,10 @@ function StatusBadge({ status }: { status: string }) {
     expired: 'bg-amber-100 text-amber-800',
     cancelled: 'bg-red-100 text-red-700',
     partial: 'bg-yellow-100 text-yellow-800',
+    refunded: 'bg-orange-100 text-orange-800',
+    processed: 'bg-green-100 text-green-800',
+    requested: 'bg-amber-100 text-amber-800',
+    failed: 'bg-red-100 text-red-700',
   };
   return (
     <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[status] ?? 'bg-gray-100 text-gray-700'}`}>

@@ -100,6 +100,14 @@ export const proofReviewSchema = z.object({
   rejection_reason: z.string().max(500).optional(),
 });
 
+export const refundCreateSchema = z.object({
+  amount: z.number().positive().optional(),
+  reason: z.string().max(500).optional(),
+  utr: z.string().max(40).optional(),
+  notes: z.string().max(500).optional(),
+  status: z.enum(['requested', 'processed']).default('processed'),
+});
+
 // =====================================================================
 // Social + Creative
 // =====================================================================
