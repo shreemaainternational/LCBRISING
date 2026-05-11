@@ -17,12 +17,20 @@ type Props = {
   paytmIntent: string;
   description: string | null;
   invoicePdfUrl: string;
+  phonepePgAvailable: boolean;
+};
+
+type OcrInfo = {
+  utr: string | null;
+  amount: number | null;
+  confidence: 'high' | 'medium' | 'low';
+  app: string | null;
 };
 
 type ProofState =
   | { kind: 'idle' }
   | { kind: 'submitting' }
-  | { kind: 'submitted'; proofId: string }
+  | { kind: 'submitted'; proofId: string; ocr: OcrInfo | null }
   | { kind: 'error'; message: string };
 
 export function PaymentClient(props: Props) {
@@ -85,15 +93,41 @@ export function PaymentClient(props: Props) {
     form.set('invoice_id', props.invoiceId);
     try {
       const res = await fetch('/api/payments/proof', { method: 'POST', body: form });
-      const json = (await res.json()) as { ok?: boolean; proof_id?: string; error?: string };
+      const json = (await res.json()) as {
+        ok?: boolean;
+        proof_id?: string;
+        ocr?: OcrInfo | null;
+        error?: string;
+      };
       if (!res.ok || !json.ok || !json.proof_id) {
         setProof({ kind: 'error', message: json.error ?? 'Submission failed' });
         return;
       }
-      setProof({ kind: 'submitted', proofId: json.proof_id });
+      setProof({ kind: 'submitted', proofId: json.proof_id, ocr: json.ocr ?? null });
       setPollingStatus('pending');
     } catch {
       setProof({ kind: 'error', message: 'Network error' });
+    }
+  }
+
+  const [phonepeBusy, setPhonepeBusy] = useState(false);
+  const [phonepeError, setPhonepeError] = useState<string | null>(null);
+
+  async function payWithPhonePePG() {
+    setPhonepeBusy(true);
+    setPhonepeError(null);
+    try {
+      const res = await fetch(`/api/invoices/${props.invoiceId}/phonepe`, { method: 'POST' });
+      const json = (await res.json()) as { redirect_url?: string; error?: string };
+      if (!res.ok || !json.redirect_url) {
+        setPhonepeError(json.error ?? 'failed to start PhonePe');
+        return;
+      }
+      window.location.href = json.redirect_url;
+    } catch {
+      setPhonepeError('network error');
+    } finally {
+      setPhonepeBusy(false);
     }
   }
 
@@ -104,6 +138,24 @@ export function PaymentClient(props: Props) {
           <span className="inline-block px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-medium">
             Expires in {formatRemaining(remaining)}
           </span>
+        </div>
+      )}
+
+      {props.phonepePgAvailable && (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={payWithPhonePePG}
+            disabled={phonepeBusy}
+            className="w-full h-12 rounded-lg bg-[#5f259f] text-white font-semibold text-sm disabled:opacity-60 hover:bg-[#4c1d87]"
+          >
+            {phonepeBusy ? 'Opening PhonePe…' : 'Pay with PhonePe (auto-verify)'}
+          </button>
+          {phonepeError && <p className="text-xs text-red-600 text-center">{phonepeError}</p>}
+          <p className="text-[11px] text-gray-500 text-center">
+            Recommended — payment confirms automatically, no manual proof needed.
+          </p>
+          <div className="text-center text-xs text-gray-400">— or scan the QR below —</div>
         </div>
       )}
 
@@ -184,12 +236,23 @@ export function PaymentClient(props: Props) {
       <div className="border-t pt-4 mt-4">
         <h3 className="text-sm font-semibold text-gray-900 mb-2">After paying, share your proof</h3>
         {proof.kind === 'submitted' ? (
-          <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-900">
-            {pollingStatus === 'paid'
-              ? 'Verified! Reloading…'
-              : pollingStatus === 'rejected'
-              ? 'Your proof was rejected. Please re-check the UTR / screenshot and submit again.'
-              : 'Submitted — our team will verify within minutes. This page will update automatically.'}
+          <div className="space-y-2">
+            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-900">
+              {pollingStatus === 'paid'
+                ? 'Verified! Reloading…'
+                : pollingStatus === 'rejected'
+                ? 'Your proof was rejected. Please re-check the UTR / screenshot and submit again.'
+                : 'Submitted — our team will verify within minutes. This page will update automatically.'}
+            </div>
+            {proof.ocr && (proof.ocr.utr || proof.ocr.amount) && (
+              <div className="rounded-lg bg-purple-50 border border-purple-200 p-3 text-xs text-purple-900">
+                <div className="font-medium mb-1">Auto-extracted from screenshot:</div>
+                {proof.ocr.app && <div>App: {proof.ocr.app}</div>}
+                {proof.ocr.utr && <div>UTR: <span className="font-mono">{proof.ocr.utr}</span></div>}
+                {proof.ocr.amount && <div>Amount: ₹{proof.ocr.amount.toLocaleString('en-IN')}</div>}
+                <div className="opacity-60 mt-1">Confidence: {proof.ocr.confidence}</div>
+              </div>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-2">
@@ -199,7 +262,9 @@ export function PaymentClient(props: Props) {
               placeholder="e.g. 432198765432"
               className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
             />
-            <label className="block text-xs text-gray-600">Or upload a screenshot (PNG/JPG/PDF, max 5MB)</label>
+            <label className="block text-xs text-gray-600">
+              Or upload a screenshot (PNG/JPG/PDF, max 5MB) — we&apos;ll auto-detect the UTR
+            </label>
             <input
               ref={fileRef}
               name="screenshot"

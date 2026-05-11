@@ -4,6 +4,7 @@ import { proofSubmitSchema } from '@/lib/validation/schemas';
 import { createAdminClient } from '@/lib/supabase/server';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { getInvoiceById, isExpired } from '@/lib/invoices';
+import { extractUpiProof, type ProofOcrResult } from '@/lib/ai/ocr';
 
 export const runtime = 'nodejs';
 
@@ -33,6 +34,7 @@ async function handleMultipart(req: Request) {
   let screenshotUrl: string | null = null;
   let screenshotHash: string | null = null;
   let method: 'screenshot' | 'utr' = utr && !file ? 'utr' : 'screenshot';
+  let ocr: ProofOcrResult | null = null;
 
   if (file && file instanceof File) {
     if (file.size === 0) {
@@ -67,15 +69,27 @@ async function handleMultipart(req: Request) {
     }
     screenshotUrl = path;
     method = 'screenshot';
+
+    if (file.type.startsWith('image/')) {
+      try {
+        ocr = await extractUpiProof(bytes, file.type);
+      } catch (err) {
+        console.error('ocr failed', err);
+      }
+    }
   } else if (!utr) {
     return NextResponse.json({ error: 'provide a screenshot or UTR' }, { status: 400 });
   }
 
-  if (utr) {
+  const finalUtr = utr ?? ocr?.utr ?? null;
+  const finalVpa = upiVpa ?? ocr?.payer_vpa ?? null;
+  const finalAmount = amountClaimed ?? ocr?.amount ?? null;
+
+  if (finalUtr) {
     const { data: utrDup } = await supabase
       .from('payment_proofs')
       .select('id')
-      .eq('utr', utr)
+      .eq('utr', finalUtr)
       .maybeSingle();
     if (utrDup) {
       return NextResponse.json({ error: 'this UTR has already been submitted' }, { status: 409 });
@@ -87,9 +101,9 @@ async function handleMultipart(req: Request) {
     .insert({
       invoice_id: inv.id,
       method,
-      utr: utr ?? null,
-      upi_vpa: upiVpa ?? null,
-      amount_claimed: amountClaimed ?? null,
+      utr: finalUtr,
+      upi_vpa: finalVpa,
+      amount_claimed: finalAmount,
       screenshot_url: screenshotUrl,
       screenshot_hash: screenshotHash,
       notes: notes ?? null,
@@ -106,12 +120,24 @@ async function handleMultipart(req: Request) {
     invoice_id: inv.id,
     actor_kind: 'customer',
     action: 'proof_submitted',
-    detail: { proof_id: proof.id, method, utr: utr ?? null },
+    detail: {
+      proof_id: proof.id,
+      method,
+      utr: finalUtr,
+      ocr: ocr ? { confidence: ocr.confidence, amount: ocr.amount, app: ocr.app } : null,
+    },
     ip: clientIp(req),
     user_agent: req.headers.get('user-agent') ?? null,
   });
 
-  return NextResponse.json({ ok: true, proof_id: proof.id, status: 'pending' });
+  return NextResponse.json({
+    ok: true,
+    proof_id: proof.id,
+    status: 'pending',
+    ocr: ocr
+      ? { utr: ocr.utr, amount: ocr.amount, confidence: ocr.confidence, app: ocr.app }
+      : null,
+  });
 }
 
 async function handleJson(req: Request) {
