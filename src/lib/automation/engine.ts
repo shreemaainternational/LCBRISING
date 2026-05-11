@@ -480,6 +480,62 @@ export async function scheduleDuesReminders() {
 }
 
 /**
+ * Generate fresh invoices from active recurring templates that are due.
+ */
+export async function runRecurringInvoices(): Promise<number> {
+  const supabase = createAdminClient();
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: templates } = await supabase
+    .from('recurring_invoices')
+    .select('*')
+    .eq('active', true)
+    .lte('next_run_at', today);
+
+  let generated = 0;
+  for (const t of templates ?? []) {
+    if (t.end_at && t.end_at < today) {
+      await supabase.from('recurring_invoices').update({ active: false }).eq('id', t.id);
+      continue;
+    }
+    const invoiceNo = `INV-${String(new Date().getFullYear()).slice(-2)}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 900000) + 100000}`;
+    const { data: inv } = await supabase
+      .from('invoices')
+      .insert({
+        invoice_no: invoiceNo,
+        customer_name: t.customer_name,
+        customer_email: t.customer_email,
+        customer_phone: t.customer_phone,
+        amount: t.amount,
+        description: t.description,
+        metadata: { recurring_id: t.id, ...t.metadata },
+        status: 'sent',
+      })
+      .select('id')
+      .single();
+    if (inv) {
+      generated += 1;
+      if (t.send_whatsapp && t.customer_phone) {
+        await enqueueJob('send_invoice_reminder', { invoice_id: inv.id, tier: 0 });
+      } else if (t.send_email && t.customer_email) {
+        await enqueueJob('send_invoice_reminder', { invoice_id: inv.id, tier: 0 });
+      }
+      const next = advance(t.next_run_at, t.interval);
+      await supabase.from('recurring_invoices').update({ next_run_at: next }).eq('id', t.id);
+    }
+  }
+  return generated;
+}
+
+function advance(dateStr: string, interval: 'weekly' | 'monthly' | 'quarterly' | 'yearly'): string {
+  const d = new Date(dateStr);
+  if (interval === 'weekly') d.setDate(d.getDate() + 7);
+  else if (interval === 'monthly') d.setMonth(d.getMonth() + 1);
+  else if (interval === 'quarterly') d.setMonth(d.getMonth() + 3);
+  else if (interval === 'yearly') d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
  * Queue payment reminders for unpaid invoices.
  * Sends at 1 / 3 / 7 days after creation, then weekly, then stops at 30 days.
  */

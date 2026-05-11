@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { processJobs, scheduleDuesReminders, schedulePaymentReminders } from '@/lib/automation/engine';
+import { processJobs, scheduleDuesReminders, schedulePaymentReminders, runRecurringInvoices } from '@/lib/automation/engine';
 import { env } from '@/lib/env';
 
 export const runtime = 'nodejs';
@@ -16,13 +16,15 @@ export async function GET(req: Request) {
   const schedule = url.searchParams.get('schedule') === '1';
   let scheduledDues = 0;
   let scheduledInvoices = 0;
+  let recurringGenerated = 0;
   if (schedule) {
     scheduledDues = await scheduleDuesReminders();
     scheduledInvoices = await schedulePaymentReminders();
+    recurringGenerated = await runRecurringInvoices();
   }
   const results = await processJobs(50);
   return NextResponse.json({
-    scheduled: { dues: scheduledDues, invoices: scheduledInvoices },
+    scheduled: { dues: scheduledDues, invoices: scheduledInvoices, recurring_generated: recurringGenerated },
     processed: results.length,
     results,
   });
