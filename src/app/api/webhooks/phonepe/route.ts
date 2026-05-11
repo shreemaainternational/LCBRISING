@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { markInvoicePaid } from '@/lib/invoices';
 import { buildReceiptNo } from '@/lib/utils';
 import { env } from '@/lib/env';
+import { sendPaymentConfirmation } from '@/lib/payment-notify';
 
 export const runtime = 'nodejs';
 
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
 
   const { data: inv } = await supabase
     .from('invoices')
-    .select('id, amount, invoice_no, status, member_id')
+    .select('id, amount, invoice_no, status, member_id, customer_name, customer_email, customer_phone')
     .eq('invoice_no', merchantTxn)
     .maybeSingle();
   if (!inv) {
@@ -104,6 +105,19 @@ export async function POST(req: Request) {
     .single();
 
   await markInvoicePaid(inv.id, payment?.id);
+
+  if (payment) {
+    await sendPaymentConfirmation({
+      invoiceId: inv.id,
+      invoiceNo: inv.invoice_no,
+      customerName: inv.customer_name,
+      customerEmail: inv.customer_email,
+      customerPhone: inv.customer_phone,
+      amount: Number(inv.amount),
+      receiptNo,
+      paymentId: payment.id,
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

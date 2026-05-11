@@ -75,6 +75,7 @@ const schema = z.object({
   PHONEPE_WEBHOOK_PASSWORD: z.string().optional(),
   NEXT_PUBLIC_UPI_VPA: z.string().optional(),
   NEXT_PUBLIC_UPI_PAYEE_NAME: z.string().optional(),
+  NEXT_PUBLIC_STATIC_QR_URL: z.string().url().optional(),
 });
 
 const parsed = schema.parse({
@@ -128,6 +129,7 @@ const parsed = schema.parse({
   PHONEPE_WEBHOOK_PASSWORD: process.env.PHONEPE_WEBHOOK_PASSWORD,
   NEXT_PUBLIC_UPI_VPA: process.env.NEXT_PUBLIC_UPI_VPA,
   NEXT_PUBLIC_UPI_PAYEE_NAME: process.env.NEXT_PUBLIC_UPI_PAYEE_NAME,
+  NEXT_PUBLIC_STATIC_QR_URL: process.env.NEXT_PUBLIC_STATIC_QR_URL,
 });
 
 export const env = parsed;

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getInvoiceById, invoiceUpi, isExpired } from '@/lib/invoices';
 import { renderQrSvg } from '@/lib/qr';
 import { buildPhonePeIntent, buildGpayIntent, buildPaytmIntent, getUpiConfig } from '@/lib/upi';
+import { env } from '@/lib/env';
 import { PaymentClient } from './PaymentClient';
 import type { Metadata } from 'next';
 
@@ -42,6 +43,7 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
   });
 
   const qrSvg = upi ? await renderQrSvg(upi) : '';
+  const staticQrUrl = env.NEXT_PUBLIC_STATIC_QR_URL ?? null;
   const expired = isExpired(inv) || inv.status === 'expired';
   const paid = inv.status === 'paid';
   const cancelled = inv.status === 'cancelled';
@@ -71,7 +73,7 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
               <ErrorPanel title="Invoice cancelled" message="This invoice has been cancelled. Contact us for a new one." />
             ) : expired ? (
               <ErrorPanel title="Invoice expired" message="This payment window has closed. Please request a new invoice." />
-            ) : !upi ? (
+            ) : !upi && !staticQrUrl ? (
               <ErrorPanel
                 title="Payment temporarily unavailable"
                 message="Our team has not finished configuring the UPI account on the server. Please try again later."
@@ -85,11 +87,13 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
                 upiVpa={cfg.vpa}
                 payeeName={cfg.payeeName}
                 qrSvg={qrSvg}
+                staticQrUrl={staticQrUrl}
                 expiresAt={inv.expires_at}
                 phonepeIntent={phonepe}
                 gpayIntent={gpay}
                 paytmIntent={paytm}
                 description={inv.description}
+                invoicePdfUrl={`/api/invoices/${inv.id}/pdf`}
               />
             )}
           </div>

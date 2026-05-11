@@ -4,6 +4,7 @@ import { proofReviewSchema } from '@/lib/validation/schemas';
 import { createAdminClient } from '@/lib/supabase/server';
 import { markInvoicePaid } from '@/lib/invoices';
 import { buildReceiptNo } from '@/lib/utils';
+import { sendPaymentConfirmation } from '@/lib/payment-notify';
 
 export const runtime = 'nodejs';
 
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
 
   const { data: inv } = await supabase
     .from('invoices')
-    .select('id, amount, customer_name, member_id, invoice_no')
+    .select('id, amount, customer_name, customer_email, customer_phone, member_id, invoice_no')
     .eq('id', proof.invoice_id!)
     .maybeSingle();
   if (!inv) return NextResponse.json({ error: 'invoice not found' }, { status: 404 });
@@ -102,5 +103,22 @@ export async function POST(req: Request) {
     detail: { proof_id, receipt_no: receiptNo },
   });
 
-  return NextResponse.json({ ok: true, status: 'verified', payment_id: payment.id, receipt_no: receiptNo });
+  const notify = await sendPaymentConfirmation({
+    invoiceId: inv.id,
+    invoiceNo: inv.invoice_no,
+    customerName: inv.customer_name,
+    customerEmail: inv.customer_email,
+    customerPhone: inv.customer_phone,
+    amount: Number(inv.amount),
+    receiptNo,
+    paymentId: payment.id,
+  });
+
+  return NextResponse.json({
+    ok: true,
+    status: 'verified',
+    payment_id: payment.id,
+    receipt_no: receiptNo,
+    notify,
+  });
 }

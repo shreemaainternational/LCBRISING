@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/auth';
 import { formatINR, formatDate } from '@/lib/utils';
 import { ReviewControls } from './ReviewControls';
 import { NewInvoiceCard } from './NewInvoiceCard';
+import { SendInvoiceButton } from './SendInvoiceButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -111,7 +112,7 @@ export default async function AdminPaymentsPage() {
                 <th className="text-right p-3">Amount</th>
                 <th className="text-left p-3">Status</th>
                 <th className="text-left p-3">Date</th>
-                <th className="text-left p-3">Link</th>
+                <th className="text-left p-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -127,8 +128,14 @@ export default async function AdminPaymentsPage() {
                     <StatusBadge status={r.status} />
                   </td>
                   <td className="p-3 text-gray-500">{formatDate(r.created_at)}</td>
-                  <td className="p-3">
-                    <a href={`/pay/${r.id}`} target="_blank" rel="noreferrer" className="text-purple-700 hover:underline">Open</a>
+                  <td className="p-3 whitespace-nowrap">
+                    <div className="flex items-center gap-3 text-xs">
+                      <a href={`/pay/${r.id}`} target="_blank" rel="noreferrer" className="text-purple-700 hover:underline">Open</a>
+                      <a href={`/api/invoices/${r.id}/pdf`} target="_blank" rel="noreferrer" className="text-gray-700 hover:underline">PDF</a>
+                      {r.status !== 'paid' && r.status !== 'cancelled' && (
+                        <SendInvoiceButton invoiceId={r.id} hasPhone={Boolean(r.customer_phone)} hasEmail={Boolean(r.customer_email)} />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

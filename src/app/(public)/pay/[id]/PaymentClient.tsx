@@ -10,11 +10,13 @@ type Props = {
   upiVpa: string;
   payeeName: string;
   qrSvg: string;
+  staticQrUrl: string | null;
   expiresAt: string | null;
   phonepeIntent: string;
   gpayIntent: string;
   paytmIntent: string;
   description: string | null;
+  invoicePdfUrl: string;
 };
 
 type ProofState =
@@ -70,7 +72,10 @@ export function PaymentClient(props: Props) {
   }
 
   function downloadQr() {
-    window.open(`/api/qr/${props.invoiceId}?format=png`, '_blank');
+    const url = props.qrSvg
+      ? `/api/qr/${props.invoiceId}?format=png`
+      : props.staticQrUrl;
+    if (url) window.open(url, '_blank');
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -109,11 +114,24 @@ export function PaymentClient(props: Props) {
 
       {tab === 'qr' ? (
         <div className="space-y-3">
-          <div
-            className="bg-white border-2 border-purple-100 rounded-2xl p-4 mx-auto"
-            style={{ width: 260, height: 260 }}
-            dangerouslySetInnerHTML={{ __html: props.qrSvg.replace('<svg ', '<svg width="100%" height="100%" ') }}
-          />
+          {props.qrSvg ? (
+            <div
+              className="bg-white border-2 border-purple-100 rounded-2xl p-4 mx-auto"
+              style={{ width: 260, height: 260 }}
+              dangerouslySetInnerHTML={{ __html: props.qrSvg.replace('<svg ', '<svg width="100%" height="100%" ') }}
+            />
+          ) : props.staticQrUrl ? (
+            <div className="bg-white border-2 border-purple-100 rounded-2xl p-4 mx-auto" style={{ width: 260, height: 260 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={props.staticQrUrl} alt="PhonePe QR" className="w-full h-full object-contain" />
+            </div>
+          ) : null}
+          {!props.qrSvg && props.staticQrUrl && (
+            <p className="text-center text-xs text-amber-700 bg-amber-50 rounded-md px-2 py-1">
+              Static QR — enter ₹{props.amount.toLocaleString('en-IN')} manually and include
+              invoice {props.invoiceNo} in the note when paying.
+            </p>
+          )}
           <p className="text-center text-xs text-gray-500">
             Open PhonePe, GPay, Paytm, or any UPI app and scan this QR.
           </p>
@@ -122,8 +140,14 @@ export function PaymentClient(props: Props) {
             onClick={downloadQr}
             className="w-full h-10 rounded-md border border-purple-300 text-purple-700 text-sm font-medium hover:bg-purple-50"
           >
-            Download QR (PNG)
+            Download QR
           </button>
+        </div>
+      ) : !props.upiString ? (
+        <div className="space-y-3">
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
+            Use the QR tab — UPI deep links are not configured yet.
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -208,6 +232,15 @@ export function PaymentClient(props: Props) {
           {props.description}
         </p>
       )}
+
+      <a
+        href={props.invoicePdfUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="block text-center text-xs text-purple-700 hover:underline"
+      >
+        Download invoice (PDF)
+      </a>
     </div>
   );
 }
