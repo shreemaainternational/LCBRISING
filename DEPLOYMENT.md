@@ -18,11 +18,20 @@ Dashboard:     https://supabase.com/dashboard/project/mvtqqlfzawyhntnsavbx
 
 ## 1. Apply the schema
 
-1. Open the **SQL Editor**:
-   https://supabase.com/dashboard/project/mvtqqlfzawyhntnsavbx/sql/new
-2. Paste the contents of `supabase/migrations/0001_initial_schema.sql`
-   and run.
-3. (Optional) paste `supabase/seed.sql` to insert the default club row.
+Run each migration in order via the **SQL Editor**
+(https://supabase.com/dashboard/project/mvtqqlfzawyhntnsavbx/sql/new):
+
+1. `supabase/migrations/0001_initial_schema.sql` — base CRM
+2. `supabase/migrations/0002_social_creative.sql` — social/creative extras
+3. `supabase/migrations/0003_enterprise_crm.sql` — federation hierarchy,
+   OAuth accounts, audit/sync logs, integrations, attendance, committees,
+   trainings, awards
+
+All migrations are idempotent (`create table if not exists`, guarded
+enum creates, additive `alter table`).
+
+4. (Optional) paste `supabase/seed.sql` to insert the default club row
+   for District 3232-F1.
 
 ## 2. Grab the keys
 
@@ -103,3 +112,50 @@ header. Vercel auto-injects this when configured under
 **RLS denials** — when calling from a route handler that uses
 `createClient()`, the call runs as the authenticated user. For trusted
 server flows use `createAdminClient()` (service role).
+
+## 8. Enterprise CRM extras
+
+### Lions OIDC / SSO
+
+Add these to Vercel env (both Production and Preview), then the
+`/api/auth/oidc/*` routes go live:
+
+```
+LIONS_OIDC_ISSUER=https://login.example.com/realms/lions
+LIONS_OIDC_CLIENT_ID=lcr-crm
+LIONS_OIDC_CLIENT_SECRET=...
+LIONS_OIDC_REDIRECT_URI=https://YOUR_DOMAIN/api/auth/oidc/callback
+LIONS_OIDC_SCOPES=openid profile email
+```
+
+Register the same `LIONS_OIDC_REDIRECT_URI` on the IdP side.
+
+### Sync engine endpoints
+
+| Endpoint                        | Requires permission |
+|---------------------------------|---------------------|
+| `POST /api/sync/run`            | `sync.trigger`      |
+| `POST /api/sync/csv` (multipart)| `sync.trigger`      |
+| `GET  /api/sync/logs`           | `sync.configure`    |
+
+### Bootstrapping the federation hierarchy
+
+```sql
+insert into public.multiple_districts (code, name) values
+  ('MD-3232', 'Multiple District 3232');
+
+insert into public.districts (code, name, multiple_district_id, lions_year)
+select '3232-F1', 'District 3232-F1', id, '2025-26'
+from public.multiple_districts where code = 'MD-3232';
+
+-- Promote yourself to international_admin (one-time bootstrap):
+update public.members
+set lions_role = 'international_admin', status = 'active'
+where email = 'admin@lcbrising.org';
+```
+
+### PWA install
+
+`/manifest.webmanifest` is served by `src/app/manifest.ts`. Drop these
+into `public/` for the install prompt:
+`icon-192.png`, `icon-512.png`, `icon-maskable.png`.
