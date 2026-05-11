@@ -102,6 +102,9 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
 
           <footer className="border-t bg-gray-50 p-4 text-center text-xs text-gray-500">
             Secured by Lions Club of Baroda Rising Star · Do not refresh after payment until you submit proof.
+            <div className="mt-2">
+              <a href="/invoices/lookup" className="text-purple-700 hover:underline">Looking up a different invoice?</a>
+            </div>
           </footer>
         </div>
       </div>
