@@ -24,6 +24,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!inv) return NextResponse.json({ error: 'invoice not found' }, { status: 404 });
 
   const payUrl = `${env.NEXT_PUBLIC_SITE_URL}/pay/${inv.id}`;
+  const qrCardUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/qr/${inv.id}/card?format=pdf`;
   const results: Record<string, { ok: boolean; error?: string }> = {};
 
   if (channels.includes('whatsapp')) {
@@ -60,6 +61,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             <strong>${inv.invoice_no}</strong> using the link below.</p>
             <p><a href="${payUrl}" style="display:inline-block;background:#1e3a8a;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none">Pay now</a></p>
             <p>Or copy this link: ${payUrl}</p>
+            <p>Prefer to print or share? <a href="${qrCardUrl}">Download the QR card (PDF)</a></p>
             <p>Thank you,<br/>Lions Club of Baroda Rising Star</p>
           `,
         });

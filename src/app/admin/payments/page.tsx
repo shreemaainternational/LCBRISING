@@ -164,6 +164,7 @@ export default async function AdminPaymentsPage() {
                     <div className="flex items-center gap-3 text-xs">
                       <a href={`/pay/${r.id}`} target="_blank" rel="noreferrer" className="text-purple-700 hover:underline">Open</a>
                       <a href={`/api/invoices/${r.id}/pdf`} target="_blank" rel="noreferrer" className="text-gray-700 hover:underline">PDF</a>
+                      <a href={`/api/qr/${r.id}/card?format=pdf`} target="_blank" rel="noreferrer" className="text-gray-700 hover:underline">QR card</a>
                       {r.status !== 'paid' && r.status !== 'cancelled' && (
                         <SendInvoiceButton invoiceId={r.id} hasPhone={Boolean(r.customer_phone)} hasEmail={Boolean(r.customer_email)} />
                       )}

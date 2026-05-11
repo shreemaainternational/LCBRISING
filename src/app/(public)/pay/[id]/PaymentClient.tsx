@@ -298,14 +298,34 @@ export function PaymentClient(props: Props) {
         </p>
       )}
 
-      <a
-        href={props.invoicePdfUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="block text-center text-xs text-purple-700 hover:underline"
-      >
-        Download invoice (PDF)
-      </a>
+      <div className="flex items-center justify-center gap-4 text-xs">
+        <a
+          href={props.invoicePdfUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-purple-700 hover:underline"
+        >
+          Invoice (PDF)
+        </a>
+        <span className="text-gray-300">·</span>
+        <a
+          href={`/api/qr/${props.invoiceId}/card?format=pdf`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-purple-700 hover:underline"
+        >
+          QR card (PDF)
+        </a>
+        <span className="text-gray-300">·</span>
+        <a
+          href={`/api/qr/${props.invoiceId}/card`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-purple-700 hover:underline"
+        >
+          QR card (SVG)
+        </a>
+      </div>
     </div>
   );
 }
