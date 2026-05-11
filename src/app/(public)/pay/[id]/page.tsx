@@ -3,7 +3,7 @@ import { getInvoiceById, invoiceUpi, isExpired } from '@/lib/invoices';
 import { renderQrSvg } from '@/lib/qr';
 import { buildPhonePeIntent, buildGpayIntent, buildPaytmIntent, getUpiConfig } from '@/lib/upi';
 import { phonepeConfigured } from '@/lib/phonepe';
-import { env } from '@/lib/env';
+import { env, integrations } from '@/lib/env';
 import { PaymentClient } from './PaymentClient';
 import type { Metadata } from 'next';
 
@@ -99,6 +99,8 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
                 description={inv.description}
                 invoicePdfUrl={`/api/invoices/${inv.id}/pdf`}
                 phonepePgAvailable={phonepeConfigured()}
+                razorpayAvailable={integrations.razorpay}
+                razorpayKeyId={env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? env.RAZORPAY_KEY_ID ?? null}
               />
             )}
           </div>

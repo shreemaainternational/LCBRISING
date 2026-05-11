@@ -18,7 +18,13 @@ type Props = {
   description: string | null;
   invoicePdfUrl: string;
   phonepePgAvailable: boolean;
+  razorpayAvailable: boolean;
+  razorpayKeyId: string | null;
 };
+
+declare global {
+  interface Window { Razorpay: new (options: Record<string, unknown>) => { open: () => void } }
+}
 
 type OcrInfo = {
   utr: string | null;
@@ -112,6 +118,67 @@ export function PaymentClient(props: Props) {
 
   const [phonepeBusy, setPhonepeBusy] = useState(false);
   const [phonepeError, setPhonepeError] = useState<string | null>(null);
+  const [rzpBusy, setRzpBusy] = useState(false);
+  const [rzpError, setRzpError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!props.razorpayAvailable) return;
+    if (document.querySelector('#rzp-script')) return;
+    const s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.id = 'rzp-script';
+    s.async = true;
+    document.body.appendChild(s);
+  }, [props.razorpayAvailable]);
+
+  async function payWithRazorpay() {
+    setRzpBusy(true);
+    setRzpError(null);
+    try {
+      const orderRes = await fetch(`/api/invoices/${props.invoiceId}/razorpay`, { method: 'POST' });
+      const orderJson = await orderRes.json();
+      if (!orderRes.ok) {
+        setRzpError(orderJson.error ?? 'failed');
+        return;
+      }
+      const rzp = new window.Razorpay({
+        key: orderJson.key_id,
+        amount: orderJson.order.amount,
+        currency: orderJson.order.currency,
+        order_id: orderJson.order.id,
+        name: props.payeeName,
+        description: `Invoice ${props.invoiceNo}`,
+        prefill: {
+          name: orderJson.customer?.name,
+          email: orderJson.customer?.email,
+          contact: orderJson.customer?.phone,
+        },
+        theme: { color: '#5f259f' },
+        handler: async (resp: Record<string, string>) => {
+          const verify = await fetch(`/api/invoices/${props.invoiceId}/razorpay`, {
+            method: 'PUT',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+              payment_record_id: orderJson.payment_record_id,
+            }),
+          });
+          if (verify.ok) {
+            window.location.reload();
+          } else {
+            setRzpError('Payment captured but verification failed. Contact support.');
+          }
+        },
+      });
+      rzp.open();
+    } catch {
+      setRzpError('network error');
+    } finally {
+      setRzpBusy(false);
+    }
+  }
 
   async function payWithPhonePePG() {
     setPhonepeBusy(true);
@@ -141,17 +208,30 @@ export function PaymentClient(props: Props) {
         </div>
       )}
 
-      {props.phonepePgAvailable && (
+      {(props.phonepePgAvailable || props.razorpayAvailable) && (
         <div className="space-y-2">
-          <button
-            type="button"
-            onClick={payWithPhonePePG}
-            disabled={phonepeBusy}
-            className="w-full h-12 rounded-lg bg-[#5f259f] text-white font-semibold text-sm disabled:opacity-60 hover:bg-[#4c1d87]"
-          >
-            {phonepeBusy ? 'Opening PhonePe…' : 'Pay with PhonePe (auto-verify)'}
-          </button>
+          {props.phonepePgAvailable && (
+            <button
+              type="button"
+              onClick={payWithPhonePePG}
+              disabled={phonepeBusy}
+              className="w-full h-12 rounded-lg bg-[#5f259f] text-white font-semibold text-sm disabled:opacity-60 hover:bg-[#4c1d87]"
+            >
+              {phonepeBusy ? 'Opening PhonePe…' : 'Pay with PhonePe (auto-verify)'}
+            </button>
+          )}
           {phonepeError && <p className="text-xs text-red-600 text-center">{phonepeError}</p>}
+          {props.razorpayAvailable && props.razorpayKeyId && (
+            <button
+              type="button"
+              onClick={payWithRazorpay}
+              disabled={rzpBusy}
+              className="w-full h-12 rounded-lg bg-[#0a2540] text-white font-semibold text-sm disabled:opacity-60 hover:bg-[#13334e]"
+            >
+              {rzpBusy ? 'Opening Razorpay…' : 'Pay with card / netbanking (Razorpay)'}
+            </button>
+          )}
+          {rzpError && <p className="text-xs text-red-600 text-center">{rzpError}</p>}
           <p className="text-[11px] text-gray-500 text-center">
             Recommended — payment confirms automatically, no manual proof needed.
           </p>

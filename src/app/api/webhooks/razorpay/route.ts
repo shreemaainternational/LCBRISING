@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { verifyWebhookSignature } from '@/lib/razorpay';
 import { createAdminClient } from '@/lib/supabase/server';
 import { enqueueJob } from '@/lib/automation/engine';
+import { markInvoicePaid } from '@/lib/invoices';
+import { sendPaymentConfirmation } from '@/lib/payment-notify';
 
 export const runtime = 'nodejs';
 
@@ -27,7 +29,7 @@ export async function POST(req: Request) {
         raw_event: event as unknown,
       })
       .eq('razorpay_order_id', p.order_id)
-      .select('id, donation_id, dues_id')
+      .select('id, donation_id, dues_id, invoice_id, amount, receipt_no, invoices(invoice_no, customer_name, customer_email, customer_phone, status)')
       .maybeSingle();
 
     if (payment?.donation_id) {
@@ -36,6 +38,25 @@ export async function POST(req: Request) {
     if (payment?.dues_id) {
       await supabase.from('dues').update({ status: 'paid', paid_at: new Date().toISOString() })
         .eq('id', payment.dues_id);
+    }
+    if (payment?.invoice_id) {
+      type WithInv = typeof payment & {
+        invoices: { invoice_no: string; customer_name: string; customer_email: string | null; customer_phone: string | null; status: string } | null;
+      };
+      const inv = (payment as WithInv).invoices;
+      if (inv && inv.status !== 'paid') {
+        await markInvoicePaid(payment.invoice_id, payment.id);
+        await sendPaymentConfirmation({
+          invoiceId: payment.invoice_id,
+          invoiceNo: inv.invoice_no,
+          customerName: inv.customer_name,
+          customerEmail: inv.customer_email,
+          customerPhone: inv.customer_phone,
+          amount: Number(payment.amount),
+          receiptNo: payment.receipt_no ?? `RZP-${p.id.slice(-8)}`,
+          paymentId: payment.id,
+        });
+      }
     }
   } else if (event.event === 'payment.failed') {
     const payload = event.payload as { payment: { entity: { id: string; order_id: string } } };
