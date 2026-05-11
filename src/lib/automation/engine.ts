@@ -484,6 +484,33 @@ export async function scheduleDuesReminders() {
 }
 
 /**
+ * Mark invoices past their expires_at as 'expired'. Runs daily.
+ */
+export async function expireStaleInvoices(): Promise<number> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+  const { data: stale } = await supabase
+    .from('invoices')
+    .select('id')
+    .in('status', ['sent', 'partial', 'draft'])
+    .not('expires_at', 'is', null)
+    .lt('expires_at', now)
+    .is('deleted_at', null);
+  if (!stale || stale.length === 0) return 0;
+  const ids = stale.map((s) => s.id);
+  await supabase.from('invoices').update({ status: 'expired' }).in('id', ids);
+  for (const id of ids) {
+    await supabase.from('payment_audit_logs').insert({
+      invoice_id: id,
+      actor_kind: 'system',
+      action: 'invoice_expired',
+      detail: { source: 'cron' },
+    });
+  }
+  return ids.length;
+}
+
+/**
  * Generate fresh invoices from active recurring templates that are due.
  */
 export async function runRecurringInvoices(): Promise<number> {

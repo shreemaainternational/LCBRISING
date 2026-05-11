@@ -97,12 +97,20 @@ export default async function AdminPaymentsPage() {
             <strong>{pendingProofs.length}</strong> proof(s) awaiting review
           </p>
         </div>
-        <a
-          href="/api/payments/reconciliation"
-          className="h-9 px-4 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-50 inline-flex items-center"
-        >
-          Export CSV
-        </a>
+        <div className="flex gap-2">
+          <a
+            href="/api/payments/reconciliation"
+            className="h-9 px-4 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-50 inline-flex items-center"
+          >
+            Reconciliation CSV
+          </a>
+          <a
+            href="/api/payments/audit-log"
+            className="h-9 px-4 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-50 inline-flex items-center"
+          >
+            Audit log CSV
+          </a>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
