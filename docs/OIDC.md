@@ -58,12 +58,14 @@ the stored `refresh_token` to mint a new access token, updating
   production.
 - PKCE (`S256`) is mandatory — no plain code flow is supported.
 - `state` and `nonce` are 24-byte CSPRNG values, base64url encoded.
-- ID-token signatures are **not** JWKS-verified yet — only the payload is
-  parsed for the nonce binding. The code-flow exchange itself rides on
-  TLS and the PKCE challenge; tightening to full JWS verification is a
-  Phase 12 item.
+- **ID-token signatures are JWKS-verified** (`src/lib/oidc/jwks.ts`) —
+  RS256/384/512 supported. The verifier checks signature, `iss`, `aud`,
+  `exp`, and the bound `nonce`. JWKS is cached for 10 minutes in-process.
 - Tokens are stored in `oauth_accounts` and only retrievable via the
   service-role client (RLS forbids client-side reads of other rows).
+- Each successful login mints an `oauth_sessions` row and an opaque
+  HttpOnly session cookie (`lcr.session`). Only the SHA-256 hash of the
+  token is persisted; the clear token never leaves the user's browser.
 
 ## Mapping Lions claims to local records
 
