@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Lions CRM — Baroda Rising Star',
     short_name: 'Lions CRM',
     description:
-      'Enterprise CRM for Lions International members, clubs, and districts. District 3232-F1 · Vadodara.',
+      'Enterprise CRM + payment collection for Lions International members, clubs, and districts. District 3232-F1 · Vadodara.',
     start_url: '/admin',
     scope: '/',
     display: 'standalone',
@@ -32,7 +32,12 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'maskable',
       },
     ],
-    categories: ['productivity', 'business', 'social'],
+    categories: ['productivity', 'business', 'social', 'finance'],
     lang: 'en',
+    shortcuts: [
+      { name: 'Pay an invoice', url: '/invoices/lookup' },
+      { name: 'My invoices', url: '/portal' },
+      { name: 'Admin payments', url: '/admin/payments' },
+    ],
   };
 }

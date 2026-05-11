@@ -3,6 +3,8 @@ import { sendEmail, emailTemplates } from '@/lib/email';
 import { sendWhatsApp, whatsappTemplates } from '@/lib/whatsapp';
 import { renderDonationReceipt } from '@/lib/pdf';
 import { formatDate } from '@/lib/utils';
+import { env } from '@/lib/env';
+import { getPrefsForPhone } from '@/lib/customer-prefs';
 import { generateContent } from '@/lib/ai/openai';
 import { createAutofillJob, getAutofillJob, exportDesign, getExportJob } from '@/lib/canva/client';
 import { dispatchToPlatform, type Platform } from '@/lib/social/dispatcher';
@@ -111,6 +113,62 @@ const handlers: Record<string, JobHandler> = {
         }
       }
     }
+  },
+
+  send_invoice_reminder: async (payload) => {
+    const invoiceId = String(payload.invoice_id);
+    const tier = Number(payload.tier ?? 0);
+    const supabase = createAdminClient();
+    const { data: inv } = await supabase
+      .from('invoices')
+      .select('id, invoice_no, customer_name, customer_email, customer_phone, amount, status')
+      .eq('id', invoiceId)
+      .maybeSingle();
+    if (!inv) return;
+    if (inv.status === 'paid' || inv.status === 'cancelled') return;
+
+    const prefs = await getPrefsForPhone(inv.customer_phone);
+    if (!prefs.reminders_enabled) return;
+
+    const payUrl = `${env.NEXT_PUBLIC_SITE_URL}/pay/${inv.id}`;
+
+    if (inv.customer_email && prefs.email_enabled) {
+      try {
+        await sendEmail({
+          to: inv.customer_email,
+          subject: `Reminder: invoice ${inv.invoice_no} – ₹${inv.amount}`,
+          html: `
+            <p>Dear ${inv.customer_name},</p>
+            <p>This is a friendly reminder that invoice <strong>${inv.invoice_no}</strong>
+            for <strong>₹${inv.amount}</strong> is awaiting payment.</p>
+            <p><a href="${payUrl}" style="display:inline-block;background:#1e3a8a;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none">Pay now</a></p>
+            <p>Thank you,<br/>Lions Club of Baroda Rising Star</p>
+          `,
+        });
+        await logComm(inv.customer_email, 'email', 'invoice_reminder', `tier=${tier}`);
+      } catch (err) {
+        console.error('invoice reminder email failed', err);
+      }
+    }
+
+    if (inv.customer_phone && prefs.whatsapp_enabled) {
+      try {
+        await sendWhatsApp(
+          inv.customer_phone,
+          whatsappTemplates.paymentRequest(inv.customer_name, Number(inv.amount), inv.invoice_no, payUrl),
+        );
+        await logComm(inv.customer_phone, 'whatsapp', 'invoice_reminder', `tier=${tier}`);
+      } catch (err) {
+        console.error('invoice reminder whatsapp failed', err);
+      }
+    }
+
+    await supabase.from('payment_audit_logs').insert({
+      invoice_id: inv.id,
+      actor_kind: 'system',
+      action: 'reminder_sent',
+      detail: { tier, payUrl },
+    });
   },
 
   // ==================================================================
@@ -491,4 +549,125 @@ export async function scheduleDuesReminders() {
     await enqueueJob('send_dues_reminder', { dues_id: d.id });
   }
   return dues?.length ?? 0;
+}
+
+/**
+ * Mark invoices past their expires_at as 'expired'. Runs daily.
+ */
+export async function expireStaleInvoices(): Promise<number> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+  const { data: stale } = await supabase
+    .from('invoices')
+    .select('id')
+    .in('status', ['sent', 'partial', 'draft'])
+    .not('expires_at', 'is', null)
+    .lt('expires_at', now)
+    .is('deleted_at', null);
+  if (!stale || stale.length === 0) return 0;
+  const ids = stale.map((s) => s.id);
+  await supabase.from('invoices').update({ status: 'expired' }).in('id', ids);
+  for (const id of ids) {
+    await supabase.from('payment_audit_logs').insert({
+      invoice_id: id,
+      actor_kind: 'system',
+      action: 'invoice_expired',
+      detail: { source: 'cron' },
+    });
+  }
+  return ids.length;
+}
+
+/**
+ * Generate fresh invoices from active recurring templates that are due.
+ */
+export async function runRecurringInvoices(): Promise<number> {
+  const supabase = createAdminClient();
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: templates } = await supabase
+    .from('recurring_invoices')
+    .select('*')
+    .eq('active', true)
+    .lte('next_run_at', today);
+
+  let generated = 0;
+  for (const t of templates ?? []) {
+    if (t.end_at && t.end_at < today) {
+      await supabase.from('recurring_invoices').update({ active: false }).eq('id', t.id);
+      continue;
+    }
+    const invoiceNo = `INV-${String(new Date().getFullYear()).slice(-2)}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 900000) + 100000}`;
+    const { data: inv } = await supabase
+      .from('invoices')
+      .insert({
+        invoice_no: invoiceNo,
+        customer_name: t.customer_name,
+        customer_email: t.customer_email,
+        customer_phone: t.customer_phone,
+        amount: t.amount,
+        description: t.description,
+        metadata: { recurring_id: t.id, ...t.metadata },
+        status: 'sent',
+      })
+      .select('id')
+      .single();
+    if (inv) {
+      generated += 1;
+      if (t.send_whatsapp && t.customer_phone) {
+        await enqueueJob('send_invoice_reminder', { invoice_id: inv.id, tier: 0 });
+      } else if (t.send_email && t.customer_email) {
+        await enqueueJob('send_invoice_reminder', { invoice_id: inv.id, tier: 0 });
+      }
+      const next = advance(t.next_run_at, t.interval);
+      await supabase.from('recurring_invoices').update({ next_run_at: next }).eq('id', t.id);
+    }
+  }
+  return generated;
+}
+
+function advance(dateStr: string, interval: 'weekly' | 'monthly' | 'quarterly' | 'yearly'): string {
+  const d = new Date(dateStr);
+  if (interval === 'weekly') d.setDate(d.getDate() + 7);
+  else if (interval === 'monthly') d.setMonth(d.getMonth() + 1);
+  else if (interval === 'quarterly') d.setMonth(d.getMonth() + 3);
+  else if (interval === 'yearly') d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Queue payment reminders for unpaid invoices.
+ * Sends at 1 / 3 / 7 days after creation, then weekly, then stops at 30 days.
+ */
+export async function schedulePaymentReminders() {
+  const supabase = createAdminClient();
+  const now = Date.now();
+  const cutoff30 = new Date(now - 30 * 86_400_000).toISOString();
+
+  const { data: invoices } = await supabase
+    .from('invoices')
+    .select('id, created_at, expires_at')
+    .in('status', ['sent', 'partial'])
+    .gte('created_at', cutoff30)
+    .is('deleted_at', null);
+
+  let queued = 0;
+  for (const inv of invoices ?? []) {
+    if (inv.expires_at && new Date(inv.expires_at).getTime() < now) continue;
+    const ageDays = Math.floor((now - new Date(inv.created_at).getTime()) / 86_400_000);
+    const tier = ageDays >= 21 ? 21 : ageDays >= 14 ? 14 : ageDays >= 7 ? 7 : ageDays >= 3 ? 3 : ageDays >= 1 ? 1 : null;
+    if (tier === null) continue;
+
+    const { data: existing } = await supabase
+      .from('payment_audit_logs')
+      .select('id')
+      .eq('invoice_id', inv.id)
+      .eq('action', 'reminder_sent')
+      .contains('detail', { tier })
+      .maybeSingle();
+    if (existing) continue;
+
+    await enqueueJob('send_invoice_reminder', { invoice_id: inv.id, tier });
+    queued += 1;
+  }
+  return queued;
 }

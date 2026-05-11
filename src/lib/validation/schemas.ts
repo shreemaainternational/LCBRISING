@@ -130,6 +130,52 @@ export const paymentVerifySchema = z.object({
 });
 
 // =====================================================================
+// Invoices + UPI / PhonePe collection
+// =====================================================================
+export const invoiceCreateSchema = z.object({
+  customer_name: z.string().min(2).max(120),
+  customer_email: z.string().email().optional().nullable(),
+  customer_phone: z.string().min(7).max(20).optional().nullable(),
+  amount: z.number().positive().max(10_000_000),
+  currency: z.literal('INR').default('INR'),
+  gst_rate: z.number().min(0).max(50).optional().nullable(),
+  description: z.string().max(500).optional().nullable(),
+  due_date: z.string().optional().nullable(),
+  expires_in_minutes: z.number().int().min(5).max(60 * 24 * 30).optional(),
+  member_id: z.string().uuid().optional().nullable(),
+  metadata: z.record(z.unknown()).optional(),
+  send_whatsapp: z.boolean().default(false),
+  send_email: z.boolean().default(false),
+  agent_id: z.string().uuid().optional().nullable(),
+  commission_rate: z.number().min(0).max(50).optional().nullable(),
+});
+
+export const proofSubmitSchema = z.object({
+  invoice_id: z.string().uuid(),
+  method: z.enum(['screenshot', 'utr']),
+  utr: z.string().min(8).max(40).optional(),
+  upi_vpa: z.string().max(80).optional(),
+  amount_claimed: z.number().positive().optional(),
+  notes: z.string().max(500).optional(),
+  screenshot_url: z.string().url().optional(),
+  screenshot_hash: z.string().length(64).optional(),
+});
+
+export const proofReviewSchema = z.object({
+  proof_id: z.string().uuid(),
+  decision: z.enum(['verified', 'rejected']),
+  rejection_reason: z.string().max(500).optional(),
+});
+
+export const refundCreateSchema = z.object({
+  amount: z.number().positive().optional(),
+  reason: z.string().max(500).optional(),
+  utr: z.string().max(40).optional(),
+  notes: z.string().max(500).optional(),
+  status: z.enum(['requested', 'processed']).default('processed'),
+});
+
+// =====================================================================
 // Social + Creative
 // =====================================================================
 export const aiGenerateSchema = z.object({

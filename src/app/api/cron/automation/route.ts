@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { processJobs, scheduleDuesReminders } from '@/lib/automation/engine';
+import { processJobs, scheduleDuesReminders, schedulePaymentReminders, runRecurringInvoices, expireStaleInvoices } from '@/lib/automation/engine';
 import { env } from '@/lib/env';
 
 export const runtime = 'nodejs';
@@ -14,9 +14,22 @@ export async function GET(req: Request) {
   if (!isAuthorised(req)) return NextResponse.json({ error: 'unauthorised' }, { status: 401 });
   const url = new URL(req.url);
   const schedule = url.searchParams.get('schedule') === '1';
-  if (schedule) await scheduleDuesReminders();
+  let scheduledDues = 0;
+  let scheduledInvoices = 0;
+  let recurringGenerated = 0;
+  let expired = 0;
+  if (schedule) {
+    scheduledDues = await scheduleDuesReminders();
+    scheduledInvoices = await schedulePaymentReminders();
+    recurringGenerated = await runRecurringInvoices();
+    expired = await expireStaleInvoices();
+  }
   const results = await processJobs(50);
-  return NextResponse.json({ processed: results.length, results });
+  return NextResponse.json({
+    scheduled: { dues: scheduledDues, invoices: scheduledInvoices, recurring_generated: recurringGenerated, expired },
+    processed: results.length,
+    results,
+  });
 }
 
 function isAuthorised(req: Request) {

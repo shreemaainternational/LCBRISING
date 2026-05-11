@@ -64,9 +64,26 @@ const schema = z.object({
   NEXT_PUBLIC_BRAND_ACCENT: z.string().default('#fbbf24'),
   NEXT_PUBLIC_BRAND_LOGO_URL: z.string().optional(),
 
+  // --- UPI / PhonePe payment collection ---
+  // VPAs are not secrets — defaulting here so the payment module works
+  // out of the box. Override via env to change the merchant account.
+  UPI_VPA: z.string().default('9712299333@ybl'),
+  UPI_PAYEE_NAME: z.string().default('Lions Club of Baroda Rising Star'),
+  UPI_MERCHANT_CODE: z.string().optional(),
+  PHONEPE_MERCHANT_ID: z.string().optional(),
+  PHONEPE_SALT_KEY: z.string().optional(),
+  PHONEPE_SALT_INDEX: z.string().optional(),
+  PHONEPE_WEBHOOK_USERNAME: z.string().optional(),
+  PHONEPE_WEBHOOK_PASSWORD: z.string().optional(),
+  NEXT_PUBLIC_UPI_VPA: z.string().default('9712299333@ybl'),
+  NEXT_PUBLIC_UPI_PAYEE_NAME: z.string().default('Lions Club of Baroda Rising Star'),
+  NEXT_PUBLIC_STATIC_QR_URL: z.string().url().optional(),
+
+  // Customer portal session signing. If unset, falls back to the
+  // service role key (already secret) so the portal still works.
+  PORTAL_SESSION_SECRET: z.string().optional(),
+
   // --- Lions OIDC / SSO (provider-agnostic) ---
-  // Wire these up once you obtain credentials from your IdP (Lions Member
-  // Service Center / Auth0 / Keycloak / Okta / Google Workspace, etc.).
   LIONS_OIDC_ISSUER: z.string().url().optional(),
   LIONS_OIDC_DISCOVERY_URL: z.string().url().optional(),
   LIONS_OIDC_CLIENT_ID: z.string().optional(),
@@ -118,6 +135,18 @@ const parsed = schema.parse({
   NEXT_PUBLIC_BRAND_PRIMARY: process.env.NEXT_PUBLIC_BRAND_PRIMARY,
   NEXT_PUBLIC_BRAND_ACCENT: process.env.NEXT_PUBLIC_BRAND_ACCENT,
   NEXT_PUBLIC_BRAND_LOGO_URL: process.env.NEXT_PUBLIC_BRAND_LOGO_URL,
+  UPI_VPA: process.env.UPI_VPA,
+  UPI_PAYEE_NAME: process.env.UPI_PAYEE_NAME,
+  UPI_MERCHANT_CODE: process.env.UPI_MERCHANT_CODE,
+  PHONEPE_MERCHANT_ID: process.env.PHONEPE_MERCHANT_ID,
+  PHONEPE_SALT_KEY: process.env.PHONEPE_SALT_KEY,
+  PHONEPE_SALT_INDEX: process.env.PHONEPE_SALT_INDEX,
+  PHONEPE_WEBHOOK_USERNAME: process.env.PHONEPE_WEBHOOK_USERNAME,
+  PHONEPE_WEBHOOK_PASSWORD: process.env.PHONEPE_WEBHOOK_PASSWORD,
+  NEXT_PUBLIC_UPI_VPA: process.env.NEXT_PUBLIC_UPI_VPA,
+  NEXT_PUBLIC_UPI_PAYEE_NAME: process.env.NEXT_PUBLIC_UPI_PAYEE_NAME,
+  NEXT_PUBLIC_STATIC_QR_URL: process.env.NEXT_PUBLIC_STATIC_QR_URL,
+  PORTAL_SESSION_SECRET: process.env.PORTAL_SESSION_SECRET,
   LIONS_OIDC_ISSUER: process.env.LIONS_OIDC_ISSUER,
   LIONS_OIDC_DISCOVERY_URL: process.env.LIONS_OIDC_DISCOVERY_URL,
   LIONS_OIDC_CLIENT_ID: process.env.LIONS_OIDC_CLIENT_ID,
@@ -160,5 +189,7 @@ export const integrations = {
   linkedin: Boolean(parsed.LINKEDIN_ACCESS_TOKEN && parsed.LINKEDIN_ORGANIZATION_URN),
   whatsappBusiness: Boolean(parsed.WHATSAPP_BUSINESS_TOKEN && parsed.WHATSAPP_BUSINESS_PHONE_ID),
   cloudinary: Boolean(parsed.CLOUDINARY_CLOUD_NAME && parsed.CLOUDINARY_API_KEY && parsed.CLOUDINARY_API_SECRET),
+  upi: Boolean(parsed.UPI_VPA),
+  phonepe: Boolean(parsed.PHONEPE_MERCHANT_ID && parsed.PHONEPE_SALT_KEY),
   lionsOidc: Boolean(parsed.LIONS_OIDC_ISSUER && parsed.LIONS_OIDC_CLIENT_ID && parsed.LIONS_OIDC_REDIRECT_URI),
 };
