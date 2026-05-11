@@ -81,6 +81,8 @@ export const invoiceCreateSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
   send_whatsapp: z.boolean().default(false),
   send_email: z.boolean().default(false),
+  agent_id: z.string().uuid().optional().nullable(),
+  commission_rate: z.number().min(0).max(50).optional().nullable(),
 });
 
 export const proofSubmitSchema = z.object({

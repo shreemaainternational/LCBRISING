@@ -42,6 +42,11 @@ export async function getInvoiceById(id: string): Promise<InvoiceRow | null> {
 
 export async function markInvoicePaid(invoiceId: string, paymentId?: string) {
   const supabase = createAdminClient();
+  const { data: inv } = await supabase
+    .from('invoices')
+    .select('amount, agent_id, commission_rate')
+    .eq('id', invoiceId)
+    .maybeSingle();
   await supabase
     .from('invoices')
     .update({ status: 'paid' })
@@ -53,6 +58,23 @@ export async function markInvoicePaid(invoiceId: string, paymentId?: string) {
     action: 'invoice_paid',
     detail: { source: 'verification' },
   });
+
+  type WithCommission = { amount: number; agent_id: string | null; commission_rate: number | null } | null;
+  const invc = inv as WithCommission;
+  if (invc?.agent_id && invc.commission_rate && invc.commission_rate > 0) {
+    const base = Number(invc.amount);
+    const rate = Number(invc.commission_rate);
+    const commission = Math.round(base * (rate / 100) * 100) / 100;
+    await supabase.from('commission_records').insert({
+      invoice_id: invoiceId,
+      payment_id: paymentId ?? null,
+      agent_id: invc.agent_id,
+      base_amount: base,
+      rate,
+      commission_amount: commission,
+      status: 'pending',
+    });
+  }
 }
 
 export function invoiceUpi(inv: InvoiceRow) {

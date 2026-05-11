@@ -42,6 +42,8 @@ export async function POST(req: Request) {
       due_date: data.due_date ?? null,
       expires_at: expiresAt,
       member_id: data.member_id ?? null,
+      agent_id: data.agent_id ?? null,
+      commission_rate: data.commission_rate ?? null,
       metadata: data.metadata ?? {},
       status: 'sent',
     })
