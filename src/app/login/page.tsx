@@ -1,56 +1,10 @@
-'use client';
-
-import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input, Label } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { createClient } from '@/lib/supabase/client';
+import { integrations, env } from '@/lib/env';
+import LoginForm from './LoginForm';
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={null}>
-      <LoginInner />
-    </Suspense>
-  );
-}
-
-function LoginInner() {
-  const router = useRouter();
-  const params = useSearchParams();
-  const redirectTo = params.get('redirectTo') ?? '/admin';
-
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    const supabase = createClient();
-    try {
-      if (mode === 'signin') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email, password,
-          options: { data: { name } },
-        });
-        if (error) throw error;
-      }
-      router.replace(redirectTo);
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  }
+  const oidcEnabled = integrations.lionsOidc;
+  const providerLabel = env.LIONS_OIDC_PROVIDER_LABEL ?? 'Lions';
 
   return (
     <main className="min-h-screen grid place-items-center bg-gray-50 p-4">
@@ -60,37 +14,25 @@ function LoginInner() {
             🦁 Member Portal
           </h1>
           <p className="text-center text-sm text-gray-500 mb-6">
-            {mode === 'signin' ? 'Sign in to continue' : 'Create your account'}
+            Sign in to continue
           </p>
 
-          <form onSubmit={submit} className="grid gap-3">
-            {mode === 'signup' && (
-              <div>
-                <Label>Full name</Label>
-                <Input required value={name} onChange={(e) => setName(e.target.value)} />
+          {oidcEnabled && (
+            <>
+              <a
+                href="/api/auth/oidc/login"
+                className="block w-full text-center rounded-md bg-navy-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-navy-800 transition"
+              >
+                Login with {providerLabel}
+              </a>
+              <div className="relative my-6 text-center text-xs uppercase tracking-wider text-gray-400">
+                <span className="bg-white px-2 relative z-10">or with email</span>
+                <span className="absolute inset-x-0 top-1/2 h-px bg-gray-200" aria-hidden />
               </div>
-            )}
-            <div>
-              <Label>Email</Label>
-              <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div>
-              <Label>Password</Label>
-              <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
-            </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Sign up'}
-            </Button>
-          </form>
+            </>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-            className="text-sm text-navy-700 mt-4 w-full text-center hover:underline"
-          >
-            {mode === 'signin' ? 'Need an account? Sign up' : 'Have an account? Sign in'}
-          </button>
+          <LoginForm />
         </CardContent>
       </Card>
     </main>

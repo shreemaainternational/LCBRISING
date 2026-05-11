@@ -9,6 +9,71 @@ export const memberSchema = z.object({
   club_id: z.string().uuid().optional().nullable(),
 });
 
+export const LIONS_ROLE_VALUES = [
+  'international_admin', 'multiple_district_admin', 'district_governor',
+  'vice_district_governor', 'cabinet_officer', 'region_chairperson',
+  'zone_chairperson', 'club_president', 'club_secretary', 'club_treasurer',
+  'club_officer', 'member', 'guest_viewer',
+] as const;
+
+export const enterpriseMemberSchema = memberSchema.extend({
+  district_id: z.string().uuid().optional().nullable(),
+  lions_member_id: z.string().max(64).optional().nullable(),
+  lions_role: z.enum(LIONS_ROLE_VALUES).optional().nullable(),
+  whatsapp: z.string().max(32).optional().nullable(),
+  birthday: z.string().optional().nullable(),
+});
+
+export const districtSchema = z.object({
+  code: z.string().min(2).max(32),
+  name: z.string().min(2).max(200),
+  multiple_district_id: z.string().uuid().optional().nullable(),
+  governor_name: z.string().max(200).optional().nullable(),
+  cabinet_secretary_name: z.string().max(200).optional().nullable(),
+  cabinet_treasurer_name: z.string().max(200).optional().nullable(),
+  lions_year: z.string().max(16).optional().nullable(),
+});
+
+export const clubSchema = z.object({
+  name: z.string().min(2).max(200),
+  district_id: z.string().uuid().optional().nullable(),
+  zone_id: z.string().uuid().optional().nullable(),
+  region_id: z.string().uuid().optional().nullable(),
+  club_number: z.string().max(64).optional().nullable(),
+  district: z.string().optional().default(''),
+  city: z.string().max(120).optional().nullable(),
+  state: z.string().max(120).optional().nullable(),
+  country: z.string().max(120).default('India'),
+});
+
+export const officerSchema = z.object({
+  member_id: z.string().uuid(),
+  scope_kind: z.enum(['club', 'zone', 'region', 'district', 'multiple_district', 'international']),
+  scope_id: z.string().uuid().optional().nullable(),
+  role: z.enum(LIONS_ROLE_VALUES),
+  term_start: z.string(),
+  term_end: z.string().optional().nullable(),
+  status: z.enum(['active', 'past', 'pending']).default('active'),
+  notes: z.string().max(2000).optional().nullable(),
+});
+
+export const attendanceSchema = z.object({
+  member_id: z.string().uuid(),
+  event_id: z.string().uuid().optional().nullable(),
+  club_id: z.string().uuid().optional().nullable(),
+  occurred_at: z.string().optional(),
+  status: z.enum(['present', 'absent', 'excused', 'remote']).default('present'),
+  check_in_method: z.string().max(32).optional().nullable(),
+  notes: z.string().max(500).optional().nullable(),
+});
+
+export const transferSchema = z.object({
+  to_club_id: z.string().uuid(),
+  to_district_id: z.string().uuid().optional().nullable(),
+  effective_on: z.string().optional(),
+  reason: z.string().max(500).optional().nullable(),
+});
+
 export const duesSchema = z.object({
   member_id: z.string().uuid(),
   amount: z.number().positive(),

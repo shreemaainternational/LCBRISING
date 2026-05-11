@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  decodeIdToken,
   exchangeCode,
   fetchUserInfo,
+  getOidcConfig,
   isOidcConfigured,
 } from '@/lib/oidc';
 import { OIDC_COOKIE } from '@/lib/oidc/cookies';
+import { verifyIdToken } from '@/lib/oidc/jwks';
 import { upsertOAuthAccount } from '@/lib/oidc/persistence';
+import { createSession } from '@/lib/oidc/session';
 import { writeAudit } from '@/lib/audit';
+
+const SESSION_COOKIE = 'lcr.session';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,21 +64,45 @@ export async function GET(req: NextRequest) {
   try {
     const tokens = await exchangeCode(code, cookieVerifier);
 
-    // Nonce check against id_token, if present.
-    if (tokens.id_token && cookieNonce) {
-      const claims = decodeIdToken(tokens.id_token) ?? {};
-      if (typeof claims.nonce === 'string' && claims.nonce !== cookieNonce) {
-        return NextResponse.json({ error: 'nonce_mismatch' }, { status: 400 });
+    // JWKS-verified ID-token check (signature + iss + aud + exp + nonce).
+    if (tokens.id_token) {
+      const cfg = getOidcConfig();
+      try {
+        await verifyIdToken(tokens.id_token, {
+          clientId: cfg.clientId,
+          issuer: cfg.issuer,
+          nonce: cookieNonce,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'id_token_invalid';
+        return NextResponse.json({ error: 'id_token_invalid', message }, { status: 400 });
       }
     }
 
     const profile = await fetchUserInfo(tokens.access_token);
 
-    await upsertOAuthAccount({ provider: 'lions', profile, tokens });
+    const { id: oauthAccountId } = await upsertOAuthAccount({
+      provider: 'lions',
+      profile,
+      tokens,
+    });
+
+    let session: { id: string; token: string; expires_at: string } | null = null;
+    if (oauthAccountId) {
+      session = await createSession({
+        oauthAccountId,
+        userId: null,
+        device: {
+          user_agent: req.headers.get('user-agent'),
+          ip_address: req.headers.get('x-forwarded-for'),
+        },
+      });
+    }
 
     await writeAudit({
       action: 'oauth.login',
       entity: 'oauth_account',
+      entity_id: oauthAccountId,
       payload: { provider: 'lions', subject: profile.sub, email: profile.email ?? null },
       actor_label: 'oidc',
       ip_address: req.headers.get('x-forwarded-for') ?? null,
@@ -84,6 +112,15 @@ export async function GET(req: NextRequest) {
     const safeReturn = returnTo.startsWith('/') ? returnTo : '/admin';
     const res = NextResponse.redirect(new URL(safeReturn, req.nextUrl.origin));
     clearTransientCookies(res);
+    if (session) {
+      res.cookies.set(SESSION_COOKIE, session.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        expires: new Date(session.expires_at),
+      });
+    }
     return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'callback_failed';

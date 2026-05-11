@@ -40,23 +40,23 @@
 
 | # | Phase                                | Status |
 |---|--------------------------------------|--------|
-| 1 | SSO / OIDC authentication            | ✅ (this commit) |
-| 2 | RBAC & authorization                 | next   |
-| 3 | Sync engine (REST + CSV + Excel)     | next   |
-| 4 | Database schema (federation tables)  | ✅ (migration 0003) |
-| 5 | OAuth token flow                     | ✅ (this commit) |
-| 6 | Member management CRM                | next   |
-| 7 | Club & district automation           | next   |
-| 8 | Event & attendance                   | next   |
-| 9 | Communication automation             | partly (existing) |
-| 10 | Analytics & reporting                | partly (existing) |
-| 11 | Mobile app (PWA / Flutter / RN)      | next   |
-| 12 | Security & compliance                | ongoing |
-| 13 | AI & automation                      | partly (existing) |
+| 1 | SSO / OIDC authentication            | ✅ shipped |
+| 2 | RBAC & authorization                 | ✅ shipped |
+| 3 | Sync engine (REST + CSV)             | ✅ shipped |
+| 4 | Database schema (federation tables)  | ✅ migration 0003 |
+| 5 | OAuth token flow (JWKS, sessions)    | ✅ shipped |
+| 6 | Member management CRM                | ✅ shipped |
+| 7 | Club & district automation           | ✅ shipped |
+| 8 | Event & attendance APIs              | ✅ shipped |
+| 9 | Communication automation             | ✅ extended (meeting/officer hooks) |
+| 10 | Analytics & reporting                | ✅ /api/crm/analytics |
+| 11 | Mobile app (PWA manifest)            | ✅ manifest.ts; native shells TBD |
+| 12 | Security & compliance                | ✅ HSTS, audit feed, RBAC denials |
+| 13 | AI insights                          | ✅ /api/crm/clubs/:id/insights |
 | 14 | Tech-stack alignment                 | ongoing |
-| 15 | Integration layer                    | next   |
-| 16 | DevOps & deployment                  | partly (existing) |
-| 17 | Documentation & deliverables         | ongoing |
+| 15 | Integration registry                 | ✅ /api/crm/integrations |
+| 16 | DevOps & deployment                  | ✅ DEPLOYMENT.md updated |
+| 17 | Documentation & deliverables         | ✅ docs/{OIDC,RBAC,SYNC,ARCHITECTURE,USER_MANUAL,ADMIN_MANUAL,SYNC_DIAGRAMS}.md |
 
 ## Layering
 
