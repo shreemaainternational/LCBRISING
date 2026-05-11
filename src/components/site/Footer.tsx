@@ -9,7 +9,7 @@ export function Footer() {
             <span className="text-2xl">🦁</span> Lions Club Baroda Rising Star
           </div>
           <p className="text-sm text-gray-300">
-            District 323-E · Vadodara, Gujarat · We Serve.
+            District 3232-F1 · Vadodara, Gujarat · We Serve.
           </p>
         </div>
 

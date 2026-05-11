@@ -1,7 +1,7 @@
 # 🦁 Lions Club of Baroda Rising Star — Enterprise Platform
 
 Production-grade NGO platform for the **Lions Club of Baroda Rising Star**
-(District 323-E, Vadodara, India). Combines a public website, member /
+(District 3232-F1, Vadodara, India). Combines a public website, member /
 donor CRM, payment processing, automation engine, and reporting.
 
 ---

@@ -63,6 +63,18 @@ const schema = z.object({
   NEXT_PUBLIC_BRAND_PRIMARY: z.string().default('#1e3a8a'),
   NEXT_PUBLIC_BRAND_ACCENT: z.string().default('#fbbf24'),
   NEXT_PUBLIC_BRAND_LOGO_URL: z.string().optional(),
+
+  // --- Lions OIDC / SSO (provider-agnostic) ---
+  // Wire these up once you obtain credentials from your IdP (Lions Member
+  // Service Center / Auth0 / Keycloak / Okta / Google Workspace, etc.).
+  LIONS_OIDC_ISSUER: z.string().url().optional(),
+  LIONS_OIDC_DISCOVERY_URL: z.string().url().optional(),
+  LIONS_OIDC_CLIENT_ID: z.string().optional(),
+  LIONS_OIDC_CLIENT_SECRET: z.string().optional(),
+  LIONS_OIDC_REDIRECT_URI: z.string().url().optional(),
+  LIONS_OIDC_SCOPES: z.string().optional(),
+  LIONS_OIDC_AUDIENCE: z.string().optional(),
+  LIONS_OIDC_PROVIDER_LABEL: z.string().optional(),
 });
 
 const parsed = schema.parse({
@@ -106,6 +118,14 @@ const parsed = schema.parse({
   NEXT_PUBLIC_BRAND_PRIMARY: process.env.NEXT_PUBLIC_BRAND_PRIMARY,
   NEXT_PUBLIC_BRAND_ACCENT: process.env.NEXT_PUBLIC_BRAND_ACCENT,
   NEXT_PUBLIC_BRAND_LOGO_URL: process.env.NEXT_PUBLIC_BRAND_LOGO_URL,
+  LIONS_OIDC_ISSUER: process.env.LIONS_OIDC_ISSUER,
+  LIONS_OIDC_DISCOVERY_URL: process.env.LIONS_OIDC_DISCOVERY_URL,
+  LIONS_OIDC_CLIENT_ID: process.env.LIONS_OIDC_CLIENT_ID,
+  LIONS_OIDC_CLIENT_SECRET: process.env.LIONS_OIDC_CLIENT_SECRET,
+  LIONS_OIDC_REDIRECT_URI: process.env.LIONS_OIDC_REDIRECT_URI,
+  LIONS_OIDC_SCOPES: process.env.LIONS_OIDC_SCOPES,
+  LIONS_OIDC_AUDIENCE: process.env.LIONS_OIDC_AUDIENCE,
+  LIONS_OIDC_PROVIDER_LABEL: process.env.LIONS_OIDC_PROVIDER_LABEL,
 });
 
 export const env = parsed;
@@ -140,4 +160,5 @@ export const integrations = {
   linkedin: Boolean(parsed.LINKEDIN_ACCESS_TOKEN && parsed.LINKEDIN_ORGANIZATION_URN),
   whatsappBusiness: Boolean(parsed.WHATSAPP_BUSINESS_TOKEN && parsed.WHATSAPP_BUSINESS_PHONE_ID),
   cloudinary: Boolean(parsed.CLOUDINARY_CLOUD_NAME && parsed.CLOUDINARY_API_KEY && parsed.CLOUDINARY_API_SECRET),
+  lionsOidc: Boolean(parsed.LIONS_OIDC_ISSUER && parsed.LIONS_OIDC_CLIENT_ID && parsed.LIONS_OIDC_REDIRECT_URI),
 };
