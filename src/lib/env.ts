@@ -78,6 +78,10 @@ const schema = z.object({
   NEXT_PUBLIC_UPI_VPA: z.string().default('9712299333@ybl'),
   NEXT_PUBLIC_UPI_PAYEE_NAME: z.string().default('Lions Club of Baroda Rising Star'),
   NEXT_PUBLIC_STATIC_QR_URL: z.string().url().optional(),
+
+  // Customer portal session signing. If unset, falls back to the
+  // service role key (already secret) so the portal still works.
+  PORTAL_SESSION_SECRET: z.string().optional(),
 });
 
 const parsed = schema.parse({
@@ -132,6 +136,7 @@ const parsed = schema.parse({
   NEXT_PUBLIC_UPI_VPA: process.env.NEXT_PUBLIC_UPI_VPA,
   NEXT_PUBLIC_UPI_PAYEE_NAME: process.env.NEXT_PUBLIC_UPI_PAYEE_NAME,
   NEXT_PUBLIC_STATIC_QR_URL: process.env.NEXT_PUBLIC_STATIC_QR_URL,
+  PORTAL_SESSION_SECRET: process.env.PORTAL_SESSION_SECRET,
 });
 
 export const env = parsed;
