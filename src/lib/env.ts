@@ -82,6 +82,16 @@ const schema = z.object({
   // Customer portal session signing. If unset, falls back to the
   // service role key (already secret) so the portal still works.
   PORTAL_SESSION_SECRET: z.string().optional(),
+
+  // --- Lions OIDC / SSO (provider-agnostic) ---
+  LIONS_OIDC_ISSUER: z.string().url().optional(),
+  LIONS_OIDC_DISCOVERY_URL: z.string().url().optional(),
+  LIONS_OIDC_CLIENT_ID: z.string().optional(),
+  LIONS_OIDC_CLIENT_SECRET: z.string().optional(),
+  LIONS_OIDC_REDIRECT_URI: z.string().url().optional(),
+  LIONS_OIDC_SCOPES: z.string().optional(),
+  LIONS_OIDC_AUDIENCE: z.string().optional(),
+  LIONS_OIDC_PROVIDER_LABEL: z.string().optional(),
 });
 
 const parsed = schema.parse({
@@ -137,6 +147,14 @@ const parsed = schema.parse({
   NEXT_PUBLIC_UPI_PAYEE_NAME: process.env.NEXT_PUBLIC_UPI_PAYEE_NAME,
   NEXT_PUBLIC_STATIC_QR_URL: process.env.NEXT_PUBLIC_STATIC_QR_URL,
   PORTAL_SESSION_SECRET: process.env.PORTAL_SESSION_SECRET,
+  LIONS_OIDC_ISSUER: process.env.LIONS_OIDC_ISSUER,
+  LIONS_OIDC_DISCOVERY_URL: process.env.LIONS_OIDC_DISCOVERY_URL,
+  LIONS_OIDC_CLIENT_ID: process.env.LIONS_OIDC_CLIENT_ID,
+  LIONS_OIDC_CLIENT_SECRET: process.env.LIONS_OIDC_CLIENT_SECRET,
+  LIONS_OIDC_REDIRECT_URI: process.env.LIONS_OIDC_REDIRECT_URI,
+  LIONS_OIDC_SCOPES: process.env.LIONS_OIDC_SCOPES,
+  LIONS_OIDC_AUDIENCE: process.env.LIONS_OIDC_AUDIENCE,
+  LIONS_OIDC_PROVIDER_LABEL: process.env.LIONS_OIDC_PROVIDER_LABEL,
 });
 
 export const env = parsed;
@@ -173,4 +191,5 @@ export const integrations = {
   cloudinary: Boolean(parsed.CLOUDINARY_CLOUD_NAME && parsed.CLOUDINARY_API_KEY && parsed.CLOUDINARY_API_SECRET),
   upi: Boolean(parsed.UPI_VPA),
   phonepe: Boolean(parsed.PHONEPE_MERCHANT_ID && parsed.PHONEPE_SALT_KEY),
+  lionsOidc: Boolean(parsed.LIONS_OIDC_ISSUER && parsed.LIONS_OIDC_CLIENT_ID && parsed.LIONS_OIDC_REDIRECT_URI),
 };

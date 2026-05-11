@@ -2,33 +2,42 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Lions Club Baroda Rising Star',
-    short_name: 'LCBRS Pay',
-    description: 'Pay invoices and view receipts for Lions Club of Baroda Rising Star.',
-    start_url: '/portal',
+    name: 'Lions CRM — Baroda Rising Star',
+    short_name: 'Lions CRM',
+    description:
+      'Enterprise CRM + payment collection for Lions International members, clubs, and districts. District 3232-F1 · Vadodara.',
+    start_url: '/admin',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#1a0f3e',
-    theme_color: '#5f259f',
+    background_color: '#0b1220',
+    theme_color: '#1e3a8a',
     icons: [
       {
-        src: '/icons/icon-192.svg',
+        src: '/icon-192.png',
         sizes: '192x192',
-        type: 'image/svg+xml',
+        type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/icons/icon-512.svg',
+        src: '/icon-512.png',
         sizes: '512x512',
-        type: 'image/svg+xml',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icon-maskable.png',
+        sizes: '512x512',
+        type: 'image/png',
         purpose: 'maskable',
       },
     ],
-    categories: ['finance', 'business'],
+    categories: ['productivity', 'business', 'social', 'finance'],
+    lang: 'en',
     shortcuts: [
       { name: 'Pay an invoice', url: '/invoices/lookup' },
       { name: 'My invoices', url: '/portal' },
+      { name: 'Admin payments', url: '/admin/payments' },
     ],
   };
 }

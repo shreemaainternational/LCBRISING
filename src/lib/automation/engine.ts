@@ -364,6 +364,74 @@ const handlers: Record<string, JobHandler> = {
    * Daily birthday sweep — generates birthday creative + sends WhatsApp
    * to each member whose dob matches today.
    */
+  send_meeting_reminder: async (payload) => {
+    const eventId = String(payload.event_id);
+    const supabase = createAdminClient();
+    const { data: event } = await supabase
+      .from('events')
+      .select('id, title, date, location, club_id')
+      .eq('id', eventId)
+      .maybeSingle();
+    if (!event) return;
+
+    const memberQuery = supabase
+      .from('members')
+      .select('id, name, email, phone, whatsapp')
+      .is('deleted_at', null);
+    const { data: members } = event.club_id
+      ? await memberQuery.eq('club_id', event.club_id)
+      : await memberQuery;
+
+    const when = formatDate(event.date);
+    for (const m of members ?? []) {
+      const subject = `Reminder: ${event.title} on ${when}`;
+      if (m.email) {
+        await sendEmail({
+          to: m.email,
+          subject,
+          html: `<p>Hi ${m.name},</p><p>Just a reminder for <strong>${event.title}</strong> on ${when}${event.location ? ` at ${event.location}` : ''}.</p>`,
+        });
+        await logComm(m.email, 'email', 'meeting_reminder', subject);
+      }
+      const wa = m.whatsapp || m.phone;
+      if (wa) {
+        try {
+          await sendWhatsApp(wa, whatsappTemplates.eventReminder(m.name, event.title, when, event.location ?? ''));
+          await logComm(wa, 'whatsapp', 'meeting_reminder', event.title);
+        } catch (err) { console.error('meeting WA failed', err); }
+      }
+    }
+  },
+
+  notify_officer_appointment: async (payload) => {
+    const officerId = String(payload.officer_id);
+    const supabase = createAdminClient();
+    const { data: officer } = await supabase
+      .from('officers')
+      .select('id, role, term_start, term_end, scope_kind, members(name, email, whatsapp, phone)')
+      .eq('id', officerId)
+      .maybeSingle();
+    if (!officer) return;
+    const m = (officer as unknown as { members: { name: string; email: string; whatsapp: string | null; phone: string | null } }).members;
+    if (!m) return;
+    const subject = `You've been appointed as ${officer.role}`;
+    if (m.email) {
+      await sendEmail({
+        to: m.email,
+        subject,
+        html: `<p>Congratulations, ${m.name}.</p><p>Your appointment as <strong>${officer.role}</strong> (${officer.scope_kind}) begins ${officer.term_start}.</p>`,
+      });
+      await logComm(m.email, 'email', 'officer_appointment', subject);
+    }
+    const wa = m.whatsapp || m.phone;
+    if (wa) {
+      try {
+        await sendWhatsApp(wa, `🦁 Congratulations ${m.name}! You've been appointed as ${officer.role} effective ${officer.term_start}.`);
+        await logComm(wa, 'whatsapp', 'officer_appointment', officer.role);
+      } catch (err) { console.error('officer WA failed', err); }
+    }
+  },
+
   daily_birthday_sweep: async () => {
     const supabase = createAdminClient();
     const { data: members } = await supabase

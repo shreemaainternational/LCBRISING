@@ -87,7 +87,7 @@ export async function generateContent(args: {
 function systemPromptFor(args: { type: string; language?: string; platform?: string; tone?: string }) {
   const lang = ({ en: 'English', gu: 'Gujarati', hi: 'Hindi' } as Record<string, string>)[args.language ?? 'en'];
   return [
-    `You are a senior content writer for the Lions Club of Baroda Rising Star — a service NGO in Vadodara, India under Lions Clubs International District 323-E. Motto: "We Serve."`,
+    `You are a senior content writer for the Lions Club of Baroda Rising Star — a service NGO in Vadodara, India under Lions Clubs International District 3232-F1. Motto: "We Serve."`,
     `Write in ${lang}. Tone: ${args.tone ?? 'inspirational'}. Always factual; never invent statistics.`,
     `Output VALID JSON only — no preface, no markdown fences. Schema depends on the requested type below.`,
   ].join(' ');

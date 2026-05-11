@@ -14,7 +14,7 @@ export default function AboutPage() {
         The <strong>Lions Club of Baroda Rising Star</strong> is part of
         Lions Clubs International — the world&apos;s largest service
         organisation, with 1.4 million members across 200+ countries.
-        Chartered under <strong>District 323-E</strong>, our chapter
+        Chartered under <strong>District 3232-F1</strong>, our chapter
         serves the city of Vadodara, Gujarat.
       </p>
 
@@ -39,7 +39,7 @@ export default function AboutPage() {
       <h2 className="text-2xl font-semibold text-navy-800 mt-10 mb-3">Leadership</h2>
       <p className="text-gray-700">
         Our governing board is elected each Lionistic year and reports
-        through District 323-E to Lions Clubs International, Oak Brook, USA.
+        through District 3232-F1 to Lions Clubs International, Oak Brook, USA.
       </p>
     </article>
   );
