@@ -38,30 +38,65 @@ type InvoiceRow = {
   payment_proofs: Proof[];
 };
 
+async function safe<T>(label: string, fn: () => Promise<T>): Promise<{ data: T | null; error: string | null }> {
+  try {
+    const data = await fn();
+    return { data, error: null };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[admin/payments] ${label} failed:`, msg);
+    return { data: null, error: msg };
+  }
+}
+
 export default async function AdminPaymentsPage() {
   await requireAdmin();
   const supabase = createAdminClient();
 
-  const [{ data: invoices }, { data: capturedPayments }, { data: refunds }, stats] = await Promise.all([
-    supabase
-      .from('invoices')
-      .select('id, invoice_no, customer_name, customer_email, customer_phone, amount, status, created_at, payment_proofs(id, status, method, utr, upi_vpa, amount_claimed, screenshot_url, notes, rejection_reason, created_at)')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(200),
-    supabase
-      .from('payments')
-      .select('id, amount, receipt_no, status, method, utr, created_at, invoices(invoice_no, customer_name)')
-      .in('status', ['captured', 'authorized'])
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('refunds')
-      .select('id, amount, status, reason, utr, created_at, processed_at, payment_id, invoices(invoice_no, customer_name)')
-      .order('created_at', { ascending: false })
-      .limit(50),
-    getPaymentStats(),
+  const [invoicesResult, paymentsResult, refundsResult, statsResult] = await Promise.all([
+    safe('invoices', async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, invoice_no, customer_name, customer_email, customer_phone, amount, status, created_at, payment_proofs(id, status, method, utr, upi_vpa, amount_claimed, screenshot_url, notes, rejection_reason, created_at)')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }),
+    safe('payments', async () => {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('id, amount, receipt_no, status, method, utr, created_at, invoices(invoice_no, customer_name)')
+        .in('status', ['captured', 'authorized'])
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }),
+    safe('refunds', async () => {
+      const { data, error } = await supabase
+        .from('refunds')
+        .select('id, amount, status, reason, utr, created_at, processed_at, payment_id, invoices(invoice_no, customer_name)')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }),
+    safe('stats', () => getPaymentStats()),
   ]);
+
+  const errors = [invoicesResult, paymentsResult, refundsResult, statsResult]
+    .map((r, i) => ({ label: ['invoices', 'payments', 'refunds', 'stats'][i], error: r.error }))
+    .filter((r) => r.error);
+
+  const invoices = invoicesResult.data ?? [];
+  const capturedPayments = paymentsResult.data ?? [];
+  const refunds = refundsResult.data ?? [];
+  const stats = statsResult.data ?? {
+    totalCollected: 0, pendingAmount: 0, paidCount: 0, pendingCount: 0,
+    expiredCount: 0, pendingProofs: 0, daily: [], topCustomers: [],
+  };
 
   const rows = (invoices ?? []) as InvoiceRow[];
   const pendingProofs = rows.flatMap((r) => r.payment_proofs.filter((p) => p.status === 'pending'));
@@ -112,6 +147,24 @@ export default async function AdminPaymentsPage() {
           </a>
         </div>
       </div>
+
+      {errors.length > 0 && (
+        <div className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-medium text-amber-900 mb-1">
+            Some data could not be loaded. The page is rendering with what succeeded.
+          </p>
+          <ul className="text-xs text-amber-800 space-y-0.5">
+            {errors.map((e) => (
+              <li key={e.label}>
+                <strong>{e.label}:</strong> {e.error}
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-amber-700 mt-2">
+            If you just applied migrations, run <code className="bg-amber-100 px-1 rounded">NOTIFY pgrst, &apos;reload schema&apos;;</code> in the Supabase SQL Editor and refresh.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <StatCard label="Collected (30d)" value={formatINR(stats.totalCollected)} accent="text-green-700" />
