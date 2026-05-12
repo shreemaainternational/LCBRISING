@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import type { Member, MemberRole } from '@/lib/supabase/database.types';
 
@@ -19,9 +20,8 @@ export async function getCurrentMember(): Promise<Member | null> {
 
 export async function requireAdmin(): Promise<Member> {
   const member = await getCurrentMember();
-  if (!member || !ADMIN_ROLES.includes(member.role)) {
-    throw new Response('Unauthorized', { status: 403 });
-  }
+  if (!member) redirect('/login?redirectTo=/admin');
+  if (!ADMIN_ROLES.includes(member.role)) redirect('/?denied=admin');
   return member;
 }
 
