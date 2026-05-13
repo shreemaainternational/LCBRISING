@@ -139,6 +139,27 @@ await check('GET /api/health -> ok:true', async () => {
 });
 
 // ---------------------------------------------------------------------
+// Deployment freshness probe.
+// /api/crm/permissions is the simplest "is the new build live?" canary
+// because it's a GET that always returns JSON (401 unauth, 200 auth).
+// If it returns 404 HTML, the deployment is stale and every later
+// CRM/sync check below will cascade into false-pass-as-404.
+// Fail loudly here so the operator immediately knows to redeploy.
+// ---------------------------------------------------------------------
+await check('Deployment carries Phase 1-17 routes (canary)', async () => {
+  const res = await fetchWithTimeout(`${BASE_URL}/api/crm/permissions`);
+  const ct = res.headers.get('content-type') || '';
+  if (res.status === 404 && /html/i.test(ct)) {
+    throw new Error(
+      'production deployment is STALE — /api/crm/* routes missing. ' +
+      'Run the "Sync Vercel env vars and redeploy" workflow on main to fix.',
+    );
+  }
+  assert([401, 403, 200].includes(res.status), await describeResponse(res));
+  return `${res.status} (canary route mounted)`;
+});
+
+// ---------------------------------------------------------------------
 // OIDC: should 503 cleanly when env not yet set, 302 when set.
 // This is the only check that needs to see the raw redirect, hence
 // redirect:'manual'.
@@ -180,9 +201,10 @@ const guardedReadEndpoints = [
 for (const path of guardedReadEndpoints) {
   await check(`GET ${path} rejects unauthenticated`, async () => {
     const res = await fetchWithTimeout(`${BASE_URL}${path}`);
-    // 401/403 = auth guard fired (ideal). 404 = path not deployed.
-    // 405 = method exists but not GET (still proves the route is mounted).
-    assert([401, 403, 404, 405].includes(res.status), await describeResponse(res));
+    // 401/403 = auth guard fired (ideal). 405 = method exists but not GET.
+    // 404 is NOT accepted here — the canary above ensures the routes
+    // are deployed, so a 404 means a real regression.
+    assert([401, 403, 405].includes(res.status), await describeResponse(res));
     return `${res.status}`;
   });
 }
@@ -212,6 +234,9 @@ for (const { method, path } of guardedWriteEndpoints) {
       headers: { 'content-type': 'application/json' },
       body: '{}',
     });
+    // 400 = body validation runs before auth; 401/403 = auth guard fired.
+    // 404 means the route isn't deployed (caught earlier by the canary,
+    // but reject it here too so a partial deploy can't slip past).
     assert([400, 401, 403].includes(res.status), await describeResponse(res));
     return `${res.status}`;
   });
