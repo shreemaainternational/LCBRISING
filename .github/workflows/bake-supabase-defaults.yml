@@ -1,0 +1,184 @@
+name: Bake Supabase public defaults into env.ts
+
+# Fetches NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+# from the Supabase Management API and patches them in as Zod defaults
+# in src/lib/env.ts.
+#
+# Why: NEXT_PUBLIC_* env vars are inlined into the client JS bundle at
+# BUILD time. If they aren't present in the build context (or build
+# cache reused stale bundles), the browser ends up with empty values
+# and Supabase Auth fetches fail with "Failed to fetch".
+#
+# Anon keys are designed to be public (Supabase RLS handles security),
+# so committing them is safe. The service_role key is NEVER touched
+# here and remains server-only.
+#
+# Required GitHub repo secret:
+#   SUPABASE_ACCESS_TOKEN  - PAT for the LCBRising Supabase org
+#                            (already configured for apply-migration).
+#
+# Result: opens a PR with the patched env.ts. Merge → Vercel auto-deploys.
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        description: 'Supabase project ref'
+        required: true
+        default: 'mvtqqlfzawyhntnsavbx'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify required secret
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Missing SUPABASE_ACCESS_TOKEN"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          # GITHUB_TOKEN is fine for branch push; PR is opened via the
+          # peter-evans action which also uses GITHUB_TOKEN.
+
+      - name: Fetch anon key from Supabase Management API
+        id: keys
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: ${{ github.event.inputs.project_ref }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/keys.json -w "%{http_code}" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$REF/api-keys")
+          if [ "$code" != "200" ]; then
+            echo "::error::api-keys fetch failed (HTTP $code)"
+            cat /tmp/keys.json
+            exit 1
+          fi
+
+          # The response is an array of {name, api_key, …}
+          anon=$(jq -r '.[] | select(.name=="anon") | .api_key' /tmp/keys.json)
+          if [ -z "$anon" ] || [ "$anon" = "null" ]; then
+            echo "::error::Could not extract anon key"
+            jq . /tmp/keys.json
+            exit 1
+          fi
+
+          url="https://${REF}.supabase.co"
+          echo "Resolved:"
+          echo "  url=$url"
+          echo "  anon=${anon:0:20}…${anon: -8}"
+
+          # Mask the anon key in subsequent logs (defence-in-depth even
+          # though anon keys are designed to be public).
+          echo "::add-mask::$anon"
+
+          {
+            echo "url=$url"
+            echo "anon<<EOF"
+            echo "$anon"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Patch src/lib/env.ts with defaults
+        env:
+          URL: ${{ steps.keys.outputs.url }}
+          ANON: ${{ steps.keys.outputs.anon }}
+        run: |
+          set -euo pipefail
+          # Use python for precise regex with multiline + escaping.
+          python3 <<'PY'
+          import os, re, pathlib
+          url = os.environ["URL"]
+          anon = os.environ["ANON"]
+          p = pathlib.Path("src/lib/env.ts")
+          src = p.read_text()
+
+          # Replace the two NEXT_PUBLIC_SUPABASE_* lines.
+          # Match current schema with or without an existing default().
+          src_new, n1 = re.subn(
+              r'NEXT_PUBLIC_SUPABASE_URL:\s*z\.string\(\)\.url\(\)(?:\.default\([^)]*\))?\.optional\(\),',
+              f'NEXT_PUBLIC_SUPABASE_URL: z.string().url().default({url!r}),',
+              src,
+          )
+          src_new, n2 = re.subn(
+              r'NEXT_PUBLIC_SUPABASE_ANON_KEY:\s*z\.string\(\)\.min\(20\)(?:\.default\([^)]*\))?\.optional\(\),',
+              f'NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20).default({anon!r}),',
+              src_new,
+          )
+          if n1 == 0 or n2 == 0:
+              raise SystemExit(f"::error::could not find env keys to patch (n1={n1}, n2={n2})")
+          p.write_text(src_new)
+          print(f"Patched {p}: url={n1}, anon={n2}")
+          PY
+
+          # Also patch the requireSupabaseEnv function to no longer throw
+          # (defaults now always exist). It's a no-op if already non-throwing.
+          # We leave the function as-is since the .default() in the schema
+          # already ensures non-null.
+
+          git --no-pager diff src/lib/env.ts || true
+
+      - name: Sanity check (typecheck the patched file)
+        run: |
+          set -euo pipefail
+          npm ci --prefer-offline --no-audit --no-fund > /dev/null
+          npx tsc --noEmit --skipLibCheck src/lib/env.ts || {
+            echo "::error::Patched env.ts fails typecheck"; exit 1;
+          }
+
+      - name: Open PR with the patch
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: claude/baked-supabase-defaults
+          delete-branch: true
+          base: main
+          commit-message: |
+            fix(env): bake Supabase public URL+anon key as Zod defaults
+
+            Previously NEXT_PUBLIC_SUPABASE_* were .optional() and read
+            from process.env at module load. In Next.js client bundles,
+            that read happens at BUILD time, so if the Vercel build
+            context didn't have those env vars set (or served a stale
+            cache), the browser bundle baked them as undefined and
+            every Supabase fetch failed with 'Failed to fetch'.
+
+            Anon keys are designed to be public; embedding them in the
+            repo is the documented pattern for shared bundles. The
+            service_role key is unchanged (server-only, secret).
+          title: 'fix(env): bake Supabase public defaults to fix "Failed to fetch" on login'
+          body: |
+            ## Why
+
+            The `/login` form fails with "Failed to fetch" because the client
+            JS bundle has empty `NEXT_PUBLIC_SUPABASE_*` strings — Vercel's
+            most recent production build didn't have those env vars set
+            (or reused a stale build cache).
+
+            ## Fix
+
+            Move the URL + anon key to Zod `.default(...)` values in
+            `src/lib/env.ts`. The build now inlines them unconditionally
+            regardless of Vercel env-var configuration.
+
+            Anon keys are public by design (Supabase RLS gates access).
+            The service_role key is **not** touched and remains a
+            server-only secret.
+
+            ## After merge
+
+            Vercel auto-deploys → login works in an incognito window with:
+            - email: `crm-admin@lcbrising.org`
+            - password: (set by previous create-admin workflow run)
