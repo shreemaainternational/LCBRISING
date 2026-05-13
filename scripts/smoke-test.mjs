@@ -8,7 +8,7 @@
  *
  * Usage:
  *   node scripts/smoke-test.mjs
- *   BASE_URL=https://lcbrising.vercel.app node scripts/smoke-test.mjs
+ *   BASE_URL=https://barodarisingstar.com node scripts/smoke-test.mjs
  *   BASE_URL=http://localhost:3000 node scripts/smoke-test.mjs
  *
  * Exit codes:
@@ -16,7 +16,7 @@
  *   1  - one or more checks failed
  */
 
-const BASE_URL = (process.env.BASE_URL || 'https://lcbrising.vercel.app').replace(/\/$/, '');
+const BASE_URL = (process.env.BASE_URL || 'https://barodarisingstar.com').replace(/\/$/, '');
 const TIMEOUT_MS = 15_000;
 
 /** @type {{name: string, ok: boolean, detail: string}[]} */

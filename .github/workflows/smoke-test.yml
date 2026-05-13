@@ -10,7 +10,7 @@ on:
       base_url:
         description: 'Site to test. Defaults to production.'
         required: true
-        default: 'https://lcbrising.vercel.app'
+        default: 'https://barodarisingstar.com'
   # Uncomment to run hourly:
   # schedule:
   #   - cron: '0 * * * *'
@@ -28,5 +28,5 @@ jobs:
         with: { node-version: '20' }
       - name: Run smoke test
         env:
-          BASE_URL: ${{ github.event.inputs.base_url || 'https://lcbrising.vercel.app' }}
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://barodarisingstar.com' }}
         run: node scripts/smoke-test.mjs
