@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { Card, CardContent } from '@/components/ui/card';
+import { PageHero } from '@/components/site/PageHero';
 import { formatDate } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -40,18 +41,14 @@ export default async function BlogPage() {
   }
 
   return (
-    <section className="container-page py-16">
-      <header className="mb-10 max-w-2xl">
-        <p className="text-xs uppercase tracking-[0.18em] text-brand-600 font-semibold mb-2">
-          Lions Club Baroda Rising Star · Blog
-        </p>
-        <h1 className="text-4xl font-bold text-navy-800 mb-3">Stories from the field</h1>
-        <p className="text-gray-600">
-          Reflections from our members, project recaps, and updates from District
-          3232-F1. We post here whenever a project closes or an officer has
-          something to share.
-        </p>
-      </header>
+    <>
+      <PageHero
+        pillText="Lions Club Baroda Rising Star · Blog"
+        headline="Stories from"
+        accent="the field"
+        subtitle="Reflections from our members, project recaps, and updates from District 3232-F1. Posted whenever a project closes or an officer has something to share."
+      />
+      <section className="container-page py-16">
 
       {posts.length === 0 ? (
         <Card className="bg-gradient-to-br from-brand-50 to-white border-brand-200">
@@ -111,6 +108,7 @@ export default async function BlogPage() {
           ))}
         </ul>
       )}
-    </section>
+      </section>
+    </>
   );
 }
