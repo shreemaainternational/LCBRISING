@@ -6,10 +6,12 @@ import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, Coins,
+  Globe, RefreshCw, ScrollText,
 } from 'lucide-react';
 
 const navItems = [
   { href: '/admin',             label: 'Dashboard',     icon: LayoutDashboard },
+  { href: '/admin/districts',   label: 'Districts',     icon: Globe },
   { href: '/admin/members',     label: 'Members',       icon: Users },
   { href: '/admin/dues',        label: 'Dues',          icon: Banknote },
   { href: '/admin/donations',   label: 'Donations',     icon: HeartHandshake },
@@ -21,6 +23,8 @@ const navItems = [
   { href: '/admin/social',      label: 'Social',        icon: Megaphone },
   { href: '/admin/communications', label: 'Comms',      icon: Mail },
   { href: '/admin/automation',  label: 'Automation',    icon: Settings },
+  { href: '/admin/sync',        label: 'Sync',          icon: RefreshCw },
+  { href: '/admin/audit',       label: 'Audit log',     icon: ScrollText },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
