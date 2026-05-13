@@ -1,23 +1,23 @@
 name: Bake Supabase public defaults into env.ts
 
 # Fetches NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
-# from the Supabase Management API and patches them in as Zod defaults
-# in src/lib/env.ts.
+# from the Supabase Management API and rewrites src/lib/env.ts so the
+# URL and anon key are baked in as Zod .default(...) values.
 #
-# Why: NEXT_PUBLIC_* env vars are inlined into the client JS bundle at
-# BUILD time. If they aren't present in the build context (or build
-# cache reused stale bundles), the browser ends up with empty values
-# and Supabase Auth fetches fail with "Failed to fetch".
+# Why: NEXT_PUBLIC_* env vars are inlined into the Next.js client JS
+# bundle at BUILD time. If Vercel's build context lacks them, the
+# bundle ships with empty Supabase URLs and every auth fetch fails
+# with "Failed to fetch". Moving the values to code-level defaults
+# removes that build-time dependency entirely.
 #
-# Anon keys are designed to be public (Supabase RLS handles security),
-# so committing them is safe. The service_role key is NEVER touched
-# here and remains server-only.
+# Anon keys are public by design (Supabase RLS gates data access).
+# The service_role key is NOT touched and stays a server-only secret.
 #
 # Required GitHub repo secret:
-#   SUPABASE_ACCESS_TOKEN  - PAT for the LCBRising Supabase org
-#                            (already configured for apply-migration).
+#   SUPABASE_ACCESS_TOKEN  - PAT for the LCBRising Supabase org.
 #
-# Result: opens a PR with the patched env.ts. Merge → Vercel auto-deploys.
+# Result: pushes a branch 'claude/baked-supabase-defaults' that you
+# (or Claude via MCP) can open into a PR.
 
 on:
   workflow_dispatch:
@@ -29,122 +29,128 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   bake:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify required secret
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Verify token
         run: |
-          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo "::error::Missing SUPABASE_ACCESS_TOKEN"
+          if [ -z "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ]; then
+            echo "::error::Missing SUPABASE_ACCESS_TOKEN secret"
             exit 1
           fi
+          echo "OK"
 
       - uses: actions/checkout@v4
         with:
           ref: main
-          # GITHUB_TOKEN is fine for branch push; PR is opened via the
-          # peter-evans action which also uses GITHUB_TOKEN.
+          fetch-depth: 0
 
-      - name: Fetch anon key from Supabase Management API
+      - name: Fetch anon key + URL from Supabase Management API
         id: keys
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           REF: ${{ github.event.inputs.project_ref }}
         run: |
           set -euo pipefail
-          code=$(curl -sS -o /tmp/keys.json -w "%{http_code}" \
+
+          code=$(curl -sS -o /tmp/keys.json -w '%{http_code}' \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             "https://api.supabase.com/v1/projects/$REF/api-keys")
+
+          echo "HTTP $code"
           if [ "$code" != "200" ]; then
-            echo "::error::api-keys fetch failed (HTTP $code)"
+            echo "::error::Supabase api-keys returned $code"
             cat /tmp/keys.json
             exit 1
           fi
 
-          # The response is an array of {name, api_key, …}
-          anon=$(jq -r '.[] | select(.name=="anon") | .api_key' /tmp/keys.json)
-          if [ -z "$anon" ] || [ "$anon" = "null" ]; then
-            echo "::error::Could not extract anon key"
-            jq . /tmp/keys.json
+          # Response is a JSON array of {name, api_key, ...}
+          ANON=$(jq -r '.[] | select(.name=="anon") | .api_key' /tmp/keys.json)
+          if [ -z "$ANON" ] || [ "$ANON" = "null" ]; then
+            echo "::error::Could not extract anon key from response"
+            cat /tmp/keys.json
             exit 1
           fi
 
-          url="https://${REF}.supabase.co"
-          echo "Resolved:"
-          echo "  url=$url"
-          echo "  anon=${anon:0:20}…${anon: -8}"
+          URL="https://${REF}.supabase.co"
+          echo "url=$URL"
+          echo "anon prefix=${ANON:0:14}…"
 
-          # Mask the anon key in subsequent logs (defence-in-depth even
-          # though anon keys are designed to be public).
-          echo "::add-mask::$anon"
+          # Mask to keep it out of subsequent logs.
+          echo "::add-mask::$ANON"
 
+          # Hand off to the next step.
+          printf 'url=%s\n' "$URL" >> "$GITHUB_OUTPUT"
           {
-            echo "url=$url"
-            echo "anon<<EOF"
-            echo "$anon"
-            echo "EOF"
+            echo 'anon<<EOF'
+            printf '%s\n' "$ANON"
+            echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
-      - name: Patch src/lib/env.ts with defaults
+      - name: Patch src/lib/env.ts via Node script
         env:
           URL: ${{ steps.keys.outputs.url }}
           ANON: ${{ steps.keys.outputs.anon }}
         run: |
           set -euo pipefail
-          # Use python for precise regex with multiline + escaping.
-          python3 <<'PY'
-          import os, re, pathlib
-          url = os.environ["URL"]
-          anon = os.environ["ANON"]
-          p = pathlib.Path("src/lib/env.ts")
-          src = p.read_text()
 
-          # Replace the two NEXT_PUBLIC_SUPABASE_* lines.
-          # Match current schema with or without an existing default().
-          src_new, n1 = re.subn(
-              r'NEXT_PUBLIC_SUPABASE_URL:\s*z\.string\(\)\.url\(\)(?:\.default\([^)]*\))?\.optional\(\),',
-              f'NEXT_PUBLIC_SUPABASE_URL: z.string().url().default({url!r}),',
-              src,
-          )
-          src_new, n2 = re.subn(
-              r'NEXT_PUBLIC_SUPABASE_ANON_KEY:\s*z\.string\(\)\.min\(20\)(?:\.default\([^)]*\))?\.optional\(\),',
-              f'NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20).default({anon!r}),',
-              src_new,
-          )
-          if n1 == 0 or n2 == 0:
-              raise SystemExit(f"::error::could not find env keys to patch (n1={n1}, n2={n2})")
-          p.write_text(src_new)
-          print(f"Patched {p}: url={n1}, anon={n2}")
-          PY
-
-          # Also patch the requireSupabaseEnv function to no longer throw
-          # (defaults now always exist). It's a no-op if already non-throwing.
-          # We leave the function as-is since the .default() in the schema
-          # already ensures non-null.
-
-          git --no-pager diff src/lib/env.ts || true
-
-      - name: Sanity check (typecheck the patched file)
-        run: |
-          set -euo pipefail
-          npm ci --prefer-offline --no-audit --no-fund > /dev/null
-          npx tsc --noEmit --skipLibCheck src/lib/env.ts || {
-            echo "::error::Patched env.ts fails typecheck"; exit 1;
+          # Inline Node script — no external deps, no heredoc fragility.
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'src/lib/env.ts';
+          const url = process.env.URL;
+          const anon = process.env.ANON;
+          if (!url || !anon) {
+            console.error('URL or ANON not set');
+            process.exit(1);
           }
 
-      - name: Push patched env.ts to a dedicated branch
+          let src = fs.readFileSync(path, 'utf8');
+          const before = src;
+
+          // The two lines we replace. We accept any combination of
+          // .optional() / .default(...) / nothing after the validators.
+          const urlPattern = /NEXT_PUBLIC_SUPABASE_URL:\s*z\.string\(\)\.url\(\)(?:\.[^,]+)*,/;
+          const anonPattern = /NEXT_PUBLIC_SUPABASE_ANON_KEY:\s*z\.string\(\)\.min\(20\)(?:\.[^,]+)*,/;
+
+          const urlReplacement = `NEXT_PUBLIC_SUPABASE_URL: z.string().url().default(${JSON.stringify(url)}),`;
+          const anonReplacement = `NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20).default(${JSON.stringify(anon)}),`;
+
+          if (!urlPattern.test(src)) {
+            console.error('Could not find NEXT_PUBLIC_SUPABASE_URL pattern');
+            process.exit(1);
+          }
+          if (!anonPattern.test(src)) {
+            console.error('Could not find NEXT_PUBLIC_SUPABASE_ANON_KEY pattern');
+            process.exit(1);
+          }
+
+          src = src.replace(urlPattern, urlReplacement);
+          src = src.replace(anonPattern, anonReplacement);
+
+          if (src === before) {
+            console.error('No change after replace — should not happen');
+            process.exit(1);
+          }
+
+          fs.writeFileSync(path, src, 'utf8');
+          console.log('Patched env.ts successfully.');
+          NODE
+
+          echo '--- diff ---'
+          git --no-pager diff src/lib/env.ts | head -40 || true
+
+      - name: Push patched branch
         env:
           GH_BRANCH: claude/baked-supabase-defaults
         run: |
           set -euo pipefail
+
           if git diff --quiet src/lib/env.ts; then
-            echo "No changes to env.ts (defaults already match). Skipping push."
+            echo "::notice::No changes to env.ts; defaults already current. Nothing to push."
             exit 0
           fi
 
@@ -152,18 +158,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$GH_BRANCH"
           git add src/lib/env.ts
-          git commit -m "fix(env): bake Supabase public URL+anon key as Zod defaults
-
-Auto-generated by .github/workflows/bake-supabase-defaults.yml.
-
-NEXT_PUBLIC_SUPABASE_* are inlined into the client JS bundle at build
-time. If Vercel's build context lacks them, the bundle gets empty
-strings and every Supabase fetch fails with 'Failed to fetch'. This
-moves the values to Zod .default() so the build no longer depends on
-env vars.
-
-Anon keys are public by design (Supabase RLS gates access).
-The service_role key is NOT touched."
+          git commit -m "fix(env): bake Supabase public URL+anon key as Zod defaults"
           git push --force origin "$GH_BRANCH"
-          echo "::notice::Pushed branch '$GH_BRANCH'. PR can be opened at:"
+
+          echo "::notice::Pushed $GH_BRANCH. Compare URL:"
           echo "::notice::https://github.com/${{ github.repository }}/compare/main...$GH_BRANCH"
