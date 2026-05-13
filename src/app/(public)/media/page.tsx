@@ -4,6 +4,7 @@ import { Image as ImageIcon, Newspaper, Video } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { Card, CardContent } from '@/components/ui/card';
+import { PageHero } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
   title: 'Media',
@@ -44,17 +45,14 @@ export default async function MediaPage() {
   }
 
   return (
-    <section className="container-page py-16">
-      <header className="mb-10 max-w-2xl">
-        <p className="text-xs uppercase tracking-[0.18em] text-brand-600 font-semibold mb-2">
-          Lions Club Baroda Rising Star · Media
-        </p>
-        <h1 className="text-4xl font-bold text-navy-800 mb-3">Photos, video & press</h1>
-        <p className="text-gray-600">
-          Every service project leaves a record — pictures from the field, video
-          recaps, and the occasional newspaper clipping. Browse below.
-        </p>
-      </header>
+    <>
+      <PageHero
+        pillText="Lions Club Baroda Rising Star · Media"
+        headline="Photos, video"
+        accent="& press"
+        subtitle="Every service project leaves a record — pictures from the field, video recaps, and the occasional newspaper clipping."
+      />
+      <section className="container-page py-16">
 
       {/* Section nav */}
       <div className="grid gap-4 sm:grid-cols-3 mb-12">
@@ -137,7 +135,8 @@ export default async function MediaPage() {
           </CardContent>
         </Card>
       </div>
-    </section>
+      </section>
+    </>
   );
 }
 
