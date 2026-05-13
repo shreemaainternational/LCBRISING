@@ -1,48 +1,52 @@
 import type { Metadata } from 'next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Mail, MapPin, Phone } from 'lucide-react';
+import { PageHero } from '@/components/site/PageHero';
 
 export const metadata: Metadata = { title: 'Contact' };
 
 export default function ContactPage() {
   return (
-    <section className="container-page py-16 max-w-3xl">
-      <h1 className="text-4xl font-bold text-navy-800 mb-2">Contact Us</h1>
-      <p className="text-gray-600 mb-10">
-        Get in touch — for membership, partnerships, or to volunteer.
-      </p>
+    <>
+      <PageHero
+        pillText="Lions Club Baroda Rising Star · Contact"
+        headline="Let's serve"
+        accent="together"
+        subtitle="For membership, partnerships, or to volunteer — drop us a line."
+      />
+      <section className="container-page py-16 max-w-3xl">
+        <div className="grid md:grid-cols-3 gap-4 mb-10">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Mail className="mx-auto text-brand-500 mb-2" />
+              <div className="font-semibold">Email</div>
+              <a href="mailto:contact@lcbrising.org" className="text-sm text-gray-600">contact@lcbrising.org</a>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Phone className="mx-auto text-brand-500 mb-2" />
+              <div className="font-semibold">Phone</div>
+              <a href="tel:+919712299333" className="text-sm text-gray-600">+91-9712299333</a>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <MapPin className="mx-auto text-brand-500 mb-2" />
+              <div className="font-semibold">Address</div>
+              <div className="text-sm text-gray-600">Vadodara, Gujarat, India</div>
+            </CardContent>
+          </Card>
+        </div>
 
-      <div className="grid md:grid-cols-3 gap-4 mb-10">
         <Card>
-          <CardContent className="p-6 text-center">
-            <Mail className="mx-auto text-brand-500 mb-2" />
-            <div className="font-semibold">Email</div>
-            <a href="mailto:contact@lcbrising.org" className="text-sm text-gray-600">contact@lcbrising.org</a>
+          <CardContent className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Send a message</h2>
+            <ContactForm />
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Phone className="mx-auto text-brand-500 mb-2" />
-            <div className="font-semibold">Phone</div>
-            <div className="text-sm text-gray-600">+91 90000 00000</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6 text-center">
-            <MapPin className="mx-auto text-brand-500 mb-2" />
-            <div className="font-semibold">Address</div>
-            <div className="text-sm text-gray-600">Vadodara, Gujarat, India</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardContent className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Send a message</h2>
-          <ContactForm />
-        </CardContent>
-      </Card>
-    </section>
+      </section>
+    </>
   );
 }
 

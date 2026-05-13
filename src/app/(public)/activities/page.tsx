@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PageHero } from '@/components/site/PageHero';
 import { formatDate } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -21,10 +22,14 @@ export default async function ActivitiesPage() {
   }
 
   return (
-    <section className="container-page py-16">
-      <h1 className="text-4xl font-bold text-navy-800 mb-2">Activities</h1>
-      <p className="text-gray-600 mb-10">Service projects organised by our chapter.</p>
-
+    <>
+      <PageHero
+        pillText="Lions Club Baroda Rising Star · Service Activities"
+        headline="One act of kindness"
+        accent="at a time"
+        subtitle="Health camps, education drives, environmental projects, disaster relief — service projects organised by our chapter."
+      />
+      <section className="container-page py-16">
       {(!activities || activities.length === 0) ? (
         <p className="text-gray-500">No activities posted yet — check back soon.</p>
       ) : (
@@ -49,6 +54,7 @@ export default async function ActivitiesPage() {
           ))}
         </div>
       )}
-    </section>
+      </section>
+    </>
   );
 }

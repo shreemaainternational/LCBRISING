@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { DonateForm } from './DonateForm';
+import { PageHero } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
   title: 'Donate',
@@ -8,13 +9,16 @@ export const metadata: Metadata = {
 
 export default function DonatePage() {
   return (
-    <section className="container-page py-16 max-w-2xl">
-      <h1 className="text-4xl font-bold text-navy-800 mb-2">Donate</h1>
-      <p className="text-gray-600 mb-8">
-        Your contribution funds eye-camps, food drives, scholarships, and more.
-        Donations are processed securely through Razorpay.
-      </p>
-      <DonateForm />
-    </section>
+    <>
+      <PageHero
+        pillText="Lions Club Baroda Rising Star · Donate"
+        headline="Your donation"
+        accent="changes lives"
+        subtitle="Funds eye-camps, food drives, scholarships, disaster relief, and more. Processed securely through Razorpay / UPI / PhonePe."
+      />
+      <section className="container-page py-16 max-w-2xl">
+        <DonateForm />
+      </section>
+    </>
   );
 }

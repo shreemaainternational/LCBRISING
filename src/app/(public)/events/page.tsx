@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { Card, CardContent } from '@/components/ui/card';
+import { PageHero } from '@/components/site/PageHero';
 import { formatDate } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Events' };
@@ -24,10 +25,14 @@ export default async function EventsPage() {
   }
 
   return (
-    <section className="container-page py-16">
-      <h1 className="text-4xl font-bold text-navy-800 mb-2">Events</h1>
-      <p className="text-gray-600 mb-10">Join us at upcoming community events.</p>
-
+    <>
+      <PageHero
+        pillText="Lions Club Baroda Rising Star · Events"
+        headline="Service"
+        accent="in action"
+        subtitle="Eye camps, food drives, training sessions, conventions. Join us at the next one."
+      />
+      <section className="container-page py-16">
       <h2 className="text-2xl font-semibold mt-6 mb-4">Upcoming</h2>
       {(!upcoming || upcoming.length === 0) ? (
         <p className="text-gray-500 mb-10">No upcoming events scheduled.</p>
@@ -49,7 +54,8 @@ export default async function EventsPage() {
           </div>
         </>
       )}
-    </section>
+      </section>
+    </>
   );
 }
 
