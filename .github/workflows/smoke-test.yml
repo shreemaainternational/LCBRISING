@@ -1,0 +1,32 @@
+name: Production smoke test
+
+# Runs scripts/smoke-test.mjs against a deployed URL. Use this:
+#   - manually after a release to spot regressions
+#   - as a scheduled probe (cron block below; enable to start hourly checks)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Site to test. Defaults to production.'
+        required: true
+        default: 'https://lcbrising.vercel.app'
+  # Uncomment to run hourly:
+  # schedule:
+  #   - cron: '0 * * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Run smoke test
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://lcbrising.vercel.app' }}
+        run: node scripts/smoke-test.mjs
