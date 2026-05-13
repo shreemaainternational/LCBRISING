@@ -6,12 +6,13 @@ import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, Coins,
-  Globe, RefreshCw, ScrollText,
+  Globe, MapPin, RefreshCw, ScrollText,
 } from 'lucide-react';
 
 const navItems = [
   { href: '/admin',             label: 'Dashboard',     icon: LayoutDashboard },
   { href: '/admin/districts',   label: 'Districts',     icon: Globe },
+  { href: '/admin/zones',       label: 'Zones',         icon: MapPin },
   { href: '/admin/members',     label: 'Members',       icon: Users },
   { href: '/admin/dues',        label: 'Dues',          icon: Banknote },
   { href: '/admin/donations',   label: 'Donations',     icon: HeartHandshake },
