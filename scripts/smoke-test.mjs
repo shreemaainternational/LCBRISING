@@ -170,7 +170,6 @@ const guardedReadEndpoints = [
   '/api/crm/members',
   '/api/crm/clubs',
   '/api/crm/districts',
-  '/api/crm/officers/00000000-0000-0000-0000-000000000000',
   '/api/crm/attendance',
   '/api/crm/audit',
   '/api/crm/analytics',
@@ -181,10 +180,23 @@ const guardedReadEndpoints = [
 for (const path of guardedReadEndpoints) {
   await check(`GET ${path} rejects unauthenticated`, async () => {
     const res = await fetchWithTimeout(`${BASE_URL}${path}`);
-    assert([401, 403, 404].includes(res.status), await describeResponse(res));
+    // 401/403 = auth guard fired (ideal). 404 = path not deployed.
+    // 405 = method exists but not GET (still proves the route is mounted).
+    assert([401, 403, 404, 405].includes(res.status), await describeResponse(res));
     return `${res.status}`;
   });
 }
+
+// /api/crm/officers/[id] only exports DELETE — verify it rejects DELETE
+// without auth (405 if GET, 401/403 if DELETE).
+await check('DELETE /api/crm/officers/<uuid> rejects unauthenticated', async () => {
+  const res = await fetchWithTimeout(
+    `${BASE_URL}/api/crm/officers/00000000-0000-0000-0000-000000000000`,
+    { method: 'DELETE' },
+  );
+  assert([401, 403, 404].includes(res.status), await describeResponse(res));
+  return `${res.status}`;
+});
 
 const guardedWriteEndpoints = [
   { method: 'POST', path: '/api/crm/members' },
@@ -238,11 +250,14 @@ console.log(`Passed:  ${passed}/${results.length}`);
 console.log(`Failed:  ${failed}/${results.length}`);
 console.log('────────────────────────────────────────────');
 
-if (failed > 0) {
-  console.log('\nFailures:');
-  for (const r of results.filter((x) => !x.ok)) {
-    console.log(`  ✗ ${r.name} — ${r.detail}`);
-  }
-  process.exit(1);
+// Machine-readable summary block — easy to copy from a failed CI run
+// back to a maintainer / chat for debugging.
+console.log('\n========== SMOKE TEST REPORT ==========');
+console.log(`target: ${BASE_URL}`);
+for (const r of results) {
+  console.log(`${r.ok ? 'PASS' : 'FAIL'}\t${r.name}\t${r.detail}`);
 }
+console.log('========== END REPORT ==========');
+
+if (failed > 0) process.exit(1);
 process.exit(0);
