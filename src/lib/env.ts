@@ -7,8 +7,8 @@ const schema = z.object({
   // Supabase is optional at module-load time so the app still builds
   // and serves marketing pages before the project is wired up.
   // Routes that actually call Supabase will throw a clear error if missing.
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20).optional(),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url().default("https://mvtqqlfzawyhntnsavbx.supabase.co"),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20).default("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12dHFxbGZ6YXd5aG50bnNhdmJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0ODk3OTksImV4cCI6MjA5MTA2NTc5OX0.x4m5jPXReQLikS2N2vox-ck406RzpqWOc-0qLOstqS4"),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
 
   RAZORPAY_KEY_ID: z.string().optional(),
