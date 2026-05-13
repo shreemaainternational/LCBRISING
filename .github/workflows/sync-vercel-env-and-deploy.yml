@@ -1,0 +1,129 @@
+name: Sync Vercel env vars and redeploy
+
+# Manual one-shot to set Supabase env vars on the Vercel production
+# project and trigger a fresh production deploy from main.
+#
+# Required GitHub repo secrets:
+#   VERCEL_TOKEN              - Vercel access token scoped to team
+#                               shreemaainternationals-projects.
+#                               Create at https://vercel.com/account/tokens
+#   SUPABASE_URL              - e.g. https://xxxx.supabase.co
+#   SUPABASE_ANON_KEY         - long JWT (anon key)
+#   SUPABASE_SERVICE_ROLE_KEY - long JWT (service_role key)
+#
+# Run: GitHub repo -> Actions tab -> "Sync Vercel env vars and redeploy"
+#      -> Run workflow -> branch main -> Run
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TEAM_SLUG: shreemaainternationals-projects
+  PROJECT_NAME: lcb-rising-star
+
+jobs:
+  finish-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Verify required secrets
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          missing=""
+          [ -z "$VERCEL_TOKEN" ]              && missing="$missing VERCEL_TOKEN"
+          [ -z "$SUPABASE_URL" ]              && missing="$missing SUPABASE_URL"
+          [ -z "$SUPABASE_ANON_KEY" ]         && missing="$missing SUPABASE_ANON_KEY"
+          [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && missing="$missing SUPABASE_SERVICE_ROLE_KEY"
+          if [ -n "$missing" ]; then
+            echo "Missing required GitHub repo secret(s):$missing"
+            echo "Add them at: https://github.com/${{ github.repository }}/settings/secrets/actions"
+            exit 1
+          fi
+          echo "All required secrets present."
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Resolve Vercel team and project IDs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          TEAM_ID=$(curl -sSf -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v2/teams?slug=$TEAM_SLUG" \
+            | jq -r '.id // empty')
+          [ -n "$TEAM_ID" ] || { echo "Failed to resolve team $TEAM_SLUG"; exit 1; }
+          echo "Team ID:    $TEAM_ID"
+          echo "TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
+
+          PROJECT_ID=$(curl -sSf -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v10/projects/$PROJECT_NAME?teamId=$TEAM_ID" \
+            | jq -r '.id // empty')
+          [ -n "$PROJECT_ID" ] || { echo "Failed to resolve project $PROJECT_NAME"; exit 1; }
+          echo "Project ID: $PROJECT_ID"
+          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+
+      - name: Upsert Supabase env vars on the Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          upsert () {
+            local key="$1"; local val="$2"
+            local payload
+            payload=$(jq -nc \
+              --arg k "$key" \
+              --arg v "$val" \
+              '{key:$k,value:$v,type:"encrypted",target:["production","preview","development"]}')
+            local code
+            code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              -H "Content-Type: application/json" \
+              -X POST "https://api.vercel.com/v10/projects/$PROJECT_ID/env?teamId=$TEAM_ID&upsert=true" \
+              --data-raw "$payload")
+            if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+              echo "FAILED to upsert $key (HTTP $code):"
+              cat /tmp/resp.json
+              exit 1
+            fi
+            echo "Upserted $key (HTTP $code)"
+          }
+          upsert NEXT_PUBLIC_SUPABASE_URL      "$SUPABASE_URL"
+          upsert NEXT_PUBLIC_SUPABASE_ANON_KEY "$SUPABASE_ANON_KEY"
+          upsert SUPABASE_SERVICE_ROLE_KEY     "$SUPABASE_SERVICE_ROLE_KEY"
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull project link and trigger fresh production deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          vercel pull --yes \
+            --environment=production \
+            --token="$VERCEL_TOKEN" \
+            --scope="$TEAM_SLUG"
+          vercel deploy --prod --force --yes \
+            --token="$VERCEL_TOKEN" \
+            --scope="$TEAM_SLUG" 2>&1 | tee /tmp/deploy.log
+          DEPLOY_URL=$(grep -oE 'https://[a-z0-9-]+\.vercel\.app' /tmp/deploy.log | tail -1)
+          echo "Deployment URL: $DEPLOY_URL"
+          echo "deploy_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+
+      - name: Done
+        run: |
+          echo "Production deploy complete."
+          echo "Hard-reload https://barodarisingstar.com/admin/payments to verify."
