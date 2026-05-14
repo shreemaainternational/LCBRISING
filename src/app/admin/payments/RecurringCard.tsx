@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -23,12 +23,23 @@ export function RecurringCard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     const res = await fetch('/api/recurring-invoices');
     const json = await res.json();
     setRows(json.rows ?? []);
-  }
-  useEffect(() => { load(); }, []);
+  }, []);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/recurring-invoices')
+      .then((r) => r.json())
+      .then((json) => {
+        if (active) setRows(json.rows ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
