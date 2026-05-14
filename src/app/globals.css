@@ -37,7 +37,9 @@ html, body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-a { color: inherit; }
+@layer base {
+  a { color: inherit; }
+}
 
 .container-page {
   max-width: 1200px;
