@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { formatDate, formatINR } from '@/lib/utils';
 import { Heart, Users, Activity as ActivityIcon, Award } from 'lucide-react';
+import { HeroSlideshow } from '@/components/site/HeroSlideshow';
 
 export const revalidate = 300; // ISR: refresh every 5 min
 
@@ -49,34 +50,8 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 text-white">
-        <div className="container-page py-20 md:py-28 grid md:grid-cols-2 gap-10 items-center">
-          <div>
-            <span className="inline-block bg-brand-500 text-navy-900 px-3 py-1 rounded-full text-xs font-bold mb-4">
-              DISTRICT 3232-F1 · INDIA
-            </span>
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
-              We Serve.<br />
-              <span className="text-brand-400">Together we rise.</span>
-            </h1>
-            <p className="text-lg text-gray-200 mb-8 max-w-xl">
-              The Lions Club of Baroda Rising Star unites volunteers across
-              Vadodara to deliver healthcare, education, and disaster-relief
-              programs to those who need them most.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Button asChild variant="primary" size="lg">
-                <Link href="/donate">Donate Now</Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-navy-900">
-                <Link href="/contact">Become a Member</Link>
-              </Button>
-            </div>
-          </div>
-          <div className="hidden md:block text-[14rem] text-center opacity-90">🦁</div>
-        </div>
-      </section>
+      {/* Rotating hero slideshow */}
+      <HeroSlideshow />
 
       {/* Stats */}
       <section className="container-page py-16">
