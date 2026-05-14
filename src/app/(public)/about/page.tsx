@@ -86,7 +86,7 @@ export default function AboutPage() {
       <section className="bg-gradient-to-br from-navy-700 via-blue-500 to-navy-800 text-white">
         <div className="container-page py-20 md:py-24 text-center">
           <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
-            About LCB Rising
+            About Lions Club of Baroda Rising Star
           </h1>
           <p className="text-base md:text-lg text-blue-100 max-w-2xl mx-auto">
             A story of community, compassion, and the unwavering belief that
