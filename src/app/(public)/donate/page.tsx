@@ -36,7 +36,7 @@ export default function DonatePage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-navy-700 via-blue-500 to-navy-800 text-white">
+      <section className="bg-gradient-to-br from-navy-700 via-blue-500 to-navy-800 text-white border-t border-white/15">
         <div className="container-page py-20 md:py-24 text-center">
           <Heart
             size={44}
