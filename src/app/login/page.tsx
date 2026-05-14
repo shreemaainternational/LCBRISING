@@ -1,4 +1,3 @@
-import { Heart } from 'lucide-react';
 import { integrations, env } from '@/lib/env';
 import LoginForm from './LoginForm';
 
@@ -10,9 +9,12 @@ export default function LoginPage() {
     <main className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-blue-700 flex flex-col items-center justify-center p-4">
       {/* Brand */}
       <div className="text-center mb-8">
-        <div className="h-20 w-20 rounded-2xl bg-brand-500 flex items-center justify-center mx-auto mb-5 shadow-lg">
-          <Heart size={38} className="text-navy-900 fill-navy-900" aria-hidden />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={env.NEXT_PUBLIC_BRAND_LOGO_URL || '/logo.png'}
+          alt="Lions Club of Baroda Rising Star"
+          className="h-20 w-20 rounded-2xl object-cover mx-auto mb-5 shadow-lg ring-2 ring-brand-300"
+        />
         <h1 className="text-3xl md:text-4xl font-bold text-white">
           Lions Club CRM
         </h1>
