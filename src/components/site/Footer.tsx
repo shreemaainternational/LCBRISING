@@ -48,7 +48,7 @@ export async function Footer() {
               alt="Lions Club of Baroda Rising Star"
               className="h-12 w-12 rounded-full object-cover ring-2 ring-brand-300"
             />
-            <span className="leading-tight">
+            <span className="leading-tight text-center">
               <span className="block text-[10px] tracking-[0.18em] text-brand-300 font-semibold">
                 LIONS CLUB OF
               </span>
