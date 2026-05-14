@@ -82,8 +82,11 @@ export default async function HomePage() {
       {/* About Us section — 2x2 collage with years badge */}
       <AboutSection />
 
-      {/* Featured Service Activities — 3-card grid */}
+      {/* Featured Service Activities — 3-card grid ("Our Work") */}
       <FeaturedActivities />
+
+      {/* Donate CTA banner — sits right below "Our Work" */}
+      <DonateCTABanner />
 
       {/* Upcoming Events strip (auto-hides if no public future events) */}
       <UpcomingEventsStrip />
@@ -120,12 +123,10 @@ export default async function HomePage() {
         )}
       </section>
 
-      {/* ---- Donation block: thermometer + CTA together, near the
-             bottom so every content section sits above it ---- */}
+      {/* Donation thermometer */}
       <section className="container-page py-10">
         <DonationThermometer />
       </section>
-      <DonateCTABanner />
 
       {/* Testimonials — "Voices of Impact" 3-card grid */}
       <TestimonialsGrid />
