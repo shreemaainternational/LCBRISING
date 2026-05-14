@@ -11,6 +11,7 @@ import { FeaturedActivities } from '@/components/site/FeaturedActivities';
 import { UpcomingEventsStrip } from '@/components/site/UpcomingEventsStrip';
 import { TestimonialsCarousel } from '@/components/site/TestimonialsCarousel';
 import { DonateCTABanner } from '@/components/site/DonateCTABanner';
+import { DonationThermometer } from '@/components/site/DonationThermometer';
 import { NewsletterSignup } from '@/components/site/NewsletterSignup';
 
 export const revalidate = 300; // ISR: refresh every 5 min
@@ -88,6 +89,11 @@ export default async function HomePage() {
 
       {/* Testimonials — rotating quotes */}
       <TestimonialsCarousel />
+
+      {/* Live donation campaign progress (auto-hides when no campaign) */}
+      <section className="container-page py-10">
+        <DonationThermometer />
+      </section>
 
       {/* Primary donation conversion moment */}
       <DonateCTABanner />
