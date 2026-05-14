@@ -7,6 +7,7 @@ import {
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, Coins,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
+  KeyRound,
 } from 'lucide-react';
 
 const navItems = [
@@ -27,6 +28,7 @@ const navItems = [
   { href: '/admin/automation',  label: 'Automation',    icon: Settings },
   { href: '/admin/sync',        label: 'Sync',          icon: RefreshCw },
   { href: '/admin/audit',       label: 'Audit log',     icon: ScrollText },
+  { href: '/admin/profile',     label: 'My Profile',    icon: KeyRound },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
