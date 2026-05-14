@@ -70,7 +70,7 @@ export default function MediaPage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-navy-900 text-white">
+      <section className="bg-navy-900 text-white border-t border-white/15">
         <div className="container-page py-20 md:py-24 text-center">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 mb-6">
             <Camera size={14} className="text-brand-400" aria-hidden />
