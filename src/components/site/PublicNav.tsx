@@ -32,7 +32,7 @@ const NAV: NavItem[] = [
   { href: '/contact', label: 'Contact' },
 ];
 
-const DISTRICT_LINE = 'District 3232-F1  |  Region VI  |  Zone I';
+const DISTRICT_LINE = 'District 3232-F1  |  Region V  |  Zone I';
 const CONTACT_PHONE = '+91-9712299333';
 
 export function PublicNav() {
