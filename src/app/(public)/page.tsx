@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/utils';
 import { HeroSlideshow } from '@/components/site/HeroSlideshow';
 import { StatsBanner } from '@/components/site/StatsBanner';
 import { AboutSection } from '@/components/site/AboutSection';
+import { FeaturedActivities } from '@/components/site/FeaturedActivities';
 
 export const revalidate = 300; // ISR: refresh every 5 min
 
@@ -74,6 +75,9 @@ export default async function HomePage() {
 
       {/* About Us section — 2x2 collage with years badge */}
       <AboutSection />
+
+      {/* Featured Service Activities — 3-card grid */}
+      <FeaturedActivities />
 
       {/* Recent Activities */}
       <section className="container-page py-12">
