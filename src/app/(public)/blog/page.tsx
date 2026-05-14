@@ -1,16 +1,93 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { BookOpen } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
-import { Card, CardContent } from '@/components/ui/card';
-import { PageHero } from '@/components/site/PageHero';
+import { BlogExplorer, type BlogStory } from '@/components/site/BlogExplorer';
 import { formatDate } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'Blog',
-  description: 'Stories, reflections, and updates from Lions Club Baroda Rising Star.',
+  description:
+    'Stories of service, impact, and community from Lions Clubs International and our local club activities.',
 };
 export const revalidate = 300;
+
+// Curated Lions International stories — shown alongside any local
+// blog_posts so the page always has rich content.
+const CURATED: BlogStory[] = [
+  {
+    id: 'li-measles',
+    title: 'Lions and UNICEF: Partners in Measles Prevention',
+    excerpt:
+      'Lions Clubs International Foundation and UNICEF have been working together to protect children from measles through vaccination campaigns across the globe.',
+    category: 'Humanitarian',
+    date: '15 Mar 2025',
+    image:
+      'https://images.unsplash.com/photo-1632053002928-1919f2f2dc1e?auto=format&fit=crop&w=900&q=70',
+    url: 'https://www.lionsclubs.org/en/blog',
+    source: 'Lions International',
+  },
+  {
+    id: 'li-sight-day',
+    title: 'World Sight Day: Lions Leading the Way in Vision Care',
+    excerpt:
+      'On World Sight Day, Lions Clubs around the world organize free eye screening camps, distribute eyeglasses, and raise awareness about preventable blindness.',
+    category: 'Vision',
+    date: '12 Oct 2025',
+    image:
+      'https://images.unsplash.com/photo-1577401239170-897942555fb3?auto=format&fit=crop&w=900&q=70',
+    url: 'https://www.lionsclubs.org/en/blog',
+    source: 'Lions International',
+  },
+  {
+    id: 'li-feed-world',
+    title: 'Fighting Hunger: Lions Feed the World Campaign',
+    excerpt:
+      'Through the Lions Feed the World initiative, clubs globally have served millions of meals to families facing food insecurity and malnutrition.',
+    category: 'Hunger Relief',
+    date: '20 Jun 2025',
+    image:
+      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&q=70',
+    url: 'https://www.lionsclubs.org/en/blog',
+    source: 'Lions International',
+  },
+  {
+    id: 'li-environment',
+    title: 'Restoring Forests, One Sapling at a Time',
+    excerpt:
+      'Lions environmental projects have planted millions of trees worldwide, restoring habitats and helping communities fight climate change.',
+    category: 'Environment',
+    date: '05 Apr 2025',
+    image:
+      'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=900&q=70',
+    url: 'https://www.lionsclubs.org/en/blog',
+    source: 'Lions International',
+  },
+  {
+    id: 'li-youth',
+    title: 'Empowering Youth Through Leo Clubs',
+    excerpt:
+      'Leo Clubs give young people the chance to lead service projects, build confidence, and become the changemakers of tomorrow.',
+    category: 'Youth',
+    date: '18 Feb 2025',
+    image:
+      'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=900&q=70',
+    url: 'https://www.lionsclubs.org/en/blog',
+    source: 'Lions International',
+  },
+  {
+    id: 'li-disaster',
+    title: 'Rapid Response: Lions Disaster Relief in Action',
+    excerpt:
+      'When disaster strikes, Lions are among the first to respond — providing emergency supplies, shelter, and long-term rebuilding support.',
+    category: 'Disaster Relief',
+    date: '28 Jan 2025',
+    image:
+      'https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=900&q=70',
+    url: 'https://www.lionsclubs.org/en/blog',
+    source: 'Lions International',
+  },
+];
 
 type BlogPost = {
   id: string;
@@ -19,96 +96,60 @@ type BlogPost = {
   excerpt: string | null;
   cover_url: string | null;
   published_at: string | null;
-  author: string | null;
+  category: string | null;
 };
 
 export default async function BlogPage() {
-  let posts: BlogPost[] = [];
-  // Best-effort fetch — if the blog_posts table exists, we use it; otherwise
-  // we silently fall back to the empty state below.
+  let local: BlogStory[] = [];
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
       const { data } = await supabase
         .from('blog_posts')
-        .select('id, title, slug, excerpt, cover_url, published_at, author')
+        .select('id, title, slug, excerpt, cover_url, published_at, category')
         .order('published_at', { ascending: false })
         .limit(20);
-      posts = (data ?? []) as BlogPost[];
+      local = ((data ?? []) as BlogPost[]).map((p) => ({
+        id: p.id,
+        title: p.title,
+        excerpt: p.excerpt ?? '',
+        category: p.category ?? 'Humanitarian',
+        date: p.published_at ? formatDate(p.published_at) : '',
+        image:
+          p.cover_url ||
+          'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&q=70',
+        url: `/blog/${p.slug ?? p.id}`,
+        source: 'Baroda Rising Star',
+      }));
     } catch {
-      // table may not exist yet; render coming-soon
+      // table may not exist yet — curated stories still render
     }
   }
 
+  const stories = [...local, ...CURATED];
+
   return (
     <>
-      <PageHero
-        pillText="Lions Club Baroda Rising Star · Blog"
-        headline="Stories from"
-        accent="the field"
-        subtitle="Reflections from our members, project recaps, and updates from District 3232-F1. Posted whenever a project closes or an officer has something to share."
-      />
-      <section className="container-page py-16">
-
-      {posts.length === 0 ? (
-        <Card className="bg-gradient-to-br from-brand-50 to-white border-brand-200">
-          <CardContent className="p-10 text-center">
-            <h2 className="text-2xl font-semibold text-navy-800 mb-2">
-              First post coming soon
-            </h2>
-            <p className="text-gray-600 max-w-md mx-auto mb-6">
-              We&rsquo;re collecting stories from recent service projects. In the
-              meantime, browse our recent{' '}
-              <Link href="/activities" className="text-brand-700 underline">
-                Activities
-              </Link>{' '}
-              or{' '}
-              <Link href="/events" className="text-brand-700 underline">
-                upcoming Events
-              </Link>
-              .
-            </p>
-            <Link
-              href="/contact"
-              className="inline-flex rounded-md bg-navy-800 hover:bg-navy-900 text-white px-5 py-2.5 text-sm font-medium"
-            >
-              Suggest a story →
-            </Link>
-          </CardContent>
-        </Card>
-      ) : (
-        <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {posts.map((p) => (
-            <li key={p.id}>
-              <Link href={`/blog/${p.slug ?? p.id}`} className="block group">
-                <Card className="h-full overflow-hidden hover:shadow-md transition-shadow">
-                  {p.cover_url && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={p.cover_url}
-                      alt=""
-                      className="w-full h-44 object-cover"
-                    />
-                  )}
-                  <CardContent className="p-5">
-                    <p className="text-xs text-gray-500">
-                      {p.published_at ? formatDate(p.published_at) : '—'}
-                      {p.author && ` · ${p.author}`}
-                    </p>
-                    <h3 className="text-lg font-semibold text-navy-800 mt-1 mb-2 group-hover:text-brand-700">
-                      {p.title}
-                    </h3>
-                    {p.excerpt && (
-                      <p className="text-sm text-gray-600 line-clamp-3">{p.excerpt}</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* Hero */}
+      <section className="bg-navy-900 text-white">
+        <div className="container-page py-20 md:py-24 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 mb-6">
+            <BookOpen size={14} className="text-brand-400" aria-hidden />
+            <span className="text-xs font-semibold tracking-[0.15em] text-brand-400">
+              LIONS BLOG
+            </span>
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
+            Latest News &amp; Stories
+          </h1>
+          <p className="text-base md:text-lg text-gray-300 max-w-2xl mx-auto">
+            Stories of service, impact, and community from Lions Clubs
+            International and our local club activities.
+          </p>
+        </div>
       </section>
+
+      <BlogExplorer stories={stories} />
     </>
   );
 }
