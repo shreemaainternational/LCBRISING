@@ -2,6 +2,21 @@ import { Users, Target, Heart, TrendingUp } from 'lucide-react';
 import { formatINRShort } from '@/lib/utils';
 
 /**
+ * Display floors for each metric. The homepage stat cards always show
+ * at least these values, even before real data is seeded. When the
+ * actual DB count exceeds the floor, the real number wins.
+ *
+ * Floors are chosen to roughly match the production reference until
+ * onboarding catches up.
+ */
+const FLOOR = {
+  members: 92,
+  activities: 48,
+  beneficiaries: 6_400,
+  funds: 9_30_000, // ₹9.3 lakhs
+};
+
+/**
  * Stats banner that floats over the bottom edge of the hero slideshow.
  *
  * Numbers are server-rendered live from Supabase aggregates. The "+"
@@ -20,27 +35,32 @@ export function StatsBanner({
   livesImpacted: number;
   fundsRaised: number;
 }) {
+  const m = Math.max(activeMembers, FLOOR.members);
+  const a = Math.max(totalActivities, FLOOR.activities);
+  const l = Math.max(livesImpacted, FLOOR.beneficiaries);
+  const f = Math.max(fundsRaised, FLOOR.funds);
+
   return (
     <div className="container-page -mt-16 md:-mt-20 relative z-10 mb-12">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard
           icon={<Users size={22} />}
-          value={`${activeMembers}+`}
+          value={`${m}+`}
           label="Active Members"
         />
         <StatCard
           icon={<Target size={22} />}
-          value={`${totalActivities}+`}
+          value={`${a}+`}
           label="Service Activities"
         />
         <StatCard
           icon={<Heart size={22} />}
-          value={`${livesImpacted.toLocaleString('en-IN')}+`}
+          value={`${l.toLocaleString('en-IN')}+`}
           label="Lives Impacted"
         />
         <StatCard
           icon={<TrendingUp size={22} />}
-          value={`${formatINRShort(fundsRaised)}+`}
+          value={`${formatINRShort(f)}+`}
           label="Funds Raised (₹)"
         />
       </div>
