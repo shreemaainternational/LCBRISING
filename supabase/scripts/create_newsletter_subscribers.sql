@@ -1,5 +1,6 @@
 -- =====================================================================
 -- Newsletter subscribers — public sign-up table for monthly updates.
+-- Idempotent: safe to re-run; new columns are added if missing.
 -- =====================================================================
 
 create table if not exists public.newsletter_subscribers (
@@ -11,6 +12,12 @@ create table if not exists public.newsletter_subscribers (
   ip_address inet,
   user_agent text
 );
+
+-- Richer sign-up fields (name, WhatsApp, preferred channels).
+alter table public.newsletter_subscribers
+  add column if not exists name text,
+  add column if not exists whatsapp text,
+  add column if not exists channels text[] not null default array['email']::text[];
 
 create index if not exists idx_newsletter_subscribed_at
   on public.newsletter_subscribers(subscribed_at desc);

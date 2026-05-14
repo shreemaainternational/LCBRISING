@@ -42,22 +42,12 @@ export async function Footer() {
         {/* Brand */}
         <div>
           <Link href="/" className="flex items-center gap-3 mb-4">
-            {env.NEXT_PUBLIC_BRAND_LOGO_URL ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={env.NEXT_PUBLIC_BRAND_LOGO_URL}
-                alt="Lions Club of Baroda Rising Star"
-                className="h-12 w-12 rounded-full object-cover ring-2 ring-brand-300"
-              />
-            ) : (
-              <span
-                aria-hidden
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-brand-400 to-brand-600 text-navy-900 ring-2 ring-brand-300"
-                style={{ fontSize: 24, lineHeight: 1 }}
-              >
-                🦁
-              </span>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={env.NEXT_PUBLIC_BRAND_LOGO_URL || '/logo.png'}
+              alt="Lions Club of Baroda Rising Star"
+              className="h-12 w-12 rounded-full object-cover ring-2 ring-brand-300"
+            />
             <span className="leading-tight">
               <span className="block text-[10px] tracking-[0.18em] text-brand-300 font-semibold">
                 LIONS CLUB OF
