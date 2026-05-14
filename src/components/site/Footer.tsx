@@ -7,14 +7,14 @@ import { isSupabaseConfigured, env } from '@/lib/env';
 export const revalidate = 30;
 
 const FOCUS_AREAS = [
-  { label: 'Environment', href: '/activities?category=environment' },
-  { label: 'Vision', href: '/activities?category=vision' },
-  { label: 'Hunger Relief', href: '/activities?category=hunger' },
-  { label: 'Disaster Relief', href: '/activities?category=relief' },
-  { label: 'Childhood Cancer', href: '/activities?category=cancer' },
-  { label: 'Diabetes', href: '/activities?category=diabetes' },
-  { label: 'Youth', href: '/activities?category=youth' },
-  { label: 'Humanitarian', href: '/activities?category=humanitarian' },
+  { label: 'Environment', href: '/activities#environment' },
+  { label: 'Vision', href: '/activities#vision' },
+  { label: 'Hunger Relief', href: '/activities#hunger' },
+  { label: 'Disaster Relief', href: '/activities#relief' },
+  { label: 'Childhood Cancer', href: '/activities#cancer' },
+  { label: 'Diabetes', href: '/activities#diabetes' },
+  { label: 'Youth', href: '/activities#youth' },
+  { label: 'Humanitarian', href: '/activities#humanitarian' },
 ];
 
 async function getVisitorCount(): Promise<number | null> {
