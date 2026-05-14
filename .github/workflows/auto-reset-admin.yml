@@ -1,0 +1,131 @@
+name: One-shot admin password reset (auto-trigger on push)
+
+# Auto-fires when this branch is pushed. Uses the existing
+# SUPABASE_ACCESS_TOKEN secret to:
+#   1. Fetch the service_role key via Management API
+#   2. Reset the admin user's password + auto-confirm email via the
+#      Auth Admin API (POST + 422-fallback PUT, both shapes handled)
+#   3. Promote the matching public.members row to international_admin
+#
+# Intentionally tied to a single branch so it can be deleted cleanly
+# after use. Password value is the same as the documented default in
+# create_admin_user.sql; CHANGE IT IMMEDIATELY AFTER FIRST LOGIN.
+
+on:
+  push:
+    branches: [claude/auto-reset-trigger]
+
+permissions:
+  contents: read
+
+env:
+  REF: mvtqqlfzawyhntnsavbx
+  EMAIL: info@shreemaainternational.com
+  PASS: Lions3232F1@2026
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify token
+        run: |
+          if [ -z "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ]; then
+            echo "::error::Missing SUPABASE_ACCESS_TOKEN"; exit 1
+          fi
+
+      - name: Fetch service_role key
+        id: keys
+        env:
+          PAT: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -sSf -H "Authorization: Bearer $PAT" \
+            "https://api.supabase.com/v1/projects/$REF/api-keys" > /tmp/k.json
+          SVC=$(jq -r '.[] | select(.name=="service_role") | .api_key' /tmp/k.json)
+          [ -n "$SVC" ] && [ "$SVC" != "null" ] || { echo "::error::no service_role"; exit 1; }
+          echo "::add-mask::$SVC"
+          { echo 'svc<<EOF'; printf '%s\n' "$SVC"; echo 'EOF'; } >> "$GITHUB_OUTPUT"
+
+      - name: Create or reset admin user via Auth Admin API
+        env:
+          SVC: ${{ steps.keys.outputs.svc }}
+        run: |
+          set -euo pipefail
+          BASE="https://$REF.supabase.co/auth/v1/admin"
+
+          # Attempt 1: create with email_confirm=true.
+          CREATE=$(jq -nc --arg e "$EMAIL" --arg p "$PASS" \
+            '{email:$e, password:$p, email_confirm:true, user_metadata:{name:"CRM Admin"}}')
+          CODE=$(curl -sS -o /tmp/c.json -w '%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $SVC" \
+            -H "apikey: $SVC" \
+            -H "Content-Type: application/json" \
+            --data "$CREATE" \
+            "$BASE/users")
+          echo "POST users -> HTTP $CODE"
+          jq . /tmp/c.json 2>/dev/null || cat /tmp/c.json
+
+          if [ "$CODE" = "200" ] || [ "$CODE" = "201" ]; then
+            echo "Created cleanly. Done."
+          else
+            # Already exists → list, find uid, PUT to reset.
+            curl -sS \
+              -H "Authorization: Bearer $SVC" \
+              -H "apikey: $SVC" \
+              "$BASE/users?per_page=1000" > /tmp/list.json
+
+            UID=$(node -e '
+              const fs = require("fs");
+              const d = JSON.parse(fs.readFileSync("/tmp/list.json","utf8"));
+              const arr = Array.isArray(d) ? d : (Array.isArray(d.users) ? d.users : []);
+              const u = arr.find(x => (x.email||"").toLowerCase() === process.env.EMAIL.toLowerCase());
+              if (!u) { console.error("no user"); process.exit(2); }
+              process.stdout.write(u.id);
+            ')
+            echo "Found existing uid=$UID"
+
+            UPD=$(jq -nc --arg p "$PASS" \
+              '{password:$p, email_confirm:true, user_metadata:{name:"CRM Admin"}}')
+            PCODE=$(curl -sS -o /tmp/u.json -w '%{http_code}' \
+              -X PUT \
+              -H "Authorization: Bearer $SVC" \
+              -H "apikey: $SVC" \
+              -H "Content-Type: application/json" \
+              --data "$UPD" \
+              "$BASE/users/$UID")
+            echo "PUT users/$UID -> HTTP $PCODE"
+            jq . /tmp/u.json 2>/dev/null || cat /tmp/u.json
+            [ "$PCODE" = "200" ] || { echo "::error::reset failed"; exit 1; }
+          fi
+
+      - name: Promote member row to international_admin
+        env:
+          PAT: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          node -e '
+            const email = process.env.EMAIL.replace(/'\''/g, "'\'''\''");
+            const sql = `update auth.users set email_confirmed_at = coalesce(email_confirmed_at, now()) where email = '\''${email}'\'';
+                         insert into public.members (user_id, name, email, role, lions_role, status, joined_at)
+                         select u.id, coalesce(u.raw_user_meta_data->>'\''name'\'', '\''CRM Admin'\''), u.email, '\''admin'\'', '\''international_admin'\'', '\''active'\'', current_date
+                         from auth.users u where u.email = '\''${email}'\''
+                         on conflict (email) do update
+                            set user_id=excluded.user_id, role='\''admin'\'',
+                                lions_role='\''international_admin'\'', status='\''active'\'',
+                                updated_at=now();`;
+            require("fs").writeFileSync("/tmp/p.json", JSON.stringify({query: sql}));
+          '
+          curl -sSf -X POST \
+            -H "Authorization: Bearer $PAT" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/p.json \
+            "https://api.supabase.com/v1/projects/$REF/database/query" | jq .
+
+      - name: Done
+        run: |
+          echo "::notice::Admin login ready"
+          echo "::notice::URL:      https://barodarisingstar.com/login"
+          echo "::notice::Email:    $EMAIL"
+          echo "::notice::Password: $PASS  (CHANGE IMMEDIATELY)"
