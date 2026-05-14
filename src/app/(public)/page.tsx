@@ -8,6 +8,10 @@ import { HeroSlideshow } from '@/components/site/HeroSlideshow';
 import { StatsBanner } from '@/components/site/StatsBanner';
 import { AboutSection } from '@/components/site/AboutSection';
 import { FeaturedActivities } from '@/components/site/FeaturedActivities';
+import { UpcomingEventsStrip } from '@/components/site/UpcomingEventsStrip';
+import { TestimonialsCarousel } from '@/components/site/TestimonialsCarousel';
+import { DonateCTABanner } from '@/components/site/DonateCTABanner';
+import { NewsletterSignup } from '@/components/site/NewsletterSignup';
 
 export const revalidate = 300; // ISR: refresh every 5 min
 
@@ -78,6 +82,18 @@ export default async function HomePage() {
 
       {/* Featured Service Activities — 3-card grid */}
       <FeaturedActivities />
+
+      {/* Upcoming Events strip (auto-hides if no public future events) */}
+      <UpcomingEventsStrip />
+
+      {/* Testimonials — rotating quotes */}
+      <TestimonialsCarousel />
+
+      {/* Primary donation conversion moment */}
+      <DonateCTABanner />
+
+      {/* Newsletter capture */}
+      <NewsletterSignup />
 
       {/* Recent Activities */}
       <section className="container-page py-12">
