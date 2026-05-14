@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { ChevronDown, Menu, Phone, X } from 'lucide-react';
+import { env } from '@/lib/env';
 
 type NavItem = {
   href: string;
@@ -66,13 +67,22 @@ export function PublicNav() {
         <div className="container-page flex h-20 items-center justify-between gap-4">
           {/* Logo + brand */}
           <Link href="/" className="flex items-center gap-3 group" aria-label="Home">
-            <span
-              aria-hidden
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-brand-400 to-brand-600 text-navy-900 font-bold ring-2 ring-brand-300 shadow-md"
-              style={{ fontSize: 26, lineHeight: 1 }}
-            >
-              🦁
-            </span>
+            {env.NEXT_PUBLIC_BRAND_LOGO_URL ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={env.NEXT_PUBLIC_BRAND_LOGO_URL}
+                alt="Lions Club of Baroda Rising Star"
+                className="h-12 w-12 rounded-full object-cover ring-2 ring-brand-300 shadow-md"
+              />
+            ) : (
+              <span
+                aria-hidden
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-brand-400 to-brand-600 text-navy-900 font-bold ring-2 ring-brand-300 shadow-md"
+                style={{ fontSize: 26, lineHeight: 1 }}
+              >
+                🦁
+              </span>
+            )}
             <span className="leading-tight">
               <span className="block text-[10px] tracking-[0.18em] text-brand-300 font-semibold">
                 LIONS CLUB OF

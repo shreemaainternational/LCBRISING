@@ -87,20 +87,6 @@ export default async function HomePage() {
       {/* Upcoming Events strip (auto-hides if no public future events) */}
       <UpcomingEventsStrip />
 
-      {/* Testimonials — rotating quotes */}
-      <TestimonialsCarousel />
-
-      {/* Live donation campaign progress (auto-hides when no campaign) */}
-      <section className="container-page py-10">
-        <DonationThermometer />
-      </section>
-
-      {/* Primary donation conversion moment */}
-      <DonateCTABanner />
-
-      {/* Newsletter capture */}
-      <NewsletterSignup />
-
       {/* Recent Activities */}
       <section className="container-page py-12">
         <div className="flex items-end justify-between mb-8">
@@ -133,18 +119,18 @@ export default async function HomePage() {
         )}
       </section>
 
-      {/* CTA */}
-      <section className="bg-brand-500 text-navy-900 mt-16">
-        <div className="container-page py-16 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-3">Your contribution changes lives.</h2>
-          <p className="mb-6 max-w-2xl mx-auto">
-            Every rupee funds eye-camps, blood drives, scholarships, and food for the underprivileged.
-          </p>
-          <Button asChild size="lg" className="bg-navy-900 text-white hover:bg-navy-800">
-            <Link href="/donate">Donate Today</Link>
-          </Button>
-        </div>
+      {/* Testimonials — rotating quotes */}
+      <TestimonialsCarousel />
+
+      {/* ---- Donation block: thermometer + CTA together, near the
+             bottom so every content section sits above it ---- */}
+      <section className="container-page py-10">
+        <DonationThermometer />
       </section>
+      <DonateCTABanner />
+
+      {/* Newsletter capture — final conversion */}
+      <NewsletterSignup />
     </>
   );
 }
