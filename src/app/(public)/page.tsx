@@ -13,6 +13,7 @@ import { TestimonialsCarousel } from '@/components/site/TestimonialsCarousel';
 import { DonateCTABanner } from '@/components/site/DonateCTABanner';
 import { DonationThermometer } from '@/components/site/DonationThermometer';
 import { NewsletterSignup } from '@/components/site/NewsletterSignup';
+import { FinalCTA } from '@/components/site/FinalCTA';
 
 export const revalidate = 300; // ISR: refresh every 5 min
 
@@ -131,6 +132,9 @@ export default async function HomePage() {
 
       {/* Newsletter capture — final conversion */}
       <NewsletterSignup />
+
+      {/* Closing CTA — last section before the footer */}
+      <FinalCTA />
     </>
   );
 }
