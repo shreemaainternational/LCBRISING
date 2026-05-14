@@ -13,6 +13,22 @@ export function formatINR(amount: number) {
   }).format(amount);
 }
 
+/**
+ * Indian-notation short formatter for headline stats.
+ *   9_30_000 -> "9.3L"
+ *   2_50_00_000 -> "2.5Cr"
+ *   8_500 -> "8.5K"
+ *   400 -> "400"
+ */
+export function formatINRShort(amount: number): string {
+  if (!Number.isFinite(amount)) return '0';
+  const abs = Math.abs(amount);
+  if (abs >= 1_00_00_000) return `${(amount / 1_00_00_000).toFixed(1).replace(/\.0$/, '')}Cr`;
+  if (abs >= 1_00_000)    return `${(amount / 1_00_000).toFixed(1).replace(/\.0$/, '')}L`;
+  if (abs >= 1_000)       return `${(amount / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  return String(Math.round(amount));
+}
+
 export function formatDate(input: string | Date, opts?: Intl.DateTimeFormatOptions) {
   const d = typeof input === 'string' ? new Date(input) : input;
   return new Intl.DateTimeFormat('en-IN', {
