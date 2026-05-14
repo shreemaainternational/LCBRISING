@@ -25,29 +25,42 @@ function LoginInner() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setNotice(null);
     const supabase = createClient();
     try {
       if (mode === 'signin') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        setNotice('Signed in successfully. Taking you to your dashboard…');
+        router.replace(redirectTo);
+        router.refresh();
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { data: { name } },
         });
         if (error) throw error;
+        // No session means Supabase requires email confirmation first.
+        if (!data.session) {
+          setNotice(
+            'Account created. Please check your email to confirm your address before signing in.',
+          );
+          setLoading(false);
+          return;
+        }
+        setNotice('Account created. Taking you to your dashboard…');
+        router.replace(redirectTo);
+        router.refresh();
       }
-      router.replace(redirectTo);
-      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
-    } finally {
       setLoading(false);
     }
   }
@@ -124,6 +137,11 @@ function LoginInner() {
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
+        {notice && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2.5 text-sm text-navy-800">
+            {notice}
+          </div>
+        )}
 
         <button
           type="submit"
