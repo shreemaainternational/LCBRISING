@@ -60,7 +60,7 @@ export function NewsletterSignup() {
   }
 
   return (
-    <section className="bg-navy-900 text-white py-16 md:py-24">
+    <section className="bg-navy-900 text-white py-16 md:py-24 border-t border-white/15">
       <div className="container-page grid lg:grid-cols-2 gap-12 items-center">
         {/* Left — copy */}
         <div>
