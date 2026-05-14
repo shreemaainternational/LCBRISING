@@ -3,30 +3,42 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
-import { formatDate, formatINR } from '@/lib/utils';
-import { Heart, Users, Activity as ActivityIcon, Award } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 import { HeroSlideshow } from '@/components/site/HeroSlideshow';
+import { StatsBanner } from '@/components/site/StatsBanner';
 
 export const revalidate = 300; // ISR: refresh every 5 min
 
 async function getStats() {
-  if (!isSupabaseConfigured()) return { members: 0, activities: 0, donations: 0 };
+  if (!isSupabaseConfigured()) {
+    return { members: 0, activities: 0, donations: 0, beneficiaries: 0 };
+  }
   try {
     const supabase = await createClient();
-    const [{ count: members }, { count: activities }, { data: donationsAgg }] =
-      await Promise.all([
-        supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('activities').select('*', { count: 'exact', head: true }),
-        supabase.from('donations').select('amount'),
-      ]);
+    const [
+      { count: members },
+      { count: activities },
+      { data: donationsAgg },
+      { data: activityAgg },
+    ] = await Promise.all([
+      supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase.from('activities').select('*', { count: 'exact', head: true }),
+      supabase.from('donations').select('amount'),
+      supabase.from('activities').select('beneficiaries'),
+    ]);
     const totalDonations = (donationsAgg ?? []).reduce((s, d) => s + Number(d.amount), 0);
+    const totalBeneficiaries = (activityAgg ?? []).reduce(
+      (s, a) => s + Number((a as { beneficiaries?: number }).beneficiaries ?? 0),
+      0,
+    );
     return {
       members: members ?? 0,
       activities: activities ?? 0,
       donations: totalDonations,
+      beneficiaries: totalBeneficiaries,
     };
   } catch {
-    return { members: 0, activities: 0, donations: 0 };
+    return { members: 0, activities: 0, donations: 0, beneficiaries: 0 };
   }
 }
 
@@ -50,18 +62,14 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Rotating hero slideshow */}
+      {/* Rotating hero slideshow + overlapping stats banner */}
       <HeroSlideshow />
-
-      {/* Stats */}
-      <section className="container-page py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon={<Users className="text-brand-500" />} label="Active Members" value={String(stats.members)} />
-          <StatCard icon={<ActivityIcon className="text-brand-500" />} label="Service Projects" value={String(stats.activities)} />
-          <StatCard icon={<Heart className="text-brand-500" />} label="Funds Raised" value={formatINR(stats.donations)} />
-          <StatCard icon={<Award className="text-brand-500" />} label="Years Serving" value="15+" />
-        </div>
-      </section>
+      <StatsBanner
+        activeMembers={stats.members}
+        totalActivities={stats.activities}
+        livesImpacted={stats.beneficiaries}
+        fundsRaised={stats.donations}
+      />
 
       {/* Recent Activities */}
       <section className="container-page py-12">
@@ -111,16 +119,3 @@ export default async function HomePage() {
   );
 }
 
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <Card>
-      <CardContent className="p-6 flex items-center gap-4">
-        <div className="text-3xl">{icon}</div>
-        <div>
-          <div className="text-2xl font-bold text-navy-800">{value}</div>
-          <div className="text-sm text-gray-600">{label}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
