@@ -98,7 +98,7 @@ export async function FeaturedActivities() {
         <div className="text-center mt-12">
           <Link
             href="/activities"
-            className="inline-flex items-center gap-2 rounded-md bg-navy-800 hover:bg-navy-900 text-white px-6 py-3 text-sm font-semibold transition-colors shadow-sm"
+            className="btn-navy inline-flex items-center gap-2 rounded-md px-6 py-3 text-sm"
           >
             View All Programs
             <ArrowRight size={16} aria-hidden />

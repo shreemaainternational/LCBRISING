@@ -25,7 +25,7 @@ export function DonateCTABanner() {
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/donate"
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-500 hover:bg-brand-600 text-navy-900 font-semibold px-6 py-3 text-sm transition-colors shadow-md"
+            className="btn-gold inline-flex items-center justify-center gap-2 rounded-md px-6 py-3 text-sm"
           >
             Donate Now
             <Heart size={16} aria-hidden />
