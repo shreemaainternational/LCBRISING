@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/auth';
+import { getCurrentMember, isAdminRole } from '@/lib/auth';
 import { writeAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -37,12 +37,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    await requireAdmin();
-  } catch (err) {
-    if (err instanceof Response) return err;
-    return NextResponse.json({ error: 'unauthorized' }, { status: 403 });
-  }
+  const actor = await getCurrentMember();
+  if (!actor) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  if (!isAdminRole(actor.role)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
@@ -65,12 +62,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  try {
-    await requireAdmin();
-  } catch (err) {
-    if (err instanceof Response) return err;
-    return NextResponse.json({ error: 'unauthorized' }, { status: 403 });
-  }
+  const actor = await getCurrentMember();
+  if (!actor) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  if (!isAdminRole(actor.role)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   const id = req.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'missing_id' }, { status: 400 });
   const supa = createAdminClient();
