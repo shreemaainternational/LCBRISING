@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from '@/lib/env';
 import { formatDate } from '@/lib/utils';
 import { HeroSlideshow } from '@/components/site/HeroSlideshow';
 import { StatsBanner } from '@/components/site/StatsBanner';
+import { AboutSection } from '@/components/site/AboutSection';
 
 export const revalidate = 300; // ISR: refresh every 5 min
 
@@ -70,6 +71,9 @@ export default async function HomePage() {
         livesImpacted={stats.beneficiaries}
         fundsRaised={stats.donations}
       />
+
+      {/* About Us section — 2x2 collage with years badge */}
+      <AboutSection />
 
       {/* Recent Activities */}
       <section className="container-page py-12">
