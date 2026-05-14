@@ -8,7 +8,7 @@ import { Heart, ArrowRight } from 'lucide-react';
  */
 export function DonateCTABanner() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 text-white">
+    <section className="relative overflow-hidden bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 text-white border-t border-white/15">
       <div
         aria-hidden
         className="absolute inset-0 opacity-25 pointer-events-none"
