@@ -76,7 +76,7 @@ jobs:
               -H "apikey: $SVC" \
               "$BASE/users?per_page=1000" > /tmp/list.json
 
-            UID=$(node -e '
+            USER_ID=$(node -e '
               const fs = require("fs");
               const d = JSON.parse(fs.readFileSync("/tmp/list.json","utf8"));
               const arr = Array.isArray(d) ? d : (Array.isArray(d.users) ? d.users : []);
@@ -84,7 +84,7 @@ jobs:
               if (!u) { console.error("no user"); process.exit(2); }
               process.stdout.write(u.id);
             ')
-            echo "Found existing uid=$UID"
+            echo "Found existing uid=$USER_ID"
 
             UPD=$(jq -nc --arg p "$PASS" \
               '{password:$p, email_confirm:true, user_metadata:{name:"CRM Admin"}}')
@@ -94,8 +94,8 @@ jobs:
               -H "apikey: $SVC" \
               -H "Content-Type: application/json" \
               --data "$UPD" \
-              "$BASE/users/$UID")
-            echo "PUT users/$UID -> HTTP $PCODE"
+              "$BASE/users/$USER_ID")
+            echo "PUT users/$USER_ID -> HTTP $PCODE"
             jq . /tmp/u.json 2>/dev/null || cat /tmp/u.json
             [ "$PCODE" = "200" ] || { echo "::error::reset failed"; exit 1; }
           fi
