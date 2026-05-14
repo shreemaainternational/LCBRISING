@@ -7,30 +7,35 @@ export const dynamic = 'force-dynamic';
 
 const Body = z.object({
   email: z.string().email(),
+  name: z.string().max(120).optional(),
+  whatsapp: z.string().max(20).optional(),
+  channels: z.array(z.enum(['email', 'whatsapp'])).optional(),
   source: z.string().max(64).optional(),
 });
 
 export async function POST(req: NextRequest) {
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json(
-      { ok: false, error: 'invalid_email' },
-      { status: 400 },
-    );
+    return NextResponse.json({ ok: false, error: 'invalid_email' }, { status: 400 });
   }
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    // Treat as a successful soft signup when DB isn't wired —
-    // gives the user a friendly UI rather than a hard error.
+    // Soft-success when DB isn't wired — keeps the UI friendly.
     return NextResponse.json({ ok: true, soft: true });
   }
+
+  const { email, name, whatsapp, channels, source } = parsed.data;
+
   try {
     const supa = createAdminClient();
     const { error } = await supa
       .from('newsletter_subscribers')
       .upsert(
         {
-          email: parsed.data.email.toLowerCase(),
-          source: parsed.data.source ?? 'home_signup',
+          email: email.toLowerCase(),
+          name: name ?? null,
+          whatsapp: whatsapp ?? null,
+          channels: channels && channels.length > 0 ? channels : ['email'],
+          source: source ?? 'home_signup',
           ip_address: req.headers.get('x-forwarded-for') ?? null,
           user_agent: req.headers.get('user-agent') ?? null,
           unsubscribed_at: null,
@@ -38,14 +43,25 @@ export async function POST(req: NextRequest) {
         { onConflict: 'email' },
       );
     if (error) {
-      // Table missing → graceful fallback.
-      if (/does not exist/i.test(error.message)) {
-        return NextResponse.json({ ok: true, soft: true });
+      // Table missing or columns not yet migrated → graceful fallback
+      // so the form never hard-fails on the visitor.
+      if (/does not exist|column/i.test(error.message)) {
+        // Retry with the minimal column set.
+        const { error: minErr } = await supa
+          .from('newsletter_subscribers')
+          .upsert(
+            { email: email.toLowerCase(), source: source ?? 'home_signup' },
+            { onConflict: 'email' },
+          );
+        if (minErr && /does not exist/i.test(minErr.message)) {
+          return NextResponse.json({ ok: true, soft: true });
+        }
+        if (minErr) {
+          return NextResponse.json({ ok: false, error: minErr.message }, { status: 500 });
+        }
+        return NextResponse.json({ ok: true, partial: true });
       }
-      return NextResponse.json(
-        { ok: false, error: error.message },
-        { status: 500 },
-      );
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
     return NextResponse.json({ ok: true });
   } catch (err) {
