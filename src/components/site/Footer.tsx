@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Mail, MapPin, Phone } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/env';
+import { isSupabaseConfigured, env } from '@/lib/env';
 
 // Force fresh per request so the counter updates without ISR delay.
 export const revalidate = 30;
@@ -42,13 +42,22 @@ export async function Footer() {
         {/* Brand */}
         <div>
           <Link href="/" className="flex items-center gap-3 mb-4">
-            <span
-              aria-hidden
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-brand-400 to-brand-600 text-navy-900 ring-2 ring-brand-300"
-              style={{ fontSize: 24, lineHeight: 1 }}
-            >
-              🦁
-            </span>
+            {env.NEXT_PUBLIC_BRAND_LOGO_URL ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={env.NEXT_PUBLIC_BRAND_LOGO_URL}
+                alt="Lions Club of Baroda Rising Star"
+                className="h-12 w-12 rounded-full object-cover ring-2 ring-brand-300"
+              />
+            ) : (
+              <span
+                aria-hidden
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-brand-400 to-brand-600 text-navy-900 ring-2 ring-brand-300"
+                style={{ fontSize: 24, lineHeight: 1 }}
+              >
+                🦁
+              </span>
+            )}
             <span className="leading-tight">
               <span className="block text-[10px] tracking-[0.18em] text-brand-300 font-semibold">
                 LIONS CLUB OF
@@ -174,10 +183,15 @@ function SocialIcon({
   );
 }
 
+// The public counter starts from a baseline so it never reads as a
+// brand-new site. Real tracked visits (site_counters.value) are added
+// on top once they exceed the baseline.
+const VISITOR_BASELINE = 25_889;
+
 function VisitorCounter({ count }: { count: number | null }) {
-  // Pad to at least 5 digits with leading-zero placeholders so the
-  // counter has the boxed look even before traffic accumulates.
-  const display = (count ?? 0).toString().padStart(5, '0');
+  // Show the larger of the baseline or the real tracked value.
+  const total = Math.max(count ?? 0, VISITOR_BASELINE);
+  const display = total.toString().padStart(5, '0');
   const digits = display.split('');
   return (
     <div className="mt-6 rounded-lg bg-navy-800/60 border border-white/10 p-4">

@@ -10,9 +10,13 @@ create table if not exists public.site_counters (
   updated_at timestamptz not null default now()
 );
 
+-- Seed with a baseline so the public counter never reads as brand-new.
+-- If the row already exists with a lower value, bump it up to the
+-- baseline (real tracked visits accumulate on top of this).
 insert into public.site_counters (key, value)
-values ('visits', 0)
-on conflict (key) do nothing;
+values ('visits', 25889)
+on conflict (key) do update
+  set value = greatest(public.site_counters.value, 25889);
 
 create or replace function public.increment_visits()
 returns bigint
