@@ -34,6 +34,33 @@ jobs:
             echo "::error::Missing SUPABASE_ACCESS_TOKEN"; exit 1
           fi
 
+      - name: Fix Supabase Auth Site URL + redirect allow-list
+        env:
+          PAT: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Password-reset / confirmation emails were pointing at
+          # http://localhost:3000 because the project's Site URL was
+          # never updated. Patch it to the production domain so every
+          # future auth email + OAuth redirect resolves correctly.
+          BODY=$(jq -nc '{
+            site_url: "https://barodarisingstar.com",
+            uri_allow_list: "https://barodarisingstar.com,https://barodarisingstar.com/**,https://barodarisingstar.com/admin,https://barodarisingstar.com/login,https://barodarisingstar.com/auth/callback"
+          }')
+          CODE=$(curl -sS -o /tmp/authcfg.json -w '%{http_code}' \
+            -X PATCH \
+            -H "Authorization: Bearer $PAT" \
+            -H "Content-Type: application/json" \
+            --data "$BODY" \
+            "https://api.supabase.com/v1/projects/$REF/config/auth")
+          echo "PATCH config/auth -> HTTP $CODE"
+          jq '{site_url, uri_allow_list}' /tmp/authcfg.json 2>/dev/null || cat /tmp/authcfg.json
+          if [ "$CODE" != "200" ]; then
+            echo "::error::Failed to patch auth config ($CODE)"
+            exit 1
+          fi
+          echo "::notice::Site URL set to https://barodarisingstar.com"
+
       - name: Fetch service_role key
         id: keys
         env:
