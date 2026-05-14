@@ -6,24 +6,33 @@ const ADMIN_PREFIX = '/admin';
 const LOGIN_PATH = '/login';
 
 /**
- * Auth middleware. Two roles:
- *   1. Gate /admin/* behind an authenticated Supabase session.
- *   2. Bounce already-authed users away from /login.
+ * Auth middleware. Single role: gate /admin/* behind an authenticated
+ * Supabase session.
  *
- * The non-obvious bit: Supabase SSR may *refresh* the session cookie
- * during getUser() and write the new value onto `response`. If we
- * then return a fresh NextResponse.redirect(), those refreshed
- * cookies are lost — the browser never receives them, so the next
- * request lands authed-but-different and we redirect again, forever
- * (ERR_TOO_MANY_REDIRECTS).
+ * Deliberately does NOT redirect already-authed users away from
+ * /login. That convenience rule caused ERR_TOO_MANY_REDIRECTS:
+ * supabase.auth.getUser() makes a network validation call that can
+ * return inconsistent results across rapid requests (stale-but-present
+ * cookie, in-flight token refresh). With both a "/admin needs user"
+ * rule AND a "/login bounces user" rule, an inconsistent getUser()
+ * ping-pongs the browser forever. Keeping /login as a terminal route
+ * (never redirects) makes the loop structurally impossible.
  *
- * Fix: ALWAYS copy the cookie jar from the working `response` onto
- * any redirect we return.
+ * Cookie note: Supabase SSR may refresh the session cookie during
+ * getUser() and write it onto `response`. Any redirect we return must
+ * carry that cookie jar or the refreshed token is lost — see
+ * redirectWithCookies().
  */
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });
 
   if (!isSupabaseConfigured()) return response;
+
+  const path = request.nextUrl.pathname;
+
+  // Only /admin/* needs an auth check — every other path passes
+  // through untouched, so /login can never enter a redirect cycle.
+  if (!path.startsWith(ADMIN_PREFIX)) return response;
 
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,19 +50,11 @@ export async function proxy(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-  const path = request.nextUrl.pathname;
 
-  if (path.startsWith(ADMIN_PREFIX) && !user) {
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = LOGIN_PATH;
     url.searchParams.set('redirectTo', path);
-    return redirectWithCookies(url, response);
-  }
-
-  if (path === LOGIN_PATH && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/admin';
-    url.searchParams.delete('redirectTo');
     return redirectWithCookies(url, response);
   }
 
@@ -61,10 +62,9 @@ export async function proxy(request: NextRequest) {
 }
 
 /**
- * Build a NextResponse.redirect that carries every Set-Cookie the
- * upstream `response` has accumulated. Without this, refreshed
- * Supabase session cookies get dropped on the redirect and the
- * browser ping-pongs between /admin and /login.
+ * NextResponse.redirect that carries every Set-Cookie the upstream
+ * `response` accumulated, so a refreshed Supabase session cookie is
+ * never dropped on a redirect.
  */
 function redirectWithCookies(url: URL, source: NextResponse): NextResponse {
   const redirect = NextResponse.redirect(url);
