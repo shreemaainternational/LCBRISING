@@ -38,7 +38,7 @@ const COLLAGE = [
 ];
 
 export function AboutSection() {
-  const yearsOfService = Math.max(0, new Date().getFullYear() - FOUNDING_YEAR);
+  const yearsOfService = 3;
 
   return (
     <section className="container-page py-16 md:py-24">

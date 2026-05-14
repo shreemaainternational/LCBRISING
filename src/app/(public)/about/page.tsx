@@ -42,7 +42,7 @@ const VALUES = [
 
 const JOURNEY = [
   {
-    year: '2024',
+    year: '2020',
     body: 'Lions Club of Baroda Rising Star chartered with founding members',
   },
   {
@@ -144,7 +144,7 @@ export default function AboutPage() {
             Our Story
           </h2>
           <p className="text-gray-600 leading-relaxed">
-            Lions Club of Baroda Rising Star was chartered in 2024 as part of
+            Lions Club of Baroda Rising Star was chartered in 2020 as part of
             Lions Clubs International — the world&apos;s largest service club
             organization. Founded by a dedicated group of Lions who saw the need
             for community service in Vadodara, we began serving through
