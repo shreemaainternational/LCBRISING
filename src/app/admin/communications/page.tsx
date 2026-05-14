@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/server';
+import BroadcastComposer from './BroadcastComposer';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,15 @@ export default async function CommunicationsPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Communications</h1>
-      <p className="text-gray-600 mb-8">Last 200 messages sent through the platform.</p>
+      <p className="text-gray-600 mb-8">Send broadcasts and review the message log.</p>
+
+      <Card className="mb-8">
+        <CardHeader><CardTitle>Compose broadcast</CardTitle></CardHeader>
+        <CardContent>
+          <BroadcastComposer />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader><CardTitle>{comms?.length ?? 0} messages</CardTitle></CardHeader>
         <CardContent className="p-0">
