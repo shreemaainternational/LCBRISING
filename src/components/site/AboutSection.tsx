@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
-const FOUNDING_YEAR = 2020;
+const FOUNDING_YEAR = 2024;
 
 const TAGS = [
   'Community Service',
