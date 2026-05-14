@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, Coins,
-  Globe, MapPin, RefreshCw, ScrollText,
+  Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
 } from 'lucide-react';
 
 const navItems = [
@@ -20,6 +20,7 @@ const navItems = [
   { href: '/admin/commissions', label: 'Commissions',   icon: Coins },
   { href: '/admin/activities',  label: 'Activities',    icon: ActivityIcon },
   { href: '/admin/events',      label: 'Events',        icon: Calendar },
+  { href: '/admin/media',       label: 'Media library', icon: ImageIcon },
   { href: '/admin/creative',    label: 'Creative',      icon: Sparkles },
   { href: '/admin/social',      label: 'Social',        icon: Megaphone },
   { href: '/admin/communications', label: 'Comms',      icon: Mail },

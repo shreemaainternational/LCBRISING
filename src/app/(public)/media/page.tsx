@@ -19,26 +19,57 @@ type Activity = {
   photos: string[] | null;
 };
 
+type Photo = {
+  id: string;
+  url: string;
+  title: string | null;
+  caption: string | null;
+  taken_on: string | null;
+  created_at: string;
+};
+
 export default async function MediaPage() {
   let gallery: { id: string; title: string; date: string; photo: string }[] = [];
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
-      const { data } = await supabase
-        .from('activities')
-        .select('id, title, date, photos')
-        .order('date', { ascending: false })
-        .limit(24);
-      gallery = ((data ?? []) as Activity[])
-        .flatMap((a) =>
-          (a.photos ?? []).map((url) => ({
-            id: a.id + '__' + url,
-            title: a.title,
-            date: a.date,
-            photo: url,
-          })),
-        )
-        .slice(0, 18);
+
+      // Prefer curated photos from the new media library.
+      const { data: managed } = await supabase
+        .from('photos')
+        .select('id, url, title, caption, taken_on, created_at')
+        .is('deleted_at', null)
+        .in('category', ['gallery', 'event'])
+        .order('display_order')
+        .order('created_at', { ascending: false })
+        .limit(36);
+      const managedPhotos = (managed ?? []) as Photo[];
+
+      if (managedPhotos.length > 0) {
+        gallery = managedPhotos.map((p) => ({
+          id: p.id,
+          title: p.title ?? p.caption ?? '',
+          date: p.taken_on ?? p.created_at,
+          photo: p.url,
+        }));
+      } else {
+        // Fallback: scrape photos[] arrays from activities rows.
+        const { data } = await supabase
+          .from('activities')
+          .select('id, title, date, photos')
+          .order('date', { ascending: false })
+          .limit(24);
+        gallery = ((data ?? []) as Activity[])
+          .flatMap((a) =>
+            (a.photos ?? []).map((url) => ({
+              id: a.id + '__' + url,
+              title: a.title,
+              date: a.date,
+              photo: url,
+            })),
+          )
+          .slice(0, 18);
+      }
     } catch {
       gallery = [];
     }
