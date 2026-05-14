@@ -61,7 +61,7 @@ export async function generateVideo(req: VideoRequest): Promise<VideoResult> {
       simg: req.scenes.map((s) => s.image_url ?? ''),
       stxt: req.scenes.map((s) => s.text),
     },
-    clips: req.scenes.map((s, i) => ({
+    clips: req.scenes.map((s) => ({
       type: s.image_url ? 'image' : 'solid',
       ...(s.image_url ? { url: s.image_url } : { color: '#1e3a8a' }),
       transformation: [
