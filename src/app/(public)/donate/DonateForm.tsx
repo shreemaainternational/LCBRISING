@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Gift, Repeat, ShieldCheck } from 'lucide-react';
+import { Gift, Repeat, ShieldCheck, CreditCard, Smartphone } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -13,6 +13,7 @@ const PRESETS = [500, 1000, 2500, 5000, 10000, 25000];
 
 export function DonateForm() {
   const [frequency, setFrequency] = useState<'one-time' | 'monthly'>('one-time');
+  const [method, setMethod] = useState<'razorpay' | 'phonepe'>('razorpay');
   const [amount, setAmount] = useState(2500);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -28,6 +29,14 @@ export function DonateForm() {
     s.id = 'rzp-script';
     s.async = true;
     document.body.appendChild(s);
+  }, []);
+
+  // Returning from a PhonePe redirect — show an optimistic thank-you
+  // while the webhook confirms the payment in the background.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('phonepe') === 'done') {
+      setSuccess({ receiptNo: 'is being confirmed' });
+    }
   }, []);
 
   async function handleDonate(e: React.FormEvent) {
@@ -46,11 +55,20 @@ export function DonateForm() {
           amount,
           campaign: 'general',
           message: frequency === 'monthly' ? 'Monthly giving requested' : '',
+          method,
         }),
       });
       if (!orderRes.ok)
         throw new Error((await orderRes.json()).error ?? 'Failed to start payment');
-      const { order, payment_record_id, key_id } = await orderRes.json();
+      const result = await orderRes.json();
+
+      // PhonePe — hand off to the hosted payment page.
+      if (result.method === 'phonepe') {
+        window.location.href = result.redirect_url;
+        return;
+      }
+
+      const { order, payment_record_id, key_id } = result;
 
       const rzp = new window.Razorpay({
         key: key_id,
@@ -91,13 +109,24 @@ export function DonateForm() {
   }
 
   if (success) {
+    const pending = success.receiptNo === 'is being confirmed';
     return (
       <div className="bg-gray-50 border border-gray-100 rounded-2xl p-10 text-center">
         <div className="text-5xl mb-4">🙏</div>
         <h2 className="text-2xl font-bold text-navy-800">Thank you!</h2>
         <p className="text-gray-600 mt-2">
-          Your donation has been received. Receipt #
-          <strong>{success.receiptNo}</strong>. A copy has been emailed to you.
+          {pending ? (
+            <>
+              Your donation {success.receiptNo}. Once the payment clears, a
+              receipt will be emailed to you.
+            </>
+          ) : (
+            <>
+              Your donation has been received. Receipt #
+              <strong>{success.receiptNo}</strong>. A copy has been emailed to
+              you.
+            </>
+          )}
         </p>
       </div>
     );
@@ -195,6 +224,35 @@ export function DonateForm() {
         placeholder="Email Address"
         className="w-full h-12 px-3 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 mb-6"
       />
+
+      {/* Payment method */}
+      <h3 className="font-bold text-navy-800 mb-3">Payment Method</h3>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <button
+          type="button"
+          onClick={() => setMethod('razorpay')}
+          className={`inline-flex items-center justify-center gap-2 h-12 rounded-lg border text-sm font-semibold transition-colors ${
+            method === 'razorpay'
+              ? 'btn-navy border-navy-800'
+              : 'bg-white border-gray-300 text-navy-800 hover:border-navy-400'
+          }`}
+        >
+          <CreditCard size={16} aria-hidden />
+          Card / Netbanking
+        </button>
+        <button
+          type="button"
+          onClick={() => setMethod('phonepe')}
+          className={`inline-flex items-center justify-center gap-2 h-12 rounded-lg border text-sm font-semibold transition-colors ${
+            method === 'phonepe'
+              ? 'btn-navy border-navy-800'
+              : 'bg-white border-gray-300 text-navy-800 hover:border-navy-400'
+          }`}
+        >
+          <Smartphone size={16} aria-hidden />
+          PhonePe / UPI
+        </button>
+      </div>
 
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
 

@@ -5,6 +5,7 @@ import { markInvoicePaid } from '@/lib/invoices';
 import { buildReceiptNo } from '@/lib/utils';
 import { env } from '@/lib/env';
 import { sendPaymentConfirmation } from '@/lib/payment-notify';
+import { enqueueJob } from '@/lib/automation/engine';
 
 export const runtime = 'nodejs';
 
@@ -79,8 +80,39 @@ export async function POST(req: Request) {
     .select('id, amount, invoice_no, status, member_id, customer_name, customer_email, customer_phone')
     .eq('invoice_no', merchantTxn)
     .maybeSingle();
+
+  // Not an invoice — try a donation payment (receipt_no = merchantTxn).
   if (!inv) {
-    return NextResponse.json({ ok: true, no_match: true });
+    const { data: donPayment } = await supabase
+      .from('payments')
+      .select('id, donation_id, status')
+      .eq('receipt_no', merchantTxn)
+      .eq('type', 'donation')
+      .maybeSingle();
+
+    if (!donPayment) {
+      return NextResponse.json({ ok: true, no_match: true });
+    }
+    if (donPayment.status === 'captured') {
+      return NextResponse.json({ ok: true, already_paid: true });
+    }
+
+    await supabase
+      .from('payments')
+      .update({
+        status: 'captured',
+        method: 'phonepe_webhook',
+        utr: event.payload?.paymentInstrument?.utr ?? null,
+        upi_vpa: event.payload?.paymentInstrument?.vpa ?? null,
+        raw_event: event as unknown as Record<string, unknown>,
+      })
+      .eq('id', donPayment.id);
+
+    if (donPayment.donation_id) {
+      await enqueueJob('send_donation_receipt', { donation_id: donPayment.donation_id });
+      await enqueueJob('on_donation_received', { donation_id: donPayment.donation_id });
+    }
+    return NextResponse.json({ ok: true, donation: true });
   }
   if (inv.status === 'paid') {
     return NextResponse.json({ ok: true, already_paid: true });

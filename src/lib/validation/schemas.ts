@@ -90,6 +90,7 @@ export const donationIntentSchema = z.object({
   campaign: z.string().max(120).optional().nullable(),
   message: z.string().max(500).optional().nullable(),
   is_anonymous: z.boolean().default(false),
+  method: z.enum(['razorpay', 'phonepe']).default('razorpay'),
 });
 
 export const activitySchema = z.object({
