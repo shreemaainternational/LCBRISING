@@ -124,7 +124,7 @@ export function HeroSlideshow({
                   {s.primaryCta && (
                     <Link
                       href={s.primaryCta.href}
-                      className="inline-flex items-center gap-2 rounded-md bg-brand-500 hover:bg-brand-600 text-navy-900 font-semibold px-6 py-3 transition-colors shadow-sm"
+                      className="btn-gold inline-flex items-center gap-2 rounded-md px-6 py-3"
                     >
                       {s.primaryCta.label}
                       <Heart size={16} aria-hidden />

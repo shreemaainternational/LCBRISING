@@ -108,7 +108,7 @@ export function PublicNav() {
           <div className="hidden lg:flex items-center gap-2">
             <Link
               href="/donate"
-              className="inline-flex items-center rounded-md bg-brand-500 hover:bg-brand-600 text-navy-900 font-semibold px-4 py-2 text-sm transition-colors shadow-sm"
+              className="btn-gold inline-flex items-center rounded-md px-4 py-2 text-sm"
             >
               Donate
             </Link>
@@ -167,7 +167,7 @@ export function PublicNav() {
             <div className="mt-3 flex gap-2">
               <Link
                 href="/donate"
-                className="flex-1 text-center rounded-md bg-brand-500 hover:bg-brand-600 text-navy-900 font-semibold px-4 py-2 text-sm"
+                className="btn-gold flex-1 text-center rounded-md px-4 py-2 text-sm"
                 onClick={() => setOpen(false)}
               >
                 Donate

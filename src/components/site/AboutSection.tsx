@@ -74,7 +74,7 @@ export function AboutSection() {
 
           <Link
             href="/about"
-            className="inline-flex items-center gap-2 rounded-md bg-navy-800 hover:bg-navy-900 text-white px-5 py-3 text-sm font-semibold transition-colors"
+            className="btn-navy inline-flex items-center gap-2 rounded-md px-5 py-3 text-sm"
           >
             Learn More About Us
             <ArrowRight size={16} aria-hidden />

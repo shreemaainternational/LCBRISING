@@ -19,13 +19,13 @@ export function FinalCTA() {
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/contact"
-            className="inline-flex items-center rounded-md bg-navy-800 hover:bg-navy-900 text-white font-semibold px-6 py-3 text-sm transition-colors"
+            className="btn-navy inline-flex items-center rounded-md px-6 py-3 text-sm"
           >
             Get Involved
           </Link>
           <Link
             href="/donate"
-            className="inline-flex items-center rounded-md bg-brand-500 hover:bg-brand-600 text-navy-900 font-semibold px-6 py-3 text-sm transition-colors shadow-sm"
+            className="btn-gold inline-flex items-center rounded-md px-6 py-3 text-sm"
           >
             Support Our Cause
           </Link>

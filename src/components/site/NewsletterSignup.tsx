@@ -170,7 +170,7 @@ export function NewsletterSignup() {
               <button
                 type="submit"
                 disabled={state === 'pending' || !name || !email}
-                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-brand-500 hover:bg-brand-600 text-navy-900 font-semibold disabled:opacity-60 transition-colors"
+                className="btn-gold w-full h-12 inline-flex items-center justify-center gap-2 rounded-md disabled:opacity-60"
               >
                 {state === 'pending' ? 'Subscribing…' : (
                   <>
