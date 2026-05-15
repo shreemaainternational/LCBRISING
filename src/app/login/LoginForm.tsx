@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, LogIn, User } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -14,7 +14,6 @@ export default function LoginForm() {
 }
 
 function LoginInner() {
-  const router = useRouter();
   const params = useSearchParams();
   const redirectTo = params.get('redirectTo') ?? '/admin';
 
@@ -38,8 +37,10 @@ function LoginInner() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         setNotice('Signed in successfully. Taking you to your dashboard…');
-        router.replace(redirectTo);
-        router.refresh();
+        // Full-page navigation so the server sees the fresh session cookie
+        // immediately — avoids the router.refresh() race that otherwise
+        // bounces the user back to /login.
+        window.location.href = redirectTo;
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -56,8 +57,7 @@ function LoginInner() {
           return;
         }
         setNotice('Account created. Taking you to your dashboard…');
-        router.replace(redirectTo);
-        router.refresh();
+        window.location.href = redirectTo;
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
