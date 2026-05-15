@@ -5,13 +5,14 @@ import { LogoutButton } from '@/components/admin/LogoutButton';
 import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
   Activity as ActivityIcon, Calendar, Mail, Settings,
-  Sparkles, Megaphone, QrCode,
+  Sparkles, Megaphone, QrCode, BarChart3,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
   KeyRound,
 } from 'lucide-react';
 
 const navItems = [
   { href: '/admin',             label: 'Dashboard',     icon: LayoutDashboard },
+  { href: '/admin/reports',     label: 'Reports',       icon: BarChart3 },
   { href: '/admin/districts',   label: 'Districts',     icon: Globe },
   { href: '/admin/zones',       label: 'Zones',         icon: MapPin },
   { href: '/admin/members',     label: 'Members',       icon: Users },
