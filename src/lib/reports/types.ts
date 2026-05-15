@@ -1,4 +1,5 @@
 export type ReportType =
+  | 'integrated'
   | 'monthly' | 'quarterly' | 'half_yearly' | 'yearly'
   | 'activity' | 'csr' | 'donor' | 'district' | 'multi_district'
   | 'lions_international' | 'beneficiary' | 'financial'

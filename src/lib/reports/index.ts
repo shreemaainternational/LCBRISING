@@ -4,6 +4,7 @@ import type {
 } from './types';
 import { buildPeriodReport } from './builders/period-reports';
 import { buildAnnualReport } from './builders/annual-report';
+import { buildIntegratedReport } from './builders/integrated-report';
 import {
   buildFinancialReport, buildDonorReport, buildCSRReport,
 } from './builders/finance-reports';
@@ -33,6 +34,7 @@ export interface ReportCatalogEntry {
 }
 
 export const REPORT_CATALOG: ReportCatalogEntry[] = [
+  { type: 'integrated',          title: 'Integrated 360° Report',           description: 'A single joined view of every CRM entity — activities, beneficiaries, donations, CSR, dues, volunteers, events, awards. Cross-linked tables and charts so the reader sees how every piece of data connects.', group: 'Period', defaultFormats: ['pdf','pptx'] },
   { type: 'monthly',             title: 'Monthly Report',                   description: 'Total activities, members, beneficiaries, finance, top projects for a calendar month.',  group: 'Period',  defaultFormats: ['pdf','pptx'] },
   { type: 'quarterly',           title: 'Quarterly Report',                 description: 'Three-month roll-up with comparative growth, CSR & zone performance.',                  group: 'Period',  defaultFormats: ['pdf','pptx'] },
   { type: 'half_yearly',         title: 'Half-Yearly Report',               description: '6-month dashboard: progress vs goals, mega projects, financial health.',                group: 'Period',  defaultFormats: ['pdf','pptx'] },
@@ -59,6 +61,8 @@ export async function buildReportDoc(req: ReportRequest): Promise<ReportDoc> {
   if (!req.period) throw new Error('period is required');
   const f: ReportFilters = req.filters ?? {};
   switch (req.type) {
+    case 'integrated':
+      return buildIntegratedReport(req.period, f);
     case 'monthly':
       return buildPeriodReport({ type: 'monthly',     title: `Monthly Report — ${req.period.label}` },     req.period, f);
     case 'quarterly':

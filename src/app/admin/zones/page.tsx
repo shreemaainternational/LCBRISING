@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { zonesPreset } from '@/components/admin/quick-add-presets';
+import { MapPin } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,12 +23,9 @@ export default async function ZonesPage() {
   const supa = await createClient();
 
   const [zonesRes, districtsRes, clubCountsRes] = await Promise.all([
-    supa
-      .from('zones')
-      .select('id, code, name, chairperson_name, region_id, district_id')
-      .is('deleted_at', null)
-      .order('code'),
-    supa.from('districts').select('id, code'),
+    supa.from('zones').select('id, code, name, chairperson_name, region_id, district_id')
+      .is('deleted_at', null).order('code'),
+    supa.from('districts').select('id, code, name').is('deleted_at', null).order('code'),
     supa.from('clubs').select('zone_id').is('deleted_at', null),
   ]);
 
@@ -38,42 +38,32 @@ export default async function ZonesPage() {
     if (c.zone_id) clubsByZone.set(c.zone_id, (clubsByZone.get(c.zone_id) ?? 0) + 1);
   }
 
+  const preset = zonesPreset({ districts: districtsRes.data ?? [] });
+
   return (
     <div>
-      <div className="flex items-start justify-between gap-4 mb-6">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-navy-800 mb-1">Zones</h1>
           <p className="text-gray-600">
             Mid-level federation grouping. A zone holds several clubs within a region;
-            a Zone Chairperson oversees them. Click a zone to drill into its clubs
-            and members.
+            a Zone Chairperson oversees them.
           </p>
         </div>
-        <QuickAddCard
-          title="Zone"
-          endpoint="/api/zones"
-          accent="cyan"
-          description="Add a new zone under a district."
-          responseKey="zone"
-          fields={[
-            { name: 'name', label: 'Zone Name', type: 'text', required: true, placeholder: 'e.g. Zone B' },
-            { name: 'district_id', label: 'District', type: 'select',
-              options: Object.values(districts).map((d) => ({ value: d.id, label: d.code })) },
-            { name: 'zone_chairperson_name', label: 'Zone Chairperson', type: 'text' },
-          ]}
-        />
+        <QuickAddCard title="Zone" {...preset} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{zones.length} zones</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {zones.length === 0 ? (
-            <div className="p-8 text-center text-sm text-gray-500">
-              No zones yet. Add via SQL editor or bulk-import.
-            </div>
-          ) : (
+      {zones.length === 0 ? (
+        <EmptyState
+          icon={<MapPin size={26} />}
+          title="No zones yet"
+          description="Create your first zone — group several clubs together under a district."
+          cta={<QuickAddCard title="Zone" {...preset} />}
+        />
+      ) : (
+        <Card>
+          <CardHeader><CardTitle>{zones.length} zones</CardTitle></CardHeader>
+          <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -88,26 +78,19 @@ export default async function ZonesPage() {
                 {zones.map((z) => (
                   <tr key={z.id} className="border-t">
                     <td className="p-3 font-mono">
-                      <Link
-                        href={`/admin/zones/${z.id}`}
-                        className="text-navy-700 hover:underline"
-                      >
-                        {z.code}
-                      </Link>
+                      <Link href={`/admin/zones/${z.id}`} className="text-navy-700 hover:underline">{z.code}</Link>
                     </td>
                     <td className="p-3 font-medium">{z.name}</td>
                     <td className="p-3 text-gray-600">{districts[z.district_id]?.code ?? '—'}</td>
                     <td className="p-3">{z.chairperson_name ?? '—'}</td>
-                    <td className="p-3 text-right tabular-nums">
-                      {clubsByZone.get(z.id) ?? 0}
-                    </td>
+                    <td className="p-3 text-right">{clubsByZone.get(z.id) ?? 0}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

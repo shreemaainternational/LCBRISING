@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
-import { Users, MapPin, Calendar } from 'lucide-react';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { clubsPreset } from '@/components/admin/quick-add-presets';
+import { Users, MapPin, Calendar, Building2 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,40 +22,30 @@ export default async function ClubsPage() {
     if (m.club_id) memberCount.set(m.club_id, (memberCount.get(m.club_id) ?? 0) + 1);
   }
 
+  const preset = clubsPreset({ districts: districts ?? [] });
+
   return (
     <div>
-      <div className="flex items-start justify-between gap-4 mb-6">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-navy-800 mb-1">Clubs</h1>
           <p className="text-gray-600">All Lions clubs in the federation. Click a club to drill into officers and members.</p>
         </div>
-        <QuickAddCard
-          title="Club"
-          endpoint="/api/crm/clubs"
-          accent="blue"
-          description="Charter a new club. Use the Lions sync to onboard existing clubs from MyLCI instead."
-          responseKey="club"
-          fields={[
-            { name: 'name', label: 'Club Name', type: 'text', required: true, placeholder: 'Lions Club of …' },
-            { name: 'district_id', label: 'District', type: 'select',
-              options: (districts ?? []).map((d) => ({ value: d.id, label: `${d.code} — ${d.name}` })) },
-            { name: 'club_number', label: 'LCI Club Number', type: 'text' },
-            { name: 'city', label: 'City', type: 'text' },
-            { name: 'state', label: 'State', type: 'text', defaultValue: 'Gujarat' },
-            { name: 'country', label: 'Country', type: 'text', defaultValue: 'India' },
-            { name: 'charter_date', label: 'Charter Date', type: 'date' },
-          ]}
-        />
+        <QuickAddCard title="Club" {...preset} />
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>{clubs?.length ?? 0} clubs</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          {!clubs?.length ? (
-            <div className="p-8 text-center text-sm text-gray-500">
-              No clubs yet. Add one above or sync from Lions International.
-            </div>
-          ) : (
+      {!clubs?.length ? (
+        <EmptyState
+          icon={<Building2 size={26} />}
+          title="No clubs yet"
+          description="Charter your first club below or sync existing clubs from Lions International."
+          cta={<QuickAddCard title="Club" {...preset} />}
+          hint={<>Or go to <Link href="/admin/sync/lions" className="text-amber-600 underline">Sync → Lions</Link></>}
+        />
+      ) : (
+        <Card>
+          <CardHeader><CardTitle>{clubs.length} clubs</CardTitle></CardHeader>
+          <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -91,9 +83,9 @@ export default async function ClubsPage() {
                 ))}
               </tbody>
             </table>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
