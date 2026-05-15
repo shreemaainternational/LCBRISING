@@ -37,14 +37,16 @@ const BYPASS_MEMBER = {
  *      auth user with no members row at all.
  */
 export async function getCurrentMember(): Promise<Member | null> {
+  // Diagnostic bypass — short-circuit BEFORE any Supabase call so even
+  // a stale or partial auth state can't fall through and dump the user
+  // back on /login.
+  const cookieStore = await cookies();
+  const crmCookie = cookieStore.get('lcbr_crm')?.value === '1';
+  if (env.ADMIN_AUTH_BYPASS === '1' || crmCookie) return BYPASS_MEMBER;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    // Bypass: env toggle OR the lcbr_crm cookie set by /crm.
-    const crmCookie = (await cookies()).get('lcbr_crm')?.value === '1';
-    if (env.ADMIN_AUTH_BYPASS === '1' || crmCookie) return BYPASS_MEMBER;
-    return null;
-  }
+  if (!user) return null;
 
   // Tier 1 — RLS-scoped.
   const { data: rlsRow } = await supabase
