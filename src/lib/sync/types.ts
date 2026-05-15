@@ -7,7 +7,10 @@ export type SyncEntity =
   | 'officers'
   | 'attendance'
   | 'awards'
-  | 'trainings';
+  | 'trainings'
+  | 'donations'
+  | 'activities'
+  | 'events';
 
 export type SyncJobInput = {
   source: SyncSourceKind;

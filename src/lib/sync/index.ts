@@ -3,12 +3,18 @@ import { csvMembersAdapter } from './adapters/csv-members';
 import { csvClubsAdapter } from './adapters/csv-clubs';
 import { csvOfficersAdapter } from './adapters/csv-officers';
 import { csvAttendanceAdapter } from './adapters/csv-attendance';
+import { csvDonationsAdapter } from './adapters/csv-donations';
+import { csvActivitiesAdapter } from './adapters/csv-activities';
+import { csvEventsAdapter } from './adapters/csv-events';
 import { restMembersAdapter } from './adapters/rest-members';
 
 registerAdapter(csvMembersAdapter);
 registerAdapter(csvClubsAdapter);
 registerAdapter(csvOfficersAdapter);
 registerAdapter(csvAttendanceAdapter);
+registerAdapter(csvDonationsAdapter);
+registerAdapter(csvActivitiesAdapter);
+registerAdapter(csvEventsAdapter);
 registerAdapter(restMembersAdapter);
 
 export * from './types';
