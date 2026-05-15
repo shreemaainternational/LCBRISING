@@ -34,6 +34,11 @@ export async function proxy(request: NextRequest) {
   // through untouched, so /login can never enter a redirect cycle.
   if (!path.startsWith(ADMIN_PREFIX)) return response;
 
+  // TEMPORARY diagnostic bypass — set ADMIN_AUTH_BYPASS=1 in the
+  // environment to skip the auth check entirely. Remove the env var
+  // once login is verified.
+  if (env.ADMIN_AUTH_BYPASS === '1') return response;
+
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL!,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
