@@ -1,8 +1,24 @@
 import { redirect } from 'next/navigation';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { Member, MemberRole } from '@/lib/supabase/database.types';
+import { env } from '@/lib/env';
 
 const ADMIN_ROLES: MemberRole[] = ['admin', 'president', 'secretary', 'treasurer'];
+
+// TEMPORARY diagnostic identity returned when ADMIN_AUTH_BYPASS=1 so
+// /admin/* renders without a real Supabase session. Remove the env var
+// once login is verified.
+const BYPASS_MEMBER = {
+  id: '00000000-0000-0000-0000-000000000000',
+  user_id: '00000000-0000-0000-0000-000000000000',
+  name: 'Bypass Admin',
+  email: 'bypass@local',
+  role: 'admin' as MemberRole,
+  lions_role: null,
+  status: 'active',
+  club_id: null,
+  joined_at: null,
+} as unknown as Member;
 
 /**
  * Resolve the current member for the logged-in auth user.
@@ -22,7 +38,11 @@ const ADMIN_ROLES: MemberRole[] = ['admin', 'president', 'secretary', 'treasurer
 export async function getCurrentMember(): Promise<Member | null> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) {
+    // Bypass: hand back a synthetic admin so the admin layout renders.
+    if (env.ADMIN_AUTH_BYPASS === '1') return BYPASS_MEMBER;
+    return null;
+  }
 
   // Tier 1 — RLS-scoped.
   const { data: rlsRow } = await supabase
