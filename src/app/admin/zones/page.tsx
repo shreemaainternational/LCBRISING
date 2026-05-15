@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
+import { QuickAddCard } from '@/components/admin/QuickAddCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,12 +40,29 @@ export default async function ZonesPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-navy-800 mb-1">Zones</h1>
-      <p className="text-gray-600 mb-8">
-        Mid-level federation grouping. A zone holds several clubs within a region;
-        a Zone Chairperson oversees them. Click a zone to drill into its clubs
-        and members.
-      </p>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-navy-800 mb-1">Zones</h1>
+          <p className="text-gray-600">
+            Mid-level federation grouping. A zone holds several clubs within a region;
+            a Zone Chairperson oversees them. Click a zone to drill into its clubs
+            and members.
+          </p>
+        </div>
+        <QuickAddCard
+          title="Zone"
+          endpoint="/api/zones"
+          accent="cyan"
+          description="Add a new zone under a district."
+          responseKey="zone"
+          fields={[
+            { name: 'name', label: 'Zone Name', type: 'text', required: true, placeholder: 'e.g. Zone B' },
+            { name: 'district_id', label: 'District', type: 'select',
+              options: Object.values(districts).map((d) => ({ value: d.id, label: d.code })) },
+            { name: 'zone_chairperson_name', label: 'Zone Chairperson', type: 'text' },
+          ]}
+        />
+      </div>
 
       <Card>
         <CardHeader>

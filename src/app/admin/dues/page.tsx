@@ -2,20 +2,39 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/server';
 import { formatINR, formatDate } from '@/lib/utils';
+import { QuickAddCard } from '@/components/admin/QuickAddCard';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DuesPage() {
   const supabase = await createClient();
-  const { data: dues } = await supabase
-    .from('dues')
-    .select('*, members(name, email)')
-    .order('due_date', { ascending: false });
+  const [{ data: dues }, { data: members }] = await Promise.all([
+    supabase.from('dues').select('*, members(name, email)').order('due_date', { ascending: false }),
+    supabase.from('members').select('id, name, email').is('deleted_at', null).order('name').limit(500),
+  ]);
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-navy-800 mb-1">Dues</h1>
-      <p className="text-gray-600 mb-8">Membership dues and collection status.</p>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-navy-800 mb-1">Dues</h1>
+          <p className="text-gray-600">Membership dues and collection status.</p>
+        </div>
+        <QuickAddCard
+          title="Dues Invoice"
+          endpoint="/api/dues"
+          accent="amber"
+          description="Raise a new dues invoice against a member."
+          responseKey="due"
+          fields={[
+            { name: 'member_id', label: 'Member', type: 'select', required: true,
+              options: (members ?? []).map((m) => ({ value: m.id, label: `${m.name} (${m.email})` })) },
+            { name: 'amount', label: 'Amount (₹)', type: 'number', required: true, min: 0, cast: 'number' },
+            { name: 'due_date', label: 'Due Date', type: 'date', required: true },
+            { name: 'period_label', label: 'Period Label', type: 'text', placeholder: 'e.g. Q1 2026 / Annual 2025-26' },
+          ]}
+        />
+      </div>
 
       <Card>
         <CardHeader><CardTitle>{dues?.length ?? 0} dues records</CardTitle></CardHeader>

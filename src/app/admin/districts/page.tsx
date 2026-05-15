@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
+import { QuickAddCard } from '@/components/admin/QuickAddCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,10 +38,29 @@ export default async function DistrictsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-navy-800 mb-1">Districts</h1>
-      <p className="text-gray-600 mb-8">
-        Lions federation hierarchy. Click a district to drill into clubs, officers, and analytics.
-      </p>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-navy-800 mb-1">Districts</h1>
+          <p className="text-gray-600">
+            Lions federation hierarchy. Click a district to drill into clubs, officers, and analytics.
+          </p>
+        </div>
+        <QuickAddCard
+          title="District"
+          endpoint="/api/crm/districts"
+          accent="blue"
+          description="Create a new Lions district. You can sync existing districts from the Lions Portal under Sync → Lions instead."
+          responseKey="district"
+          fields={[
+            { name: 'code', label: 'District Code', type: 'text', required: true, placeholder: 'e.g. 3232-F1' },
+            { name: 'name', label: 'District Name', type: 'text', required: true },
+            { name: 'governor_name', label: 'Governor', type: 'text' },
+            { name: 'cabinet_secretary_name', label: 'Cabinet Secretary', type: 'text' },
+            { name: 'cabinet_treasurer_name', label: 'Cabinet Treasurer', type: 'text' },
+            { name: 'lions_year', label: 'Lions Year', type: 'text', placeholder: '2025-26' },
+          ]}
+        />
+      </div>
 
       <Card>
         <CardHeader>

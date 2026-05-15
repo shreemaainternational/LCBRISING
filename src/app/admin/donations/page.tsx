@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
 import { formatINR, formatDate } from '@/lib/utils';
+import { QuickAddCard } from '@/components/admin/QuickAddCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +17,29 @@ export default async function DonationsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-navy-800 mb-1">Donations</h1>
-      <p className="text-gray-600 mb-8">Total raised: <strong>{formatINR(total)}</strong></p>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-navy-800 mb-1">Donations</h1>
+          <p className="text-gray-600">Total raised: <strong>{formatINR(total)}</strong></p>
+        </div>
+        <QuickAddCard
+          title="Offline Donation"
+          endpoint="/api/donations"
+          accent="amber"
+          description="Record a cheque, cash, or bank-transfer donation manually. Online donations are captured automatically via Razorpay webhooks."
+          responseKey="donation"
+          fields={[
+            { name: 'donor_name',  label: 'Donor Name', type: 'text',  required: true },
+            { name: 'amount',      label: 'Amount (₹)', type: 'number', required: true, min: 1, cast: 'number' },
+            { name: 'donor_email', label: 'Email',     type: 'email' },
+            { name: 'donor_phone', label: 'Phone',     type: 'tel' },
+            { name: 'donor_pan',   label: 'PAN',       type: 'text', hint: 'For 80G receipts' },
+            { name: 'campaign',    label: 'Campaign',  type: 'text', placeholder: 'e.g. Eye Camp 2026' },
+            { name: 'is_anonymous', label: 'Anonymous donor', type: 'checkbox', cast: 'boolean' },
+            { name: 'message',     label: 'Message',   type: 'textarea' },
+          ]}
+        />
+      </div>
 
       <Card>
         <CardHeader><CardTitle>{donations?.length ?? 0} records</CardTitle></CardHeader>

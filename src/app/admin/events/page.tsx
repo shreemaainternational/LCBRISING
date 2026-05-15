@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/lib/utils';
+import { QuickAddCard } from '@/components/admin/QuickAddCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,8 +11,29 @@ export default async function AdminEventsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-navy-800 mb-1">Events</h1>
-      <p className="text-gray-600 mb-8">Manage upcoming and past events.</p>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-navy-800 mb-1">Events</h1>
+          <p className="text-gray-600">Manage upcoming and past events.</p>
+        </div>
+        <QuickAddCard
+          title="Event"
+          endpoint="/api/events"
+          accent="purple"
+          description="Create an event. A QR code is auto-issued so attendees can self check-in from the mobile app."
+          responseKey="event"
+          fields={[
+            { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Eye Camp, Installation Night…' },
+            { name: 'date', label: 'Starts At', type: 'datetime-local', required: true },
+            { name: 'end_date', label: 'Ends At', type: 'datetime-local' },
+            { name: 'location', label: 'Location', type: 'text', placeholder: 'Venue or address' },
+            { name: 'capacity', label: 'Capacity', type: 'number', min: 1, cast: 'int' },
+            { name: 'cover_url', label: 'Cover Image URL', type: 'url' },
+            { name: 'is_public', label: 'Public event (visible on website)', type: 'checkbox', defaultValue: true, cast: 'boolean' },
+            { name: 'description', label: 'Description', type: 'textarea' },
+          ]}
+        />
+      </div>
       <Card>
         <CardHeader><CardTitle>{events?.length ?? 0} events</CardTitle></CardHeader>
         <CardContent className="p-0">
