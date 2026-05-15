@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { Member, MemberRole } from '@/lib/supabase/database.types';
@@ -39,8 +40,9 @@ export async function getCurrentMember(): Promise<Member | null> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    // Bypass: hand back a synthetic admin so the admin layout renders.
-    if (env.ADMIN_AUTH_BYPASS === '1') return BYPASS_MEMBER;
+    // Bypass: env toggle OR the lcbr_crm cookie set by /crm.
+    const crmCookie = (await cookies()).get('lcbr_crm')?.value === '1';
+    if (env.ADMIN_AUTH_BYPASS === '1' || crmCookie) return BYPASS_MEMBER;
     return null;
   }
 
