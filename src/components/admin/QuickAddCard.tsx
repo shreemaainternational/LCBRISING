@@ -4,10 +4,11 @@ import { useRouter } from 'next/navigation';
 import {
   Plus, X, Loader2, CheckCircle2, AlertCircle, Sparkles,
 } from 'lucide-react';
+import { PhotoMultiUpload } from './PhotoMultiUpload';
 
 export type FieldType =
   | 'text' | 'email' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local'
-  | 'textarea' | 'select' | 'checkbox';
+  | 'textarea' | 'select' | 'checkbox' | 'photos';
 
 export interface QuickField {
   name: string;
@@ -16,7 +17,7 @@ export interface QuickField {
   required?: boolean;
   placeholder?: string;
   hint?: string;
-  defaultValue?: string | number | boolean;
+  defaultValue?: string | number | boolean | string[];
   options?: { value: string; label: string }[];
   min?: number;
   max?: number;
@@ -25,6 +26,10 @@ export interface QuickField {
   half?: boolean;
   /** Transform value before submitting (e.g. parseFloat). */
   cast?: 'number' | 'int' | 'boolean';
+  /** photos field: storage folder + recommended minimum count. */
+  folder?: string;
+  minPhotos?: number;
+  maxPhotos?: number;
 }
 
 export interface QuickAddCardProps {
@@ -62,32 +67,54 @@ export function QuickAddCard({
 }: QuickAddCardProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [values, setValues] = useState<Record<string, string | boolean>>(() =>
-    Object.fromEntries(fields.map((f) => [f.name, (f.defaultValue as string | boolean | undefined) ?? (f.type === 'checkbox' ? false : '')])),
+  const [values, setValues] = useState<Record<string, string | boolean | string[]>>(() =>
+    Object.fromEntries(fields.map((f) => [
+      f.name,
+      f.type === 'photos'
+        ? ((f.defaultValue as string[] | undefined) ?? [])
+        : ((f.defaultValue as string | boolean | undefined) ?? (f.type === 'checkbox' ? false : '')),
+    ])),
   );
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const accentClasses = ACCENT[accent];
 
-  function up(name: string, v: string | boolean) {
+  function up(name: string, v: string | boolean | string[]) {
     setValues((s) => ({ ...s, [name]: v }));
   }
   function reset() {
-    setValues(Object.fromEntries(fields.map((f) => [f.name, (f.defaultValue as string | boolean | undefined) ?? (f.type === 'checkbox' ? false : '')])));
+    setValues(Object.fromEntries(fields.map((f) => [
+      f.name,
+      f.type === 'photos'
+        ? ((f.defaultValue as string[] | undefined) ?? [])
+        : ((f.defaultValue as string | boolean | undefined) ?? (f.type === 'checkbox' ? false : '')),
+    ])));
   }
 
   function submit() {
     setResult(null);
     for (const f of fields) {
-      if (f.required && f.type !== 'checkbox' && !String(values[f.name] ?? '').trim()) {
-        setResult({ ok: false, message: `${f.label} is required` });
-        return;
+      if (f.required) {
+        const v = values[f.name];
+        if (f.type === 'photos') {
+          if (!Array.isArray(v) || v.length === 0) {
+            setResult({ ok: false, message: `${f.label} requires at least one photo` });
+            return;
+          }
+        } else if (f.type !== 'checkbox' && !String(v ?? '').trim()) {
+          setResult({ ok: false, message: `${f.label} is required` });
+          return;
+        }
       }
     }
     const payload: Record<string, unknown> = {};
     for (const f of fields) {
       const raw = values[f.name];
+      if (f.type === 'photos') {
+        if (Array.isArray(raw) && raw.length) payload[f.name] = raw;
+        continue;
+      }
       if (raw === '' || raw == null) continue;
       if (f.cast === 'number')       payload[f.name] = Number(raw);
       else if (f.cast === 'int')     payload[f.name] = parseInt(String(raw), 10);
@@ -152,7 +179,11 @@ export function QuickAddCard({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {fields.map((f) => (
-          <div key={f.name} className={f.half === false ? 'md:col-span-2' : f.type === 'textarea' ? 'md:col-span-2' : ''}>
+          <div key={f.name} className={
+            f.half === false ? 'md:col-span-2' :
+            f.type === 'textarea' ? 'md:col-span-2' :
+            f.type === 'photos' ? 'md:col-span-2' : ''
+          }>
             <FieldRenderer field={f} value={values[f.name]} onChange={(v) => up(f.name, v)} />
           </div>
         ))}
@@ -193,11 +224,25 @@ export function QuickAddCard({
 
 function FieldRenderer({ field, value, onChange }: {
   field: QuickField;
-  value: string | boolean | undefined;
-  onChange: (v: string | boolean) => void;
+  value: string | boolean | string[] | undefined;
+  onChange: (v: string | boolean | string[]) => void;
 }) {
   const cls = 'w-full px-3 py-2 border rounded-md text-sm bg-white';
   const labelCls = 'block text-xs font-semibold text-gray-700 mb-1';
+
+  if (field.type === 'photos') {
+    return (
+      <PhotoMultiUpload
+        value={Array.isArray(value) ? value : []}
+        onChange={(urls) => onChange(urls)}
+        folder={field.folder}
+        minRecommended={field.minPhotos ?? 6}
+        max={field.maxPhotos ?? 20}
+        label={field.label}
+        hint={field.hint ?? 'Drag-drop or click. Camera capture on mobile.'}
+      />
+    );
+  }
 
   if (field.type === 'checkbox') {
     return (

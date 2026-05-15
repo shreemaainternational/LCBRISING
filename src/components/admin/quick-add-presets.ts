@@ -136,6 +136,19 @@ export function eventsPreset(): Omit<QuickAddCardProps, 'title'> {
     accent: 'purple',
     description: 'Create an event. A QR code is auto-issued so attendees can self check-in from the mobile app.',
     responseKey: 'event',
+    // Events table stores a single cover_url. Promote the first uploaded
+    // photo to cover, drop the rest (we can wire a media gallery later).
+    beforeSubmit: (p) => {
+      const photos = p.photos as string[] | undefined;
+      if (photos?.length) {
+        const out = { ...p, cover_url: p.cover_url || photos[0] };
+        delete (out as Record<string, unknown>).photos;
+        return out;
+      }
+      const out = { ...p };
+      delete (out as Record<string, unknown>).photos;
+      return out;
+    },
     fields: [
       { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Eye Camp, Installation Night…' },
       { name: 'date', label: 'Starts At', type: 'datetime-local', required: true },
@@ -145,6 +158,9 @@ export function eventsPreset(): Omit<QuickAddCardProps, 'title'> {
       { name: 'cover_url', label: 'Cover Image URL', type: 'url' },
       { name: 'is_public', label: 'Public event (visible on website)', type: 'checkbox', defaultValue: true, cast: 'boolean' },
       { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'photos', label: 'Event photos / poster', type: 'photos',
+        folder: 'events', minPhotos: 1, maxPhotos: 20,
+        hint: 'Upload the event poster, hall layout, or gallery photos from past editions.' },
     ],
   };
 }
@@ -177,6 +193,9 @@ export function activitiesPreset(): Omit<QuickAddCardProps, 'title'> {
       { name: 'amount_raised', label: 'Funds Raised (₹)', type: 'number', min: 0, defaultValue: 0, cast: 'number' },
       { name: 'location', label: 'Location', type: 'text', placeholder: 'Venue or city' },
       { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'photos', label: 'Photos & media', type: 'photos',
+        folder: 'activities', minPhotos: 6, maxPhotos: 20,
+        hint: 'Upload at least 6 photos of the project — before, during and after. Drag-drop or use the camera on mobile.' },
     ],
   };
 }
@@ -187,6 +206,16 @@ export function socialPreset(): Omit<QuickAddCardProps, 'title'> {
     accent: 'rose',
     description: 'Queue a post for one platform without going through the Creative Builder.',
     responseKey: 'post',
+    beforeSubmit: (p) => {
+      const photos = p.photos as string[] | undefined;
+      const out = { ...p } as Record<string, unknown>;
+      if (photos?.length) {
+        out.image_url = (out.image_url as string) || photos[0];
+        out.image_urls = photos;
+      }
+      delete out.photos;
+      return out;
+    },
     fields: [
       { name: 'platform', label: 'Platform', type: 'select', required: true, options: [
         { value: 'facebook', label: 'Facebook' },
@@ -194,8 +223,11 @@ export function socialPreset(): Omit<QuickAddCardProps, 'title'> {
         { value: 'linkedin', label: 'LinkedIn' },
       ] },
       { name: 'caption', label: 'Caption', type: 'textarea', required: true, placeholder: 'Write or paste the post copy…' },
-      { name: 'image_url', label: 'Image URL', type: 'url', hint: 'Optional cover image' },
+      { name: 'image_url', label: 'Image URL', type: 'url', hint: 'Optional cover image (or upload below)' },
       { name: 'scheduled_at', label: 'Schedule (optional)', type: 'datetime-local', hint: 'Leave blank to publish immediately' },
+      { name: 'photos', label: 'Upload media', type: 'photos',
+        folder: 'social', minPhotos: 1, maxPhotos: 10,
+        hint: 'Upload cover image or carousel photos.' },
     ],
   };
 }
@@ -206,6 +238,13 @@ export function beneficiariesPreset(): Omit<QuickAddCardProps, 'title'> {
     accent: 'emerald',
     description: 'Quickly create a beneficiary record. Add demographics + service history from the profile page.',
     responseKey: 'beneficiary',
+    beforeSubmit: (p) => {
+      const photos = p.photos as string[] | undefined;
+      const out = { ...p } as Record<string, unknown>;
+      if (photos?.length) out.photo_url = photos[0];
+      delete out.photos;
+      return out;
+    },
     fields: [
       { name: 'full_name', label: 'Full Name', type: 'text', required: true },
       { name: 'phone', label: 'Phone', type: 'tel' },
@@ -218,6 +257,9 @@ export function beneficiariesPreset(): Omit<QuickAddCardProps, 'title'> {
       { name: 'age', label: 'Age', type: 'number', min: 0, max: 120, cast: 'int' },
       { name: 'city', label: 'City', type: 'text' },
       { name: 'state', label: 'State', type: 'text', defaultValue: 'Gujarat' },
+      { name: 'photos', label: 'Profile photo', type: 'photos',
+        folder: 'beneficiaries', minPhotos: 1, maxPhotos: 3,
+        hint: 'Optional. Photo helps caseworkers identify the beneficiary.' },
     ],
   };
 }
