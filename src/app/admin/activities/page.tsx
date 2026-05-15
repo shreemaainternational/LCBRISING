@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/lib/utils';
@@ -48,8 +49,12 @@ export default async function AdminActivitiesPage() {
               </thead>
               <tbody>
                 {activities.map((a) => (
-                  <tr key={a.id} className="border-t">
-                    <td className="p-3 font-medium">{a.title}</td>
+                  <tr key={a.id} className="border-t hover:bg-gray-50">
+                    <td className="p-3 font-medium">
+                      <Link href={`/admin/activities/${a.id}`} className="text-navy-800 hover:underline">
+                        {a.title}
+                      </Link>
+                    </td>
                     <td className="p-3">{a.category ?? '—'}</td>
                     <td className="p-3">{formatDate(a.date)}</td>
                     <td className="p-3 text-right">{a.beneficiaries}</td>
