@@ -137,13 +137,6 @@ export function PublicNav() {
             >
               Donate
             </Link>
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-1.5 rounded-md border border-white/30 hover:bg-white/10 text-white px-4 py-2 text-sm font-medium transition-colors"
-            >
-              Admin
-              <span aria-hidden>→</span>
-            </Link>
           </div>
 
           {/* Mobile menu toggle */}
@@ -197,13 +190,6 @@ export function PublicNav() {
                 onClick={() => setOpen(false)}
               >
                 Donate
-              </Link>
-              <Link
-                href="/admin"
-                className="flex-1 text-center rounded-md border border-white/30 hover:bg-white/10 text-white px-4 py-2 text-sm font-medium"
-                onClick={() => setOpen(false)}
-              >
-                Admin →
               </Link>
             </div>
           </div>
