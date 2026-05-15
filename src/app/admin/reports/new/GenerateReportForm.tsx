@@ -20,6 +20,9 @@ export function GenerateReportForm({ catalog, initialType }: Props) {
   const [year, setYear] = useState(now.getFullYear());
   const [index, setIndex] = useState(now.getMonth());
   const [formats, setFormats] = useState<string[]>(['pdf','pptx']);
+  const [aiNarrative, setAiNarrative] = useState(false);
+  const [language, setLanguage] = useState<'en'|'gu'|'bilingual'>('en');
+  const [tone, setTone] = useState('lions_district');
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; message: string; ids?: string[] } | null>(null);
 
@@ -49,7 +52,7 @@ export function GenerateReportForm({ catalog, initialType }: Props) {
       const res = await fetch('/api/reports/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, scope, year, index, formats }),
+        body: JSON.stringify({ type, scope, year, index, formats, aiNarrative, language, tone }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -166,6 +169,63 @@ export function GenerateReportForm({ catalog, initialType }: Props) {
           PDF includes colorful native charts (bar, donut, pie, line, area, stacked).
           PPTX uses native Office charts that are fully editable in PowerPoint / Keynote.
         </p>
+      </div>
+
+      <div className="border-t pt-5">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={aiNarrative}
+            onChange={(e) => setAiNarrative(e.target.checked)}
+            className="mt-1"
+          />
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-800">AI Narrative Writer</span>
+              <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700 uppercase tracking-wider">
+                OpenAI
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Generate executive summary, flagship project, impact and outlook sections automatically.
+              Supports English, Gujarati (ગુજરાતી), or bilingual output.
+            </p>
+          </div>
+        </label>
+
+        {aiNarrative && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pl-7">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Language</label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as 'en'|'gu'|'bilingual')}
+                className="w-full px-3 py-2 border rounded-md text-sm bg-white"
+              >
+                <option value="en">English</option>
+                <option value="gu">Gujarati (ગુજરાતી)</option>
+                <option value="bilingual">Bilingual (EN + GU)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Tone</label>
+              <select
+                value={tone}
+                onChange={(e) => setTone(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md text-sm bg-white"
+              >
+                <option value="lions_district">Lions District</option>
+                <option value="executive">Executive Briefing</option>
+                <option value="board">Board Meeting</option>
+                <option value="donor">Donor Stewardship</option>
+                <option value="press_release">Press Release</option>
+                <option value="social_media">Social Media</option>
+                <option value="volunteer_thanks">Volunteer Thanks</option>
+                <option value="sponsor_pitch">CSR Sponsor Pitch</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3 pt-4 border-t">

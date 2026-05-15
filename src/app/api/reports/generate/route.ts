@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import {
-  buildReportDoc, renderReport, parsePeriod, type ReportRequest,
+  buildReportDoc, renderReport, parsePeriod, enrichWithAINarrative, type ReportRequest,
 } from '@/lib/reports';
 
 export const runtime = 'nodejs';
@@ -38,6 +38,9 @@ const schema = z.object({
     activityId: z.string().optional(),
   }).default({}),
   persist: z.boolean().default(true),
+  aiNarrative: z.boolean().default(false),
+  language: z.enum(['en','gu','bilingual']).default('en'),
+  tone: z.enum(['executive','board','donor','press_release','social_media','lions_district','volunteer_thanks','sponsor_pitch']).optional(),
 });
 
 /** POST /api/reports/generate — build + render + persist. */
@@ -64,7 +67,11 @@ export async function POST(req: Request) {
     filters: body.filters,
   };
 
-  const doc = await buildReportDoc(reqIn);
+  let doc = await buildReportDoc(reqIn);
+  if (body.aiNarrative) {
+    try { doc = await enrichWithAINarrative(doc, body.language, body.tone); }
+    catch (e) { /* leave deterministic narrative if AI fails */ console.error('ai narrative failed:', e); }
+  }
   const rendered = await Promise.all(body.formats.map((fmt) => renderReport(doc, fmt)));
 
   if (!body.persist) {
