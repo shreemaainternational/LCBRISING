@@ -35,9 +35,14 @@ export async function proxy(request: NextRequest) {
   if (!path.startsWith(ADMIN_PREFIX)) return response;
 
   // TEMPORARY diagnostic bypass — set ADMIN_AUTH_BYPASS=1 in the
-  // environment to skip the auth check entirely. Remove the env var
-  // once login is verified.
-  if (env.ADMIN_AUTH_BYPASS === '1') return response;
+  // environment, OR visit /crm to set the lcbr_crm cookie, to skip
+  // the auth check entirely. Remove both when no longer needed.
+  if (
+    env.ADMIN_AUTH_BYPASS === '1' ||
+    request.cookies.get('lcbr_crm')?.value === '1'
+  ) {
+    return response;
+  }
 
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL!,
