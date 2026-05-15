@@ -95,6 +95,13 @@ const schema = z.object({
   LIONS_OIDC_SCOPES: z.string().optional(),
   LIONS_OIDC_AUDIENCE: z.string().optional(),
   LIONS_OIDC_PROVIDER_LABEL: z.string().optional(),
+
+  // --- Lions International REST API (optional) ---
+  LIONS_API_BASE_URL: z.string().url().optional(),
+  LIONS_API_KEY: z.string().optional(),
+  LIONS_API_ACCESS_TOKEN: z.string().optional(),
+  LIONS_API_DISTRICT_CODE: z.string().optional(),
+  LIONS_API_MULTI_DISTRICT_CODE: z.string().optional(),
 });
 
 const parsed = schema.parse({
@@ -159,6 +166,11 @@ const parsed = schema.parse({
   LIONS_OIDC_SCOPES: process.env.LIONS_OIDC_SCOPES,
   LIONS_OIDC_AUDIENCE: process.env.LIONS_OIDC_AUDIENCE,
   LIONS_OIDC_PROVIDER_LABEL: process.env.LIONS_OIDC_PROVIDER_LABEL,
+  LIONS_API_BASE_URL: process.env.LIONS_API_BASE_URL,
+  LIONS_API_KEY: process.env.LIONS_API_KEY,
+  LIONS_API_ACCESS_TOKEN: process.env.LIONS_API_ACCESS_TOKEN,
+  LIONS_API_DISTRICT_CODE: process.env.LIONS_API_DISTRICT_CODE,
+  LIONS_API_MULTI_DISTRICT_CODE: process.env.LIONS_API_MULTI_DISTRICT_CODE,
 });
 
 export const env = parsed;

@@ -51,6 +51,20 @@ export default async function SyncPage() {
         Import member/club/officer/attendance data from CSV exports, and audit every sync run.
       </p>
 
+      <a href="/admin/sync/lions"
+        className="block mb-8 p-4 rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-amber-50 hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Lions International Integration</div>
+            <div className="text-lg font-bold text-navy-800 mt-1">Sign in with Lions · Sync via MyLCI REST</div>
+            <div className="text-sm text-gray-600 mt-1">
+              OIDC SSO and REST sync for districts, clubs, members and awards.
+            </div>
+          </div>
+          <span className="text-amber-600 font-medium">Open →</span>
+        </div>
+      </a>
+
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>CSV import</CardTitle>

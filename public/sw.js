@@ -3,8 +3,19 @@
 // payment pages so that customers can still see their invoice
 // (read-only) when the network drops mid-transaction.
 
-const VERSION = 'lcbrs-pay-v1';
-const SHELL = ['/portal/login', '/invoices/lookup', '/icons/icon-192.svg', '/icons/icon-512.svg'];
+const VERSION = 'lcbrs-pwa-v2';
+const SHELL = [
+  '/m',
+  '/m/activities',
+  '/m/checkin',
+  '/m/beneficiaries',
+  '/m/reports',
+  '/m/profile',
+  '/portal/login',
+  '/invoices/lookup',
+  '/icons/icon-192.svg',
+  '/icons/icon-512.svg',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

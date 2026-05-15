@@ -5,7 +5,7 @@ import { LogoutButton } from '@/components/admin/LogoutButton';
 import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
   Activity as ActivityIcon, Calendar, Mail, Settings,
-  Sparkles, Megaphone, QrCode, BarChart3,
+  Sparkles, Megaphone, QrCode, BarChart3, Smartphone,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
   KeyRound,
 } from 'lucide-react';
@@ -13,6 +13,7 @@ import {
 const navItems = [
   { href: '/admin',             label: 'Dashboard',     icon: LayoutDashboard },
   { href: '/admin/reports',     label: 'Reports',       icon: BarChart3 },
+  { href: '/admin/beneficiaries', label: 'Beneficiaries', icon: HeartHandshake },
   { href: '/admin/districts',   label: 'Districts',     icon: Globe },
   { href: '/admin/zones',       label: 'Zones',         icon: MapPin },
   { href: '/admin/members',     label: 'Members',       icon: Users },
@@ -29,6 +30,7 @@ const navItems = [
   { href: '/admin/sync',        label: 'Sync',          icon: RefreshCw },
   { href: '/admin/audit',       label: 'Audit log',     icon: ScrollText },
   { href: '/admin/profile',     label: 'My Profile',    icon: KeyRound },
+  { href: '/m',                 label: 'Mobile App',    icon: Smartphone },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -21,6 +21,7 @@ import {
 import { renderPdf } from './render-pdf';
 import { renderPptx } from './render-pptx';
 import { monthPeriod, quarterPeriod, halfYearlyPeriod, lionsYearPeriod } from './period';
+import { generateNarrative, type NarrativeLanguage, type NarrativeTone, gujaratiHeading } from '@/lib/ai/narrative';
 
 export interface ReportCatalogEntry {
   type: ReportType;
@@ -87,6 +88,57 @@ export async function buildReportDoc(req: ReportRequest): Promise<ReportDoc> {
 export async function renderReport(doc: ReportDoc, format: ReportFormat): Promise<RenderedReport> {
   if (format === 'pdf') return renderPdf(doc);
   return renderPptx(doc);
+}
+
+/**
+ * Enrich a ReportDoc with AI-generated narrative sections (English /
+ * Gujarati / bilingual). The original deterministic narrative is
+ * preserved in `appendix` so reviewers can compare versions.
+ */
+export async function enrichWithAINarrative(
+  doc: ReportDoc,
+  language: NarrativeLanguage,
+  tone?: NarrativeTone,
+): Promise<ReportDoc> {
+  const totals: Record<string, number | string> = {
+    activities: doc.kpis.find((k) => /activit/i.test(k.label))?.value ?? '',
+    beneficiaries: doc.kpis.find((k) => /beneficiar/i.test(k.label))?.value ?? '',
+    hours: doc.kpis.find((k) => /hour/i.test(k.label))?.value ?? '',
+    funds: doc.kpis.find((k) => /fund|donation|csr/i.test(k.label))?.value ?? '',
+    ...doc.totals,
+  };
+  const highlights = (doc.tables.find((t) => /top.*project|flagship/i.test(t.title))?.rows ?? [])
+    .slice(0, 3)
+    .map((r) => ({
+      title: String(r.title ?? r.project ?? ''),
+      date: r.date as string | undefined,
+      beneficiaries: Number(String(r.beneficiaries ?? '0').replace(/[^\d]/g, '')) || undefined,
+    }));
+
+  const ai = await generateNarrative({
+    title: doc.title,
+    periodLabel: doc.period.label,
+    lionsYear: doc.period.lionsYear,
+    totals,
+    highlights,
+    language,
+    tone,
+  });
+  if (!ai) return doc;
+
+  return {
+    ...doc,
+    narrative: ai.sections.map((s) => ({
+      heading: language === 'en' ? s.heading : `${s.heading} · ${gujaratiHeading(s.heading)}`,
+      body: s.body,
+    })),
+    appendix: [
+      ...(doc.appendix ?? []),
+      ...doc.narrative.map((s) => ({ heading: `${s.heading} (auto-draft)`, body: s.body })),
+      ...(ai.executive_one_liner ? [{ heading: 'Executive One-Liner', body: ai.executive_one_liner }] : []),
+      ...(ai.social_caption ? [{ heading: 'Social Caption', body: ai.social_caption }] : []),
+    ],
+  };
 }
 
 /** Convenience period parser used by API/UI. */
