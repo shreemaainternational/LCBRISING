@@ -4,7 +4,15 @@ import { runSyncJob, type SyncEntity } from '@/lib/sync';
 
 export const dynamic = 'force-dynamic';
 
-const ALLOWED: SyncEntity[] = ['members', 'clubs', 'officers', 'attendance'];
+const ALLOWED: SyncEntity[] = [
+  'members',
+  'clubs',
+  'officers',
+  'attendance',
+  'donations',
+  'activities',
+  'events',
+];
 
 /**
  * multipart/form-data upload:
