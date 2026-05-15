@@ -36,11 +36,13 @@ function LoginInner() {
       if (mode === 'signin') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // Force the session cookie to be flushed to document.cookie
+        // before navigating — otherwise the /admin request can fire
+        // before the cookie is on disk and the middleware bounces the
+        // user back to /login even though sign-in just succeeded.
+        await supabase.auth.getSession();
         setNotice('Signed in successfully. Taking you to your dashboard…');
-        // Full-page navigation so the server sees the fresh session cookie
-        // immediately — avoids the router.refresh() race that otherwise
-        // bounces the user back to /login.
-        window.location.href = redirectTo;
+        window.location.assign(redirectTo);
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -56,8 +58,9 @@ function LoginInner() {
           setLoading(false);
           return;
         }
+        await supabase.auth.getSession();
         setNotice('Account created. Taking you to your dashboard…');
-        window.location.href = redirectTo;
+        window.location.assign(redirectTo);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
