@@ -3,6 +3,7 @@ import type {
   ReportRequest, ReportType, RenderedReport,
 } from './types';
 import { buildPeriodReport } from './builders/period-reports';
+import { buildAnnualReport } from './builders/annual-report';
 import {
   buildFinancialReport, buildDonorReport, buildCSRReport,
 } from './builders/finance-reports';
@@ -65,7 +66,7 @@ export async function buildReportDoc(req: ReportRequest): Promise<ReportDoc> {
     case 'half_yearly':
       return buildPeriodReport({ type: 'half_yearly', title: `Half-Yearly Report — ${req.period.label}` }, req.period, f);
     case 'yearly':
-      return buildPeriodReport({ type: 'yearly',      title: `Annual Report — ${req.period.label}` },       req.period, f);
+      return buildAnnualReport(req.period, f);
     case 'activity':            return buildActivityReport(req.period, f);
     case 'event_performance':   return buildEventPerformanceReport(req.period, f);
     case 'service_category':    return buildServiceCategoryReport(req.period, f);

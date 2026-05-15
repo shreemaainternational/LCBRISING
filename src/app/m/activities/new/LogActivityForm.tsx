@@ -1,7 +1,7 @@
 'use client';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Save, AlertCircle, CheckCircle2, MapPin } from 'lucide-react';
+import { Loader2, Save, AlertCircle, CheckCircle2, MapPin, ScanLine } from 'lucide-react';
 
 const CATEGORIES = [
   'vision', 'hunger', 'environment', 'diabetes', 'childhood_cancer',
@@ -24,6 +24,33 @@ export function LogActivityForm() {
   const [funds, setFunds] = useState('0');
   const [description, setDescription] = useState('');
   const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
+  const [expenses, setExpenses] = useState('0');
+  const [budget, setBudget] = useState('0');
+  const [ocrPending, setOcrPending] = useState(false);
+  const [ocrNotice, setOcrNotice] = useState<string | null>(null);
+
+  async function scanBill(file: File) {
+    setOcrNotice(null);
+    setOcrPending(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/ai/ocr/bill', { method: 'POST', body: fd });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { setOcrNotice(j.error === 'ocr_failed_or_not_configured' ? 'Enable OPENAI_API_KEY for bill OCR' : 'Could not read bill'); return; }
+      const r = j.result as { merchant_name?: string; total?: number; invoice_date?: string; notes?: string; confidence?: string };
+      if (r.total) setExpenses(String(r.total));
+      if (r.invoice_date) setDate(r.invoice_date);
+      if (r.merchant_name) {
+        setDescription((d) => d ? d : `Expense bill from ${r.merchant_name}${r.notes ? ` — ${r.notes}` : ''}`);
+      }
+      setOcrNotice(`Scanned ${r.merchant_name ?? 'bill'} · ₹${r.total ?? '?'} (${r.confidence ?? 'low'} confidence)`);
+    } catch (e) {
+      setOcrNotice(`Scan failed: ${String(e)}`);
+    } finally {
+      setOcrPending(false);
+    }
+  }
 
   function captureGps() {
     if (!navigator.geolocation) return;
@@ -54,16 +81,18 @@ export function LogActivityForm() {
       const j = await res.json().catch(() => ({}));
       if (!res.ok) { setError(j.error ?? 'Save failed'); return; }
       setOk(true);
-      // Best-effort: attach Lions count, GPS, etc. on second pass since
-      // those columns aren't in the base activitySchema yet.
+      // Best-effort: attach Lions count, GPS, expenses on a second
+      // pass since those columns aren't in the base activitySchema.
       try {
-        if (j.activity?.id && (Number(lions) || gps)) {
+        if (j.activity?.id && (Number(lions) || gps || Number(expenses) || Number(budget))) {
           await fetch(`/api/activities/${j.activity.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               lion_members_count: Number(lions) || 0,
               gps_lat: gps?.lat, gps_lng: gps?.lng,
+              expenses: Number(expenses) || 0,
+              budget: Number(budget) || 0,
             }),
           });
         }
@@ -113,6 +142,38 @@ export function LogActivityForm() {
         <Field label="Funds Raised (₹)">
           <input type="number" min={0} inputMode="decimal" value={funds} onChange={(e) => setFunds(e.target.value)} className={input} />
         </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Budget (₹)">
+          <input type="number" min={0} inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} className={input} />
+        </Field>
+        <Field label="Expenses (₹)">
+          <input type="number" min={0} inputMode="decimal" value={expenses} onChange={(e) => setExpenses(e.target.value)} className={input} />
+        </Field>
+      </div>
+
+      <div className="rounded-xl border border-dashed border-purple-300 bg-purple-50/40 p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="text-xs font-semibold text-purple-800 uppercase tracking-wider">
+            Scan expense bill
+          </div>
+          <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">AI OCR</span>
+        </div>
+        <p className="text-[11px] text-purple-700/80 mb-2">
+          Take a photo of a receipt or upload one. OpenAI vision will read merchant,
+          total and date and fill the fields above.
+        </p>
+        <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium cursor-pointer w-full justify-center">
+          {ocrPending ? <Loader2 className="animate-spin" size={14} /> : <ScanLine size={14} />}
+          {ocrPending ? 'Reading bill…' : 'Capture / Upload Bill'}
+          <input type="file" accept="image/*" capture="environment" className="hidden"
+            disabled={ocrPending}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) void scanBill(f); }} />
+        </label>
+        {ocrNotice && (
+          <p className="text-[11px] text-purple-700 mt-2">{ocrNotice}</p>
+        )}
       </div>
 
       <Field label="Description">

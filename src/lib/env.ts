@@ -102,6 +102,12 @@ const schema = z.object({
   LIONS_API_ACCESS_TOKEN: z.string().optional(),
   LIONS_API_DISTRICT_CODE: z.string().optional(),
   LIONS_API_MULTI_DISTRICT_CODE: z.string().optional(),
+
+  // --- Web Push (VAPID) ---
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
 });
 
 const parsed = schema.parse({
@@ -171,6 +177,10 @@ const parsed = schema.parse({
   LIONS_API_ACCESS_TOKEN: process.env.LIONS_API_ACCESS_TOKEN,
   LIONS_API_DISTRICT_CODE: process.env.LIONS_API_DISTRICT_CODE,
   LIONS_API_MULTI_DISTRICT_CODE: process.env.LIONS_API_MULTI_DISTRICT_CODE,
+  VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+  VAPID_SUBJECT: process.env.VAPID_SUBJECT,
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
 });
 
 export const env = parsed;
@@ -208,4 +218,5 @@ export const integrations = {
   upi: Boolean(parsed.UPI_VPA),
   phonepe: Boolean(parsed.PHONEPE_MERCHANT_ID && parsed.PHONEPE_SALT_KEY),
   lionsOidc: Boolean(parsed.LIONS_OIDC_ISSUER && parsed.LIONS_OIDC_CLIENT_ID && parsed.LIONS_OIDC_REDIRECT_URI),
+  webPush: Boolean(parsed.VAPID_PUBLIC_KEY && parsed.VAPID_PRIVATE_KEY),
 };

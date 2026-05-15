@@ -51,10 +51,11 @@ export default async function MobileHome() {
         <MobKpi icon={HeartHandshake} label="Events" value={String(upcomingEvents?.length ?? 0)} hint="upcoming" color="bg-purple-100 text-purple-700" />
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-2">
         <QuickAction href="/m/activities/new" label="Log Activity" icon={Plus} color="bg-amber-500" />
-        <QuickAction href="/m/checkin" label="QR Check-in" icon={QrCode} color="bg-emerald-500" />
+        <QuickAction href="/m/checkin" label="QR Scan" icon={QrCode} color="bg-emerald-500" />
         <QuickAction href="/m/beneficiaries/new" label="Add Person" icon={Users} color="bg-blue-500" />
+        <QuickAction href="/invoices/lookup" label="Pay / UPI" icon={Banknote} color="bg-purple-500" />
       </div>
 
       <section>

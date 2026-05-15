@@ -5,7 +5,7 @@ import { LogoutButton } from '@/components/admin/LogoutButton';
 import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
   Activity as ActivityIcon, Calendar, Mail, Settings,
-  Sparkles, Megaphone, QrCode, BarChart3, Smartphone,
+  Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
   KeyRound,
 } from 'lucide-react';
@@ -26,6 +26,7 @@ const navItems = [
   { href: '/admin/creative',    label: 'Creative',      icon: Sparkles },
   { href: '/admin/social',      label: 'Social',        icon: Megaphone },
   { href: '/admin/communications', label: 'Comms',      icon: Mail },
+  { href: '/admin/notifications', label: 'Push',         icon: Bell },
   { href: '/admin/automation',  label: 'Automation',    icon: Settings },
   { href: '/admin/sync',        label: 'Sync',          icon: RefreshCw },
   { href: '/admin/audit',       label: 'Audit log',     icon: ScrollText },

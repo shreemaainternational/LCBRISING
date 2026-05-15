@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getCurrentMember } from '@/lib/auth';
 import { LogoutButton } from '@/components/admin/LogoutButton';
 import { Mail, Phone, Shield, LayoutDashboard, ExternalLink } from 'lucide-react';
+import { PushToggle } from './PushToggle';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,8 @@ export default async function MobileProfile() {
         {member.phone && <Row icon={Phone} label="Phone" value={member.phone} />}
         <Row icon={Shield} label="Status" value={member.status} />
       </div>
+
+      <PushToggle />
 
       <div className="bg-white rounded-2xl shadow-sm divide-y">
         <LinkRow icon={LayoutDashboard} href="/admin" label="Open Desktop CRM" external />
