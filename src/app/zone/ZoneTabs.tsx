@@ -9,6 +9,7 @@ const TABS = [
   { href: '/zone/calendar',    label: 'Zone Calendar', emoji: '🦁' },
   { href: '/zone/lions-year',  label: 'Lions Year',    emoji: '📅' },
   { href: '/zone/minutes',     label: 'Minutes',       emoji: '📝' },
+  { href: '/zone/action-items', label: 'Action Items', emoji: '✅' },
   { href: '/zone/attendance',  label: 'Attendance',    emoji: '' },
   { href: '/zone/advisories',  label: 'Advisories',    emoji: '' },
   { href: '/zone/automations', label: 'Automations',   emoji: '⚡' },

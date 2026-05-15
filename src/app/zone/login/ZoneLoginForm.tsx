@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { Loader2, LogIn, AlertCircle } from 'lucide-react';
 
-export function ZoneLoginForm() {
+export function ZoneLoginForm({ redirectTo = '/zone' }: { redirectTo?: string } = {}) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,7 +31,7 @@ export function ZoneLoginForm() {
         }).catch(() => null);
         // Fallback — server can still resolve via the supabase-js auth cookies set by signInWithPassword above.
         void res;
-        router.push('/zone');
+        router.push(redirectTo);
       } catch (e) {
         setError(String(e));
       }
