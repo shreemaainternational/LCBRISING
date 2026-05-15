@@ -2,6 +2,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Save, AlertCircle, CheckCircle2, MapPin, ScanLine } from 'lucide-react';
+import { PhotoMultiUpload } from '@/components/admin/PhotoMultiUpload';
 
 const CATEGORIES = [
   'vision', 'hunger', 'environment', 'diabetes', 'childhood_cancer',
@@ -28,6 +29,7 @@ export function LogActivityForm() {
   const [budget, setBudget] = useState('0');
   const [ocrPending, setOcrPending] = useState(false);
   const [ocrNotice, setOcrNotice] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
 
   async function scanBill(file: File) {
     setOcrNotice(null);
@@ -75,7 +77,7 @@ export function LogActivityForm() {
           service_hours: Number(hours) || 0,
           amount_raised: Number(funds) || 0,
           description: description || undefined,
-          photos: [],
+          photos,
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -174,6 +176,18 @@ export function LogActivityForm() {
         {ocrNotice && (
           <p className="text-[11px] text-purple-700 mt-2">{ocrNotice}</p>
         )}
+      </div>
+
+      <div className="rounded-xl border border-blue-200 bg-white p-3">
+        <PhotoMultiUpload
+          value={photos}
+          onChange={setPhotos}
+          folder="activities"
+          minRecommended={6}
+          max={20}
+          label="Project photos"
+          hint="Upload at least 6 photos — before, during, after. Use the rear camera on your phone."
+        />
       </div>
 
       <Field label="Description">

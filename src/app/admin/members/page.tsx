@@ -1,51 +1,70 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/server';
+import { QuickAddCard } from '@/components/admin/QuickAddCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { membersPreset } from '@/components/admin/quick-add-presets';
+import { Users } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MembersPage() {
   const supabase = await createClient();
-  const { data: members } = await supabase
-    .from('members').select('*').order('created_at', { ascending: false });
+  const [{ data: members }, { data: clubs }] = await Promise.all([
+    supabase.from('members').select('*').order('created_at', { ascending: false }),
+    supabase.from('clubs').select('id, name').is('deleted_at', null).order('name'),
+  ]);
+
+  const preset = membersPreset({ clubs: clubs ?? [] });
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-navy-800 mb-1">Members</h1>
-      <p className="text-gray-600 mb-8">All members across the chapter.</p>
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-navy-800 mb-1">Members</h1>
+          <p className="text-gray-600">All members across the chapter.</p>
+        </div>
+        <QuickAddCard title="Member" {...preset} />
+      </div>
 
-      <Card>
-        <CardHeader><CardTitle>{members?.length ?? 0} members</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left p-3">Name</th>
-                <th className="text-left p-3">Email</th>
-                <th className="text-left p-3">Phone</th>
-                <th className="text-left p-3">Role</th>
-                <th className="text-left p-3">Status</th>
-                <th className="text-left p-3">Joined</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(members ?? []).map((m) => (
-                <tr key={m.id} className="border-t">
-                  <td className="p-3 font-medium">{m.name}</td>
-                  <td className="p-3">{m.email}</td>
-                  <td className="p-3">{m.phone ?? '—'}</td>
-                  <td className="p-3 capitalize">{m.role}</td>
-                  <td className="p-3"><StatusBadge status={m.status} /></td>
-                  <td className="p-3 text-gray-500">{m.joined_at ?? '—'}</td>
+      {!members?.length ? (
+        <EmptyState
+          icon={<Users size={26} />}
+          title="No members yet"
+          description="Add your first Lion or Leo to the roster."
+          cta={<QuickAddCard title="Member" {...preset} />}
+        />
+      ) : (
+        <Card>
+          <CardHeader><CardTitle>{members.length} members</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left p-3">Name</th>
+                  <th className="text-left p-3">Email</th>
+                  <th className="text-left p-3">Phone</th>
+                  <th className="text-left p-3">Role</th>
+                  <th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">Joined</th>
                 </tr>
-              ))}
-              {(!members || members.length === 0) && (
-                <tr><td colSpan={6} className="p-6 text-center text-gray-500">No members yet</td></tr>
-              )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+              </thead>
+              <tbody>
+                {members.map((m) => (
+                  <tr key={m.id} className="border-t">
+                    <td className="p-3 font-medium">{m.name}</td>
+                    <td className="p-3">{m.email}</td>
+                    <td className="p-3">{m.phone ?? '—'}</td>
+                    <td className="p-3 capitalize">{m.role}</td>
+                    <td className="p-3"><StatusBadge status={m.status} /></td>
+                    <td className="p-3 text-gray-500">{m.joined_at ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

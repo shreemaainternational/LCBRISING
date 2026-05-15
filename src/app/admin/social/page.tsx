@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, integrations } from '@/lib/env';
+import { QuickAddCard } from '@/components/admin/QuickAddCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,10 +34,27 @@ export default async function SocialPage() {
         <ConnStat name="OpenAI"    ok={integrations.openai} />
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap gap-3">
         <Link href="/admin/creative" className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-500 text-navy-900 font-semibold">
           ✨ New post in Creative Builder
         </Link>
+        <QuickAddCard
+          title="Social Post"
+          endpoint="/api/social/post"
+          accent="rose"
+          description="Quickly queue a post for one platform without going through the Creative Builder."
+          responseKey="post"
+          fields={[
+            { name: 'platform', label: 'Platform', type: 'select', required: true, options: [
+              { value: 'facebook', label: 'Facebook' },
+              { value: 'instagram', label: 'Instagram' },
+              { value: 'linkedin', label: 'LinkedIn' },
+            ] },
+            { name: 'caption', label: 'Caption', type: 'textarea', required: true, placeholder: 'Write or paste the post copy…' },
+            { name: 'image_url', label: 'Image URL', type: 'url', hint: 'Optional cover image' },
+            { name: 'scheduled_at', label: 'Schedule (optional)', type: 'datetime-local', hint: 'Leave blank to publish immediately' },
+          ]}
+        />
       </div>
 
       <Card>
