@@ -10,6 +10,7 @@ interface ApiSettingsRow {
   district_code: string | null;
   multi_district_code: string | null;
   is_active: boolean;
+  sandbox_mode?: boolean;
   last_test_ok?: boolean | null;
   last_test_at?: string | null;
   last_test_error?: string | null;
@@ -30,6 +31,7 @@ export function LionsApiSetupForm({ initial }: Props) {
   const [districtCode, setDistrictCode] = useState(initial?.district_code ?? '');
   const [mdCode, setMdCode] = useState(initial?.multi_district_code ?? '');
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
+  const [sandboxMode, setSandboxMode] = useState(initial?.sandbox_mode ?? false);
   const [test, setTest] = useState(true);
 
   function loadLionsDefaults() {
@@ -39,8 +41,8 @@ export function LionsApiSetupForm({ initial }: Props) {
 
   function save() {
     setResult(null);
-    if (!baseUrl.trim()) {
-      setResult({ ok: false, msg: 'Base URL is required.' });
+    if (!sandboxMode && !baseUrl.trim()) {
+      setResult({ ok: false, msg: 'Base URL is required (or enable sandbox mode).' });
       return;
     }
     start(async () => {
@@ -53,6 +55,7 @@ export function LionsApiSetupForm({ initial }: Props) {
           district_code: districtCode || undefined,
           multi_district_code: mdCode || undefined,
           is_active: isActive,
+          sandbox_mode: sandboxMode,
           test,
         }),
       });
@@ -119,6 +122,23 @@ export function LionsApiSetupForm({ initial }: Props) {
           <label className="inline-flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={test} onChange={(e) => setTest(e.target.checked)} />
             Test /districts endpoint on save
+          </label>
+        </div>
+        <div className="md:col-span-2 rounded-md border-2 border-dashed border-purple-300 bg-purple-50/40 p-3">
+          <label className="inline-flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" checked={sandboxMode}
+              onChange={(e) => setSandboxMode(e.target.checked)}
+              className="mt-0.5" />
+            <span className="text-sm">
+              <span className="font-semibold text-purple-800">Sandbox mode</span>
+              <span className="inline-block ml-2 text-[10px] font-bold uppercase tracking-wider bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-full">
+                no API needed
+              </span>
+              <p className="text-xs text-purple-700/90 mt-1 leading-snug">
+                Returns synthetic districts, clubs and members from <code>/api/sync/lions</code> so
+                you can exercise the sync UI without LCI API credentials.
+              </p>
+            </span>
           </label>
         </div>
       </div>

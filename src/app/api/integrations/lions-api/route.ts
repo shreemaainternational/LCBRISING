@@ -9,13 +9,16 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 const upsertSchema = z.object({
-  base_url: z.string().url(),
+  base_url: z.string().url().optional().or(z.literal('')),
   api_key: z.string().optional(),
   access_token: z.string().optional(),
   district_code: z.string().max(32).optional(),
   multi_district_code: z.string().max(32).optional(),
   is_active: z.boolean().default(true),
+  sandbox_mode: z.boolean().default(false),
   test: z.boolean().default(true),
+}).refine((v) => v.sandbox_mode || !!v.base_url, {
+  message: 'Base URL is required unless sandbox mode is enabled.',
 });
 
 export async function GET() {
@@ -54,7 +57,7 @@ export async function PUT(req: Request) {
 
   let testOk: boolean | null = null;
   let testError: string | null = null;
-  if (parsed.data.test) {
+  if (parsed.data.test && !parsed.data.sandbox_mode && parsed.data.base_url) {
     try {
       const url = `${parsed.data.base_url.replace(/\/$/, '')}/districts`;
       const headers: Record<string, string> = { Accept: 'application/json' };
@@ -68,12 +71,13 @@ export async function PUT(req: Request) {
 
   const payload = {
     id: 'singleton' as const,
-    base_url: parsed.data.base_url,
+    base_url: parsed.data.base_url || null,
     api_key: apiKey ?? null,
     access_token: accessToken ?? null,
     district_code: parsed.data.district_code ?? null,
     multi_district_code: parsed.data.multi_district_code ?? null,
     is_active: parsed.data.is_active,
+    sandbox_mode: parsed.data.sandbox_mode,
     configured_by: actor?.id ?? null,
     configured_at: new Date().toISOString(),
     last_test_ok: testOk,

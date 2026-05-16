@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getIntegrationRegistry, summarizeIntegrations, type IntegrationCategory, type IntegrationDescriptor } from '@/lib/integrations-registry';
 import { loadOidcSettings } from '@/lib/oidc/runtime-config';
+import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
 import {
   Plug, CheckCircle2, XCircle, Lock, Database, CreditCard, MessageSquare,
   Brain, Share2, Image as ImageIcon, Server, ExternalLink,
@@ -25,7 +26,7 @@ const CATEGORY_ORDER: IntegrationCategory[] = [
 ];
 
 export default async function IntegrationsPage() {
-  await loadOidcSettings(true);
+  await Promise.all([loadOidcSettings(true), loadLionsApiSettings(true)]);
   const registry = getIntegrationRegistry();
   const summary = summarizeIntegrations();
   const pct = summary.total ? Math.round((summary.configured / summary.total) * 100) : 0;

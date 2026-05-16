@@ -16,6 +16,7 @@ export interface OidcSettings {
   provider_label: string | null;
   discovery_url: string | null;
   is_active: boolean;
+  sandbox_mode?: boolean;
 }
 
 const TTL_MS = 60_000;
