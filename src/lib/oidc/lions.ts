@@ -41,18 +41,35 @@ export interface LionsApiConfig {
   multipleDistrictCode?: string;
 }
 
+import { peekLionsApiSettings } from './lions-api-runtime';
+
+function merge(): {
+  base_url?: string; api_key?: string; access_token?: string;
+  district_code?: string; multi_district_code?: string;
+} {
+  const db = peekLionsApiSettings();
+  return {
+    base_url:            db?.base_url            ?? env.LIONS_API_BASE_URL,
+    api_key:             db?.api_key             ?? env.LIONS_API_KEY,
+    access_token:        db?.access_token        ?? env.LIONS_API_ACCESS_TOKEN,
+    district_code:       db?.district_code       ?? env.LIONS_API_DISTRICT_CODE,
+    multi_district_code: db?.multi_district_code ?? env.LIONS_API_MULTI_DISTRICT_CODE,
+  };
+}
+
 export function isLionsApiConfigured(): boolean {
-  return Boolean(env.LIONS_API_BASE_URL);
+  return Boolean(merge().base_url);
 }
 
 export function getLionsApiConfig(): LionsApiConfig | null {
-  if (!env.LIONS_API_BASE_URL) return null;
+  const m = merge();
+  if (!m.base_url) return null;
   return {
-    baseUrl: env.LIONS_API_BASE_URL.replace(/\/$/, ''),
-    apiKey: env.LIONS_API_KEY,
-    accessToken: env.LIONS_API_ACCESS_TOKEN,
-    districtCode: env.LIONS_API_DISTRICT_CODE,
-    multipleDistrictCode: env.LIONS_API_MULTI_DISTRICT_CODE,
+    baseUrl: m.base_url.replace(/\/$/, ''),
+    apiKey: m.api_key,
+    accessToken: m.access_token,
+    districtCode: m.district_code,
+    multipleDistrictCode: m.multi_district_code,
   };
 }
 

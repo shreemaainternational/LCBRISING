@@ -3,11 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Globe, CheckCircle2, XCircle } from 'lucide-react';
 import { isLionsApiConfigured, getLionsApiConfig } from '@/lib/oidc/lions';
 import { isOidcConfigured } from '@/lib/oidc';
+import { loadOidcSettings } from '@/lib/oidc/runtime-config';
+import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
 import { LionsSyncPanel } from './LionsSyncPanel';
 
 export const dynamic = 'force-dynamic';
 
-export default function LionsSyncPage() {
+export default async function LionsSyncPage() {
+  await Promise.all([loadOidcSettings(true), loadLionsApiSettings(true)]);
   const apiConfigured = isLionsApiConfigured();
   const apiConfig = apiConfigured ? getLionsApiConfig() : null;
   const oidcConfigured = isOidcConfigured();
