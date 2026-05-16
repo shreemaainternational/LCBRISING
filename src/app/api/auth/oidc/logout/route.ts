@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { discover, getOidcConfig, isOidcConfigured } from '@/lib/oidc';
+import { discover, getOidcConfig, isOidcConfigured, isOidcSandboxActive } from '@/lib/oidc';
 import { writeAudit } from '@/lib/audit';
 import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 
@@ -15,8 +15,10 @@ export async function GET(req: NextRequest) {
     user_agent: req.headers.get('user-agent') ?? null,
   });
 
-  if (!isOidcConfigured()) {
-    return NextResponse.redirect(new URL(returnTo, req.nextUrl.origin));
+  if (!isOidcConfigured() || isOidcSandboxActive()) {
+    const res = NextResponse.redirect(new URL(returnTo, req.nextUrl.origin));
+    res.cookies.set('lcbr_crm', '', { path: '/', maxAge: 0 });
+    return res;
   }
 
   try {

@@ -12,6 +12,7 @@ export interface LionsApiSettings {
   district_code: string | null;
   multi_district_code: string | null;
   is_active: boolean;
+  sandbox_mode?: boolean;
 }
 
 const TTL_MS = 60_000;

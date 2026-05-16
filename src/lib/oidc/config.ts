@@ -52,5 +52,10 @@ export function getOidcConfig(): OidcConfig {
 
 export function isOidcConfigured(): boolean {
   const m = merge();
+  if (peekOidcSettings()?.sandbox_mode) return true;
   return Boolean(m.issuer && m.clientId && m.redirectUri);
+}
+
+export function isOidcSandboxActive(): boolean {
+  return Boolean(peekOidcSettings()?.sandbox_mode);
 }

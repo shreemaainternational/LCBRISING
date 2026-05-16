@@ -58,7 +58,12 @@ function merge(): {
 }
 
 export function isLionsApiConfigured(): boolean {
+  if (peekLionsApiSettings()?.sandbox_mode) return true;
   return Boolean(merge().base_url);
+}
+
+export function isLionsApiSandboxActive(): boolean {
+  return Boolean(peekLionsApiSettings()?.sandbox_mode);
 }
 
 export function getLionsApiConfig(): LionsApiConfig | null {
@@ -153,6 +158,23 @@ export function normalizeLionsProfile(p: UserInfo): NormalizedLionsProfile {
 }
 
 /* ------------------------------------------------------------------ */
+/* Sandbox fixtures — used when lions_api_settings.sandbox_mode = true */
+/* ------------------------------------------------------------------ */
+
+const SANDBOX_DISTRICTS: LionsDistrictRecord[] = [
+  { district_code: '3232-F1', name: 'District 3232-F1 (Sandbox)', governor_name: 'Lion Sandbox DG', lions_year: '2025-26' },
+];
+const SANDBOX_CLUBS: LionsClubRecord[] = [
+  { club_id: 'SBX-CLUB-1', name: 'Lions Club of Baroda Rising Star (Sandbox)', district_code: '3232-F1', city: 'Vadodara', state: 'Gujarat', country: 'India', charter_date: '2010-04-15' },
+  { club_id: 'SBX-CLUB-2', name: 'Lions Club of Baroda Sandbox',              district_code: '3232-F1', city: 'Vadodara', state: 'Gujarat', country: 'India', charter_date: '2014-08-22' },
+];
+const SANDBOX_MEMBERS: LionsMemberRecord[] = [
+  { member_id: 'LCI-SBX-0001', email: 'sandbox.president@lcbarodarisingstar.in',  first_name: 'Sandbox', last_name: 'President', phone: '+91-99999-10001', status: 'Active', club_id: 'SBX-CLUB-1', joined_at: '2018-07-01', roles: ['lci.role.club_president'] },
+  { member_id: 'LCI-SBX-0002', email: 'sandbox.governor@lcbarodarisingstar.in',   first_name: 'Sandbox', last_name: 'Governor',  phone: '+91-99999-10002', status: 'Active', club_id: 'SBX-CLUB-1', joined_at: '2010-07-01', roles: ['lci.role.district_governor'] },
+  { member_id: 'LCI-SBX-0003', email: 'sandbox.zonechair@lcbarodarisingstar.in',  first_name: 'Sandbox', last_name: 'Zone Chair', phone: '+91-99999-10003', status: 'Active', club_id: 'SBX-CLUB-2', joined_at: '2012-07-01', roles: ['lci.role.zone_chairperson'] },
+];
+
+/* ------------------------------------------------------------------ */
 /* Sync helpers                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -213,14 +235,20 @@ function startReport(entity: LionsSyncEntity, dryRun: boolean): LionsSyncReport 
 export async function syncLionsDistricts(): Promise<LionsSyncReport> {
   const t0 = Date.now();
   const cfg = getLionsApiConfig();
-  const r = startReport('district', !cfg);
-  if (!cfg) { r.durationMs = Date.now() - t0; return r; }
+  const sandbox = isLionsApiSandboxActive();
+  const r = startReport('district', !cfg && !sandbox);
+  if (!cfg && !sandbox) { r.durationMs = Date.now() - t0; return r; }
 
   try {
-    const path = cfg.multipleDistrictCode
-      ? `/multiple-districts/${cfg.multipleDistrictCode}/districts`
-      : `/districts`;
-    const list = await fetchLionsList<LionsDistrictRecord>(cfg, path);
+    let list: LionsDistrictRecord[];
+    if (sandbox) {
+      list = SANDBOX_DISTRICTS;
+    } else {
+      const path = cfg!.multipleDistrictCode
+        ? `/multiple-districts/${cfg!.multipleDistrictCode}/districts`
+        : `/districts`;
+      list = await fetchLionsList<LionsDistrictRecord>(cfg!, path);
+    }
     r.fetched = list.length;
 
     const db = createAdminClient();
@@ -252,14 +280,20 @@ export async function syncLionsDistricts(): Promise<LionsSyncReport> {
 export async function syncLionsClubs(districtCode?: string): Promise<LionsSyncReport> {
   const t0 = Date.now();
   const cfg = getLionsApiConfig();
-  const r = startReport('club', !cfg);
-  if (!cfg) { r.durationMs = Date.now() - t0; return r; }
+  const sandbox = isLionsApiSandboxActive();
+  const r = startReport('club', !cfg && !sandbox);
+  if (!cfg && !sandbox) { r.durationMs = Date.now() - t0; return r; }
 
   try {
-    const dCode = districtCode ?? cfg.districtCode;
-    const list = await fetchLionsList<LionsClubRecord>(
-      cfg, dCode ? `/districts/${dCode}/clubs` : `/clubs`,
-    );
+    let list: LionsClubRecord[];
+    if (sandbox) {
+      list = SANDBOX_CLUBS;
+    } else {
+      const dCode = districtCode ?? cfg!.districtCode;
+      list = await fetchLionsList<LionsClubRecord>(
+        cfg!, dCode ? `/districts/${dCode}/clubs` : `/clubs`,
+      );
+    }
     r.fetched = list.length;
     const db = createAdminClient();
 
@@ -300,13 +334,21 @@ export async function syncLionsClubs(districtCode?: string): Promise<LionsSyncRe
 export async function syncLionsMembers(clubExternalId?: string): Promise<LionsSyncReport> {
   const t0 = Date.now();
   const cfg = getLionsApiConfig();
-  const r = startReport('member', !cfg);
-  if (!cfg) { r.durationMs = Date.now() - t0; return r; }
+  const sandbox = isLionsApiSandboxActive();
+  const r = startReport('member', !cfg && !sandbox);
+  if (!cfg && !sandbox) { r.durationMs = Date.now() - t0; return r; }
 
   try {
-    const list = await fetchLionsList<LionsMemberRecord>(
-      cfg, clubExternalId ? `/clubs/${clubExternalId}/members` : `/members`,
-    );
+    let list: LionsMemberRecord[];
+    if (sandbox) {
+      list = clubExternalId
+        ? SANDBOX_MEMBERS.filter((m) => m.club_id === clubExternalId)
+        : SANDBOX_MEMBERS;
+    } else {
+      list = await fetchLionsList<LionsMemberRecord>(
+        cfg!, clubExternalId ? `/clubs/${clubExternalId}/members` : `/members`,
+      );
+    }
     r.fetched = list.length;
     const db = createAdminClient();
 

@@ -9,17 +9,21 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 const upsertSchema = z.object({
-  issuer: z.string().url(),
-  client_id: z.string().min(1),
+  issuer: z.string().url().optional().or(z.literal('')),
+  client_id: z.string().optional().or(z.literal('')),
   client_secret: z.string().optional(),
-  redirect_uri: z.string().url(),
+  redirect_uri: z.string().url().optional().or(z.literal('')),
   scopes: z.string().default('openid profile email'),
   audience: z.string().optional(),
   provider_label: z.string().default('Lions International'),
   discovery_url: z.string().url().optional().or(z.literal('')),
   is_active: z.boolean().default(true),
+  sandbox_mode: z.boolean().default(false),
   test: z.boolean().default(true),
-});
+}).refine(
+  (v) => v.sandbox_mode || (v.issuer && v.client_id && v.redirect_uri),
+  { message: 'Issuer, Client ID and Redirect URI are required unless sandbox mode is enabled.' },
+);
 
 export async function GET() {
   try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
@@ -53,10 +57,10 @@ export async function PUT(req: Request) {
   }
 
   // Optionally probe the discovery document so we fail fast on bad
-  // issuer / redirect URI.
+  // issuer / redirect URI. Sandbox mode skips the probe.
   let testOk: boolean | null = null;
   let testError: string | null = null;
-  if (parsed.data.test) {
+  if (parsed.data.test && !parsed.data.sandbox_mode && parsed.data.issuer) {
     const url = parsed.data.discovery_url
       || `${parsed.data.issuer.replace(/\/$/, '')}/.well-known/openid-configuration`;
     try {
@@ -78,15 +82,16 @@ export async function PUT(req: Request) {
 
   const payload = {
     id: 'singleton' as const,
-    issuer: parsed.data.issuer,
-    client_id: parsed.data.client_id,
+    issuer: parsed.data.issuer || null,
+    client_id: parsed.data.client_id || null,
     client_secret: clientSecret ?? null,
-    redirect_uri: parsed.data.redirect_uri,
+    redirect_uri: parsed.data.redirect_uri || null,
     scopes: parsed.data.scopes,
     audience: parsed.data.audience ?? null,
     provider_label: parsed.data.provider_label,
     discovery_url: parsed.data.discovery_url || null,
     is_active: parsed.data.is_active,
+    sandbox_mode: parsed.data.sandbox_mode,
     configured_by: actor?.id ?? null,
     configured_at: new Date().toISOString(),
     last_test_ok: testOk,

@@ -17,6 +17,7 @@ interface SettingsRow {
   provider_label: string | null;
   discovery_url: string | null;
   is_active: boolean;
+  sandbox_mode?: boolean;
 }
 
 interface Props {
@@ -47,6 +48,7 @@ export function OidcSetupForm({ initial, defaultRedirect }: Props) {
   const [providerLabel, setProviderLabel] = useState(initial?.provider_label ?? 'Lions International');
   const [discoveryUrl, setDiscoveryUrl] = useState(initial?.discovery_url ?? '');
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
+  const [sandboxMode, setSandboxMode] = useState(initial?.sandbox_mode ?? false);
   const [verifyOnSave, setVerifyOnSave] = useState(true);
 
   function applyPreset(key: string) {
@@ -82,8 +84,8 @@ export function OidcSetupForm({ initial, defaultRedirect }: Props) {
 
   function save() {
     setResult(null);
-    if (!issuer.trim() || !clientId.trim() || !redirectUri.trim()) {
-      setResult({ ok: false, msg: 'Issuer, Client ID and Redirect URI are required.' });
+    if (!sandboxMode && (!issuer.trim() || !clientId.trim() || !redirectUri.trim())) {
+      setResult({ ok: false, msg: 'Issuer, Client ID and Redirect URI are required (or enable sandbox mode).' });
       return;
     }
     start(async () => {
@@ -97,6 +99,7 @@ export function OidcSetupForm({ initial, defaultRedirect }: Props) {
           provider_label: providerLabel,
           discovery_url: discoveryUrl || undefined,
           is_active: isActive,
+          sandbox_mode: sandboxMode,
           test: verifyOnSave,
         }),
       });
@@ -221,6 +224,25 @@ export function OidcSetupForm({ initial, defaultRedirect }: Props) {
           <label className="inline-flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={verifyOnSave} onChange={(e) => setVerifyOnSave(e.target.checked)} />
             Verify discovery document on save
+          </label>
+        </div>
+        <div className="md:col-span-2 rounded-md border-2 border-dashed border-purple-300 bg-purple-50/40 p-3">
+          <label className="inline-flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" checked={sandboxMode}
+              onChange={(e) => setSandboxMode(e.target.checked)}
+              className="mt-0.5" />
+            <span className="text-sm">
+              <span className="font-semibold text-purple-800">Sandbox mode</span>
+              <span className="inline-block ml-2 text-[10px] font-bold uppercase tracking-wider bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-full">
+                no LCI credentials needed
+              </span>
+              <p className="text-xs text-purple-700/90 mt-1 leading-snug">
+                Activates the integration with synthetic data. The &ldquo;Sign in with Lions International&rdquo;
+                button signs you in as a demo Lion (president, governor, or zone chair via
+                <code className="bg-white/60 px-1 rounded">?as=…</code>). Use this to test the entire flow
+                end-to-end while you wait for production Lions Developer credentials.
+              </p>
+            </span>
           </label>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { buildAuthorizationRequest, isOidcConfigured } from '@/lib/oidc';
+import { buildAuthorizationRequest, isOidcConfigured, isOidcSandboxActive } from '@/lib/oidc';
 import { OIDC_COOKIE, transientCookieOptions } from '@/lib/oidc/cookies';
 import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 
@@ -7,14 +7,25 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   await loadOidcSettings();
+  const returnTo = req.nextUrl.searchParams.get('return_to') ?? '/admin';
+
+  // Sandbox short-circuit — sign the user in as a synthetic Lion
+  // without leaving the app. Useful before real LCI credentials are
+  // configured.
+  if (isOidcSandboxActive()) {
+    const url = new URL('/api/auth/oidc/sandbox', req.url);
+    url.searchParams.set('return_to', returnTo);
+    const as = req.nextUrl.searchParams.get('as');
+    if (as) url.searchParams.set('as', as);
+    return NextResponse.redirect(url);
+  }
+
   if (!isOidcConfigured()) {
     return NextResponse.json(
-      { error: 'oidc_not_configured', message: 'OIDC environment variables are not set.' },
+      { error: 'oidc_not_configured', message: 'OIDC is not configured. Visit /admin/integrations/oidc to set it up or enable sandbox mode.' },
       { status: 503 },
     );
   }
-
-  const returnTo = req.nextUrl.searchParams.get('return_to') ?? '/admin';
 
   try {
     const { url, state, nonce, codeVerifier } = await buildAuthorizationRequest();
