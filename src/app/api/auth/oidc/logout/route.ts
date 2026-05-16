@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { discover, getOidcConfig, isOidcConfigured } from '@/lib/oidc';
 import { writeAudit } from '@/lib/audit';
+import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  await loadOidcSettings();
   const returnTo = req.nextUrl.searchParams.get('return_to') ?? '/';
   await writeAudit({
     action: 'oauth.logout',

@@ -75,6 +75,7 @@ export function QuickAddCard({
         : ((f.defaultValue as string | boolean | undefined) ?? (f.type === 'checkbox' ? false : '')),
     ])),
   );
+  const [captions, setCaptions] = useState<Record<string, Record<string, string>>>({});
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
@@ -112,7 +113,15 @@ export function QuickAddCard({
     for (const f of fields) {
       const raw = values[f.name];
       if (f.type === 'photos') {
-        if (Array.isArray(raw) && raw.length) payload[f.name] = raw;
+        if (Array.isArray(raw) && raw.length) {
+          payload[f.name] = raw;
+          const fieldCaptions = captions[f.name];
+          if (fieldCaptions && Object.keys(fieldCaptions).length) {
+            // Single photos field → "photo_captions". Multiple → "<name>_captions".
+            const captionKey = f.name === 'photos' ? 'photo_captions' : `${f.name}_captions`;
+            payload[captionKey] = fieldCaptions;
+          }
+        }
         continue;
       }
       if (raw === '' || raw == null) continue;
@@ -184,7 +193,12 @@ export function QuickAddCard({
             f.type === 'textarea' ? 'md:col-span-2' :
             f.type === 'photos' ? 'md:col-span-2' : ''
           }>
-            <FieldRenderer field={f} value={values[f.name]} onChange={(v) => up(f.name, v)} />
+            <FieldRenderer
+              field={f}
+              value={values[f.name]}
+              onChange={(v) => up(f.name, v)}
+              onCaptionsChange={(map) => setCaptions((s) => ({ ...s, [f.name]: map }))}
+            />
           </div>
         ))}
       </div>
@@ -222,10 +236,11 @@ export function QuickAddCard({
   );
 }
 
-function FieldRenderer({ field, value, onChange }: {
+function FieldRenderer({ field, value, onChange, onCaptionsChange }: {
   field: QuickField;
   value: string | boolean | string[] | undefined;
   onChange: (v: string | boolean | string[]) => void;
+  onCaptionsChange?: (map: Record<string, string>) => void;
 }) {
   const cls = 'w-full px-3 py-2 border rounded-md text-sm bg-white';
   const labelCls = 'block text-xs font-semibold text-gray-700 mb-1';
@@ -235,6 +250,7 @@ function FieldRenderer({ field, value, onChange }: {
       <PhotoMultiUpload
         value={Array.isArray(value) ? value : []}
         onChange={(urls) => onChange(urls)}
+        onCaptionsChange={onCaptionsChange}
         folder={field.folder}
         minRecommended={field.minPhotos ?? 6}
         max={field.maxPhotos ?? 20}

@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   Upload, X, Loader2, AlertCircle, Image as ImageIcon, GripVertical,
   CheckCircle2, Camera,
@@ -16,51 +16,71 @@ export interface PhotoItem {
 interface Props {
   value?: string[] | PhotoItem[];
   onChange?: (urls: string[]) => void;
+  onCaptionsChange?: (captions: Record<string, string>) => void;
+  initialCaptions?: Record<string, string>;
   folder?: string;
-  /** Min recommended photos (default 6). Just a UX hint, not a hard limit. */
+  /** Min recommended photos. Just a UX hint, not a hard limit. */
   minRecommended?: number;
   /** Hard max — default 20. */
   max?: number;
   accept?: string;
   label?: string;
   hint?: string;
+  /** Set false to hide the caption inputs (e.g. profile photo). */
+  showCaptions?: boolean;
 }
 
 /**
- * Enterprise multi-photo uploader. Drag-and-drop or click; previews
- * each file with progress, individual delete, error per file, and a
- * running "X of Y" counter against a recommended minimum.
+ * Enterprise multi-photo uploader.
  *
- * Posts to /api/uploads (multipart) which returns Supabase Storage
- * public URLs from the `media` bucket. Per-file optimistic previews
- * are shown via FileReader before the round-trip completes.
+ *  - Click / drop / camera-capture (rear-camera on mobile)
+ *  - Optimistic FileReader previews while the upload completes
+ *  - HTML5 drag-and-drop reorder (with handle on hover)
+ *  - Per-photo caption inline input
+ *  - Per-photo delete
+ *  - Running "N of M+ recommended" counter
+ *  - Per-file error display (mime / size / server failure)
+ *  - Distinct visuals for image / video / pdf
+ *  - Green check when a file is confirmed in storage
  */
 export function PhotoMultiUpload({
   value,
   onChange,
+  onCaptionsChange,
+  initialCaptions = {},
   folder = 'activities',
   minRecommended = 6,
   max = 20,
   accept = 'image/*,video/mp4,application/pdf',
   label = 'Photos & media',
-  hint = `Upload at least ${6} photos. Drag-drop or click. Captures from camera on mobile.`,
+  hint,
+  showCaptions = true,
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // normalize value to PhotoItem[]
-  const initial = (value ?? []).map((v) => typeof v === 'string' ? { url: v } : v);
+  const initial: PhotoItem[] = (value ?? []).map((v) =>
+    typeof v === 'string' ? { url: v, caption: initialCaptions[v] } : v,
+  );
   const [items, setItems] = useState<PhotoItem[]>(initial);
-  const [dragging, setDragging] = useState(false);
+  const [dragging, setDragging] = useState(false);   // drop zone
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null); // reorder
+  const [overIdx, setOverIdx] = useState<number | null>(null);
   const [errors, setErrors] = useState<{ filename: string; reason: string }[]>([]);
   const [uploading, setUploading] = useState(0);
 
-  // emit URLs whenever items change
+  // Emit URL list + captions map
   useEffect(() => {
     onChange?.(items.map((i) => i.url));
+    if (onCaptionsChange) {
+      const map: Record<string, string> = {};
+      for (const it of items) if (it.caption && it.url) map[it.url] = it.caption;
+      onCaptionsChange(map);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
   const reachedMin = items.length >= minRecommended;
+  const effectiveHint = hint ?? `Upload at least ${minRecommended} photos. Drag-drop or click. Camera on mobile.`;
 
   async function handleFiles(files: FileList | File[]) {
     const fileArr = Array.from(files);
@@ -74,7 +94,6 @@ export function PhotoMultiUpload({
     setUploading((n) => n + fileArr.length);
     setErrors([]);
 
-    // optimistic previews via FileReader
     const previews: PhotoItem[] = await Promise.all(fileArr.map((f) => new Promise<PhotoItem>((resolve) => {
       const reader = new FileReader();
       reader.onload = () => resolve({ url: reader.result as string, type: f.type, size: f.size });
@@ -85,7 +104,6 @@ export function PhotoMultiUpload({
     const startIndex = items.length;
     setItems((cur) => [...cur, ...previews]);
 
-    // actual upload
     const fd = new FormData();
     fd.append('folder', folder);
     for (const f of fileArr) fd.append('file', f);
@@ -100,13 +118,15 @@ export function PhotoMultiUpload({
         const next = [...cur];
         (j.files as Array<{ ok: boolean; url?: string; path?: string; filename?: string; error?: string; type?: string; size?: number }>).forEach((r, i) => {
           if (r.ok && r.url) {
-            next[startIndex + i] = { url: r.url, path: r.path, type: r.type, size: r.size };
+            next[startIndex + i] = {
+              url: r.url, path: r.path, type: r.type, size: r.size,
+              caption: next[startIndex + i]?.caption,
+            };
           } else {
             newErrors.push({ filename: r.filename ?? `file-${i}`, reason: r.error ?? 'unknown' });
           }
         });
-        // remove failed previews
-        return next.filter((it, idx) => {
+        return next.filter((_, idx) => {
           if (idx < startIndex) return true;
           const r = (j.files as Array<{ ok: boolean }>)[idx - startIndex];
           return r?.ok;
@@ -115,32 +135,58 @@ export function PhotoMultiUpload({
       setErrors(newErrors);
     } catch (e) {
       setErrors([{ filename: '', reason: String(e) }]);
-      // strip optimistic previews on hard failure
       setItems((cur) => cur.slice(0, startIndex));
     } finally {
       setUploading((n) => Math.max(0, n - fileArr.length));
     }
   }
 
-  function onDrop(e: React.DragEvent) {
+  // Drop zone handlers (file ingest)
+  function onDropZone(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
     if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
   }
-  function onDragOver(e: React.DragEvent) { e.preventDefault(); setDragging(true); }
-  function onDragLeave() { setDragging(false); }
+  function onDragOverZone(e: React.DragEvent) {
+    if (draggingIdx != null) return;
+    e.preventDefault();
+    setDragging(true);
+  }
+  function onDragLeaveZone() { setDragging(false); }
+
+  // Reorder handlers
+  function startReorder(i: number, e: React.DragEvent) {
+    setDraggingIdx(i);
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', String(i)); } catch { /* ignore */ }
+  }
+  function overItem(i: number, e: React.DragEvent) {
+    if (draggingIdx == null || draggingIdx === i) return;
+    e.preventDefault();
+    setOverIdx(i);
+  }
+  function dropOnItem(to: number) {
+    if (draggingIdx == null || draggingIdx === to) {
+      setDraggingIdx(null); setOverIdx(null); return;
+    }
+    setItems((cur) => {
+      const next = [...cur];
+      const [m] = next.splice(draggingIdx, 1);
+      next.splice(to, 0, m);
+      return next;
+    });
+    setDraggingIdx(null);
+    setOverIdx(null);
+  }
+  function endReorder() {
+    setDraggingIdx(null); setOverIdx(null);
+  }
 
   function removeAt(i: number) {
     setItems((cur) => cur.filter((_, idx) => idx !== i));
   }
-  function move(from: number, to: number) {
-    setItems((cur) => {
-      if (to < 0 || to >= cur.length) return cur;
-      const next = [...cur];
-      const [m] = next.splice(from, 1);
-      next.splice(to, 0, m);
-      return next;
-    });
+  function updateCaption(i: number, caption: string) {
+    setItems((cur) => cur.map((it, idx) => idx === i ? { ...it, caption } : it));
   }
 
   return (
@@ -153,9 +199,9 @@ export function PhotoMultiUpload({
       </div>
 
       <div
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
+        onDrop={onDropZone}
+        onDragOver={onDragOverZone}
+        onDragLeave={onDragLeaveZone}
         onClick={() => inputRef.current?.click()}
         role="button"
         tabIndex={0}
@@ -174,7 +220,7 @@ export function PhotoMultiUpload({
           <div className="text-sm font-medium text-navy-800">
             {dragging ? 'Drop to upload…' : 'Click or drop files here'}
           </div>
-          <div className="text-[11px] text-gray-500 max-w-md">{hint}</div>
+          <div className="text-[11px] text-gray-500 max-w-md">{effectiveHint}</div>
           {uploading > 0 && (
             <div className="inline-flex items-center gap-1 text-xs text-blue-700 mt-1">
               <Loader2 className="animate-spin" size={12} /> Uploading {uploading}…
@@ -203,53 +249,81 @@ export function PhotoMultiUpload({
       )}
 
       {items.length > 0 && (
-        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-          {items.map((it, i) => (
-            <div key={`${it.url}-${i}`} className="group relative aspect-square rounded-md overflow-hidden border bg-gray-50">
-              {it.type?.startsWith('video/') ? (
-                <video src={it.url} className="w-full h-full object-cover" muted />
-              ) : it.type === 'application/pdf' ? (
-                <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 text-xs p-2">
-                  <ImageIcon size={20} className="mb-1" />
-                  PDF
-                </div>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={it.url} alt="" className="w-full h-full object-cover" />
-              )}
-              <div className="absolute inset-x-0 top-0 px-1 py-0.5 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  type="button"
-                  title="Move left"
-                  onClick={(e) => { e.stopPropagation(); move(i, i - 1); }}
-                  className="w-5 h-5 rounded bg-white/90 text-gray-700 flex items-center justify-center text-xs"
-                >‹</button>
-                <span className="text-[10px] font-bold text-white px-1">{i + 1}</span>
-                <button
-                  type="button"
-                  title="Move right"
-                  onClick={(e) => { e.stopPropagation(); move(i, i + 1); }}
-                  className="w-5 h-5 rounded bg-white/90 text-gray-700 flex items-center justify-center text-xs"
-                >›</button>
-              </div>
-              <button
-                type="button"
-                title="Remove"
-                onClick={(e) => { e.stopPropagation(); removeAt(i); }}
-                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-red-600"
+        <div className={`grid gap-2 ${
+          showCaptions
+            ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+            : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-6'
+        }`}>
+          {items.map((it, i) => {
+            const isImage = !it.type || it.type.startsWith('image/') || it.url.startsWith('data:image');
+            const isVideo = it.type?.startsWith('video/');
+            const isPdf   = it.type === 'application/pdf';
+            const isOver  = overIdx === i;
+            const isDragSrc = draggingIdx === i;
+            return (
+              <div
+                key={`${it.url}-${i}`}
+                draggable
+                onDragStart={(e) => startReorder(i, e)}
+                onDragOver={(e) => overItem(i, e)}
+                onDrop={() => dropOnItem(i)}
+                onDragEnd={endReorder}
+                className={`group relative rounded-md overflow-hidden border bg-gray-50 ${
+                  isDragSrc ? 'opacity-40' : ''
+                } ${isOver ? 'ring-2 ring-blue-500' : ''}`}
               >
-                <X size={12} />
-              </button>
-              {it.path && (
-                <CheckCircle2 size={12} className="absolute bottom-1 left-1 text-emerald-400 drop-shadow" />
-              )}
-            </div>
-          ))}
+                <div className="aspect-square">
+                  {isVideo ? (
+                    <video src={it.url} className="w-full h-full object-cover" muted />
+                  ) : isPdf ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 text-xs p-2">
+                      <ImageIcon size={20} className="mb-1" /> PDF
+                    </div>
+                  ) : isImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={it.url} alt={it.caption ?? ''} className="w-full h-full object-cover" />
+                  ) : null}
+                </div>
+
+                <div className="absolute inset-x-0 top-0 px-1 py-0.5 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-white px-1 cursor-grab active:cursor-grabbing">
+                    <GripVertical size={11} /> {i + 1}
+                  </span>
+                  <button
+                    type="button"
+                    title="Remove"
+                    onClick={(e) => { e.stopPropagation(); removeAt(i); }}
+                    className="w-6 h-6 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-red-600"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+
+                {it.path && (
+                  <CheckCircle2 size={12} className="absolute top-1 right-8 text-emerald-400 drop-shadow opacity-0 group-hover:opacity-100" />
+                )}
+
+                {showCaptions && (
+                  <input
+                    type="text"
+                    value={it.caption ?? ''}
+                    onChange={(e) => updateCaption(i, e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="Add a caption…"
+                    className="w-full text-[11px] px-2 py-1 border-t bg-white focus:outline-none focus:bg-blue-50/60"
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Hidden grip handle reference so lucide is imported and tree-shaken cleanly. */}
-      <span className="hidden"><GripVertical size={0} /></span>
+      {items.length > 1 && (
+        <p className="text-[10px] text-gray-400">
+          💡 Drag thumbnails to reorder. The first photo is used as the cover where applicable.
+        </p>
+      )}
     </div>
   );
 }

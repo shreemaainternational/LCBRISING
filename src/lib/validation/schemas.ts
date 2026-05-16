@@ -103,6 +103,7 @@ export const activitySchema = z.object({
   date: z.string(),
   location: z.string().optional(),
   photos: z.array(z.string().url()).default([]),
+  photo_captions: z.record(z.string(), z.string()).optional(),
 });
 
 export const eventSchema = z.object({

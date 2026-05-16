@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildAuthorizationRequest, isOidcConfigured } from '@/lib/oidc';
 import { OIDC_COOKIE, transientCookieOptions } from '@/lib/oidc/cookies';
+import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  await loadOidcSettings();
   if (!isOidcConfigured()) {
     return NextResponse.json(
       { error: 'oidc_not_configured', message: 'OIDC environment variables are not set.' },

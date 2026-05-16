@@ -16,6 +16,7 @@ const patchSchema = z.object({
   date: z.string().optional(),
   location: z.string().optional(),
   photos: z.array(z.string().url()).optional(),
+  photo_captions: z.record(z.string(), z.string()).optional(),
   // Extended reporting columns
   service_category_id: z.string().uuid().nullable().optional(),
   csr_partner_id: z.string().uuid().nullable().optional(),
