@@ -5,6 +5,7 @@
  */
 import { integrations, env } from '@/lib/env';
 import { isLionsApiConfigured } from '@/lib/oidc/lions';
+import { isOidcConfigured as isOidcConfiguredAtAll } from '@/lib/oidc';
 
 export type IntegrationCategory =
   | 'identity'
@@ -73,8 +74,8 @@ export function getIntegrationRegistry(): IntegrationDescriptor[] {
       key: 'lions_oidc',
       name: 'Lions International SSO',
       category: 'identity',
-      description: 'OIDC (PKCE + JWKS + discovery) with role mapping and MyLCI claim support.',
-      configured: integrations.lionsOidc,
+      description: 'OIDC (PKCE + JWKS + discovery) with role mapping and MyLCI claim support. Configure in-app or via env.',
+      configured: integrations.lionsOidc || isOidcConfiguredAtAll(),
       envVars: [
         v('LIONS_OIDC_ISSUER', true),
         v('LIONS_OIDC_CLIENT_ID', true),
@@ -86,7 +87,7 @@ export function getIntegrationRegistry(): IntegrationDescriptor[] {
         v('LIONS_OIDC_DISCOVERY_URL', false, { hint: 'Override .well-known URL' }),
       ],
       whenMissing: "The \"Sign in with Lions\" button on /login is hidden.",
-      adminHref: '/admin/sync/lions',
+      adminHref: '/admin/integrations/oidc',
     },
     {
       key: 'lions_rest',

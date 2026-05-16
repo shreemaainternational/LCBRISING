@@ -2,11 +2,13 @@ import { requireRegionChair } from '@/lib/region-portal';
 import { RegionTabs } from '../RegionTabs';
 import { isLionsApiConfigured, isOidcConfiguredFlag } from '@/app/zone/portal/client-flags';
 import { ExternalLink, Shield, Globe, RefreshCw } from 'lucide-react';
+import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 
 export const dynamic = 'force-dynamic';
 
 export default async function RegionPortalPage() {
   const ctx = await requireRegionChair();
+  await loadOidcSettings(true);
   const oidc = isOidcConfiguredFlag();
   const api = isLionsApiConfigured();
 
@@ -24,10 +26,17 @@ export default async function RegionPortalPage() {
             Single Sign-On
           </h3>
           <p className="text-sm text-gray-600 mt-2">OIDC sign-in with Lions International credentials.</p>
-          <a href="/api/auth/oidc/login?return_to=/region"
-            className={`mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold ${oidc ? 'bg-navy-900 text-white hover:bg-navy-800' : 'bg-gray-100 text-gray-400 pointer-events-none'}`}>
-            <ExternalLink size={13} /> Sign in with Lions
-          </a>
+          {oidc ? (
+            <a href="/api/auth/oidc/login?return_to=/region"
+              className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-navy-900 text-white hover:bg-navy-800">
+              <ExternalLink size={13} /> Sign in with Lions
+            </a>
+          ) : (
+            <a href="/admin/integrations/oidc"
+              className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-white">
+              ⚙ Set up OIDC SSO
+            </a>
+          )}
         </div>
         <div className="bg-white rounded-xl border shadow-sm p-5">
           <h3 className="inline-flex items-center gap-2 font-semibold text-navy-800">

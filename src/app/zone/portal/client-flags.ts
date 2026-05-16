@@ -1,8 +1,10 @@
-import { integrations } from '@/lib/env';
+import { isOidcConfigured } from '@/lib/oidc';
 import { isLionsApiConfigured as isLionsApiConfiguredFn } from '@/lib/oidc/lions';
 
 export function isOidcConfiguredFlag(): boolean {
-  return integrations.lionsOidc;
+  // Consults both env and the cached DB singleton (call
+  // loadOidcSettings(true) once before this in async callers).
+  return isOidcConfigured();
 }
 
 export function isLionsApiConfigured(): boolean {

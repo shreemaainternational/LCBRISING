@@ -2,11 +2,13 @@ import { requireZoneChair } from '@/lib/zone-portal';
 import { ZoneTabs } from '../ZoneTabs';
 import { isLionsApiConfigured, isOidcConfiguredFlag } from './client-flags';
 import { ExternalLink, Shield, Globe, RefreshCw } from 'lucide-react';
+import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ZoneLionsPortalPage() {
   const ctx = await requireZoneChair();
+  await loadOidcSettings(true);
   const apiConfigured = isLionsApiConfigured();
   const oidcConfigured = isOidcConfiguredFlag();
 
@@ -20,9 +22,17 @@ export default async function ZoneLionsPortalPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card title="Single Sign-On" icon={Shield} configured={oidcConfigured}>
           <p className="text-sm text-gray-600">PKCE-based OIDC flow with MyLCI claim mapping. Sign in once → cross-domain access to Zone Control, CRM and Member Portal.</p>
-          <a href="/api/auth/oidc/login?return_to=/zone" className={`mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold ${oidcConfigured ? 'bg-navy-900 text-white hover:bg-navy-800' : 'bg-gray-100 text-gray-400 pointer-events-none'}`}>
-            <ExternalLink size={13} /> Sign in with Lions International
-          </a>
+          {oidcConfigured ? (
+            <a href="/api/auth/oidc/login?return_to=/zone"
+              className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-navy-900 text-white hover:bg-navy-800">
+              <ExternalLink size={13} /> Sign in with Lions International
+            </a>
+          ) : (
+            <a href="/admin/integrations/oidc"
+              className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-white">
+              ⚙ Set up OIDC SSO
+            </a>
+          )}
         </Card>
         <Card title="REST Sync (MyLCI shape)" icon={Globe} configured={apiConfigured}>
           <p className="text-sm text-gray-600">Pull districts → clubs → members from the Lions Member Portal REST API. Falls back to dry-run mode when not configured.</p>
