@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getIntegrationRegistry, summarizeIntegrations, type IntegrationCategory, type IntegrationDescriptor } from '@/lib/integrations-registry';
 import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
+import { QuickEnableSandbox } from './QuickEnableSandbox';
 import {
   Plug, CheckCircle2, XCircle, Lock, Database, CreditCard, MessageSquare,
   Brain, Share2, Image as ImageIcon, Server, ExternalLink,
@@ -30,6 +31,10 @@ export default async function IntegrationsPage() {
   const registry = getIntegrationRegistry();
   const summary = summarizeIntegrations();
   const pct = summary.total ? Math.round((summary.configured / summary.total) * 100) : 0;
+
+  const lionsOidc = registry.find((r) => r.key === 'lions_oidc');
+  const lionsRest = registry.find((r) => r.key === 'lions_rest');
+  const lionsAllOff = !lionsOidc?.configured && !lionsRest?.configured;
 
   const grouped = new Map<IntegrationCategory, IntegrationDescriptor[]>();
   for (const cat of CATEGORY_ORDER) grouped.set(cat, []);
@@ -71,6 +76,28 @@ export default async function IntegrationsPage() {
           />
         </div>
       </div>
+
+      {lionsAllOff && (
+        <div className="rounded-xl border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-amber-50 p-5">
+          <h3 className="font-bold text-navy-800 mb-1 inline-flex items-center gap-2">
+            <Plug className="text-purple-600" size={16} />
+            Lions International integrations are not configured
+          </h3>
+          <p className="text-sm text-gray-700">
+            You can either enter your real Lions Developer credentials, or flip on
+            <strong> Sandbox mode</strong> right now to make the &ldquo;Sign in with Lions&rdquo; button and
+            MyLCI sync work end-to-end with synthetic data.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <QuickEnableSandbox target="oidc" />
+            <QuickEnableSandbox target="api" />
+            <a href="/admin/integrations/oidc"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border text-xs font-semibold text-gray-800 hover:bg-gray-50">
+              Open setup wizard →
+            </a>
+          </div>
+        </div>
+      )}
 
       {CATEGORY_ORDER.map((cat) => {
         const items = grouped.get(cat) ?? [];
@@ -128,6 +155,9 @@ function IntegrationCard({ item }: { item: IntegrationDescriptor }) {
             <strong className="text-amber-800">Impact:</strong> {item.whenMissing}
           </p>
         )}
+
+        {!item.configured && item.key === 'lions_oidc' && <QuickEnableSandbox target="oidc" />}
+        {!item.configured && item.key === 'lions_rest' && <QuickEnableSandbox target="api" />}
 
         {item.envVars.length > 0 && (
           <details className="text-xs">
