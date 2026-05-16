@@ -6,6 +6,7 @@
 import { integrations, env } from '@/lib/env';
 import { isLionsApiConfigured } from '@/lib/oidc/lions';
 import { isOidcConfigured as isOidcConfiguredAtAll } from '@/lib/oidc';
+import { isCronAuthConfigured } from '@/lib/cron-auth';
 
 export type IntegrationCategory =
   | 'identity'
@@ -298,12 +299,13 @@ export function getIntegrationRegistry(): IntegrationDescriptor[] {
       key: 'vercel_cron',
       name: 'Vercel Cron',
       category: 'platform',
-      description: 'Scheduled jobs — daily automation engine + monthly / quarterly / half-yearly / yearly report generation.',
-      configured: !!env.CRON_SECRET,
+      description: 'Scheduled jobs — daily automation engine + monthly / quarterly / half-yearly / yearly report generation. Secret is auto-provisioned in the database on first install.',
+      configured: isCronAuthConfigured(),
       envVars: [
-        v('CRON_SECRET', true, { hint: 'Shared secret for cron endpoint auth' }),
+        v('CRON_SECRET', false, { hint: 'Optional — env value takes precedence over the DB-stored secret. Useful for production where Vercel sends the Authorization header.' }),
       ],
       whenMissing: 'Scheduled cron jobs run without auth and return 401 on Vercel.',
+      adminHref: '/admin/integrations/cron',
     },
     {
       key: 'pwa',

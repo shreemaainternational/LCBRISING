@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { env } from '@/lib/env';
 import { createAdminClient } from '@/lib/supabase/server';
 import {
   buildReportDoc, renderReport, parsePeriod, type ReportRequest, type ReportType, type ReportFormat,
 } from '@/lib/reports';
+import { verifyCronAuth } from '@/lib/cron-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,11 +16,10 @@ export const maxDuration = 60;
  * month/quarter etc. and renders+persists default formats.
  */
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const provided = url.searchParams.get('secret') ?? req.headers.get('x-cron-secret') ?? req.headers.get('authorization')?.replace('Bearer ', '');
-  if (env.CRON_SECRET && provided !== env.CRON_SECRET) {
+  if (!(await verifyCronAuth(req))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
+  const url = new URL(req.url);
 
   const type = (url.searchParams.get('type') ?? 'monthly') as ReportType;
   const formats = (url.searchParams.get('formats')?.split(',') ?? ['pdf','pptx']) as ReportFormat[];

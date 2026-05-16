@@ -5,19 +5,17 @@
  * last_reminder_at is older than 18 hours ago.
  */
 import { NextResponse } from 'next/server';
-import { env } from '@/lib/env';
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendEmail } from '@/lib/email';
 import { pushToMember } from '@/lib/push';
+import { verifyCronAuth } from '@/lib/cron-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const secret = url.searchParams.get('secret') ?? req.headers.get('x-cron-secret');
-  if (env.CRON_SECRET && secret !== env.CRON_SECRET) {
+  if (!(await verifyCronAuth(req))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
