@@ -3,12 +3,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const TABS = [
-  { href: '/district',          label: 'Overview',  emoji: '' },
-  { href: '/district/regions',  label: 'Regions',   emoji: '🗺️' },
-  { href: '/district/zones',    label: 'Zones',     emoji: '🦁' },
-  { href: '/district/clubs',    label: 'Clubs',     emoji: '' },
-  { href: '/district/calendar', label: 'Calendar',  emoji: '📅' },
-  { href: '/district/reports',  label: 'Reports',   emoji: '' },
+  { href: '/district',           label: 'Overview',  emoji: '' },
+  { href: '/district/regions',   label: 'Regions',   emoji: '🗺️' },
+  { href: '/district/zones',     label: 'Zones',     emoji: '🦁' },
+  { href: '/district/clubs',     label: 'Clubs',     emoji: '' },
+  { href: '/district/calendar',  label: 'Calendar',  emoji: '📅' },
+  { href: '/district/circulars', label: 'Circulars', emoji: '📢' },
+  { href: '/district/sync',      label: 'Sync',      emoji: '🔄' },
+  { href: '/district/reports',   label: 'Reports',   emoji: '' },
 ];
 
 export function DistrictTabs() {
