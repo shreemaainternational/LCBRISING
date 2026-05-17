@@ -51,7 +51,7 @@ export function districtsPreset(): Omit<QuickAddCardProps, 'title'> {
     description: 'Create a new Lions district. You can sync existing districts from the Lions Portal under Sync → Lions instead.',
     responseKey: 'district',
     fields: [
-      { name: 'code', label: 'District Code', type: 'text', required: true, placeholder: 'e.g. 3232-F1' },
+      { name: 'code', label: 'District Code', type: 'text', required: true, placeholder: 'e.g. 3232 FI' },
       { name: 'name', label: 'District Name', type: 'text', required: true },
       { name: 'governor_name', label: 'Governor', type: 'text' },
       { name: 'cabinet_secretary_name', label: 'Cabinet Secretary', type: 'text' },

@@ -21,7 +21,7 @@ export function emptyDoc(
     metadata: {
       generatedAt: new Date().toISOString(),
       clubName: env.NEXT_PUBLIC_SITE_NAME,
-      districtCode: '3232-F1',
+      districtCode: '3232 FI',
     },
   };
 }

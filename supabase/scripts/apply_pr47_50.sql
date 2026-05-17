@@ -89,7 +89,7 @@ exception when duplicate_object then null; end $$;
 insert into public.campaigns (slug, title, description, goal_amount, is_featured, match_campaign)
 values (
   'vision-mission-2026',
-  'District 3232-F1 Vision Mission',
+  'District 3232 FI Vision Mission',
   'Free eye-camps and cataract surgeries across Vadodara — every ₹500 funds one full screening + spectacles.',
   10_00_000,   -- ₹10 lakhs
   true,

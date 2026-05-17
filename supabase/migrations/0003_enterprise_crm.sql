@@ -73,7 +73,7 @@ create table if not exists public.multiple_districts (
 );
 
 -- ---------------------------------------------------------------------
--- Districts (e.g. 3232-F1)
+-- Districts (e.g. 3232 FI)
 -- ---------------------------------------------------------------------
 create table if not exists public.districts (
   id uuid primary key default uuid_generate_v4(),

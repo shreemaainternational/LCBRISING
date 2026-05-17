@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Lions CRM — Baroda Rising Star',
     short_name: 'Lions CRM',
     description:
-      'Enterprise NGO CRM, reporting and on-the-go field tools for Lions International — members, clubs, districts, beneficiaries. District 3232-F1 · Vadodara.',
+      'Enterprise NGO CRM, reporting and on-the-go field tools for Lions International — members, clubs, districts, beneficiaries. District 3232 FI · Vadodara.',
     start_url: '/m',
     scope: '/',
     display: 'standalone',

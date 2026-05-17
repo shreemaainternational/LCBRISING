@@ -105,13 +105,13 @@ export default async function LionsSyncPage() {
           <div>
             <strong>GET /districts</strong>
             <pre className="bg-gray-50 p-2 rounded mt-1 overflow-x-auto">{`[
-  { "district_code": "3232-F1", "name": "...", "governor_name": "...", "lions_year": "2025-26" }
+  { "district_code": "3232 FI", "name": "...", "governor_name": "...", "lions_year": "2025-26" }
 ]`}</pre>
           </div>
           <div>
             <strong>GET /districts/&lt;code&gt;/clubs</strong>
             <pre className="bg-gray-50 p-2 rounded mt-1 overflow-x-auto">{`[
-  { "club_id": "12345", "name": "...", "district_code": "3232-F1",
+  { "club_id": "12345", "name": "...", "district_code": "3232 FI",
     "city": "Vadodara", "state": "Gujarat", "country": "India",
     "charter_date": "2010-04-15" }
 ]`}</pre>

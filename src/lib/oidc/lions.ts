@@ -162,11 +162,11 @@ export function normalizeLionsProfile(p: UserInfo): NormalizedLionsProfile {
 /* ------------------------------------------------------------------ */
 
 const SANDBOX_DISTRICTS: LionsDistrictRecord[] = [
-  { district_code: '3232-F1', name: 'District 3232-F1 (Sandbox)', governor_name: 'Lion Sandbox DG', lions_year: '2025-26' },
+  { district_code: '3232 FI', name: 'District 3232 FI (Sandbox)', governor_name: 'Lion Sandbox DG', lions_year: '2025-26' },
 ];
 const SANDBOX_CLUBS: LionsClubRecord[] = [
-  { club_id: 'SBX-CLUB-1', name: 'Lions Club of Baroda Rising Star (Sandbox)', district_code: '3232-F1', city: 'Vadodara', state: 'Gujarat', country: 'India', charter_date: '2010-04-15' },
-  { club_id: 'SBX-CLUB-2', name: 'Lions Club of Baroda Sandbox',              district_code: '3232-F1', city: 'Vadodara', state: 'Gujarat', country: 'India', charter_date: '2014-08-22' },
+  { club_id: 'SBX-CLUB-1', name: 'Lions Club of Baroda Rising Star (Sandbox)', district_code: '3232 FI', city: 'Vadodara', state: 'Gujarat', country: 'India', charter_date: '2010-04-15' },
+  { club_id: 'SBX-CLUB-2', name: 'Lions Club of Baroda Sandbox',              district_code: '3232 FI', city: 'Vadodara', state: 'Gujarat', country: 'India', charter_date: '2014-08-22' },
 ];
 const SANDBOX_MEMBERS: LionsMemberRecord[] = [
   { member_id: 'LCI-SBX-0001', email: 'sandbox.president@lcbarodarisingstar.in',  first_name: 'Sandbox', last_name: 'President', phone: '+91-99999-10001', status: 'Active', club_id: 'SBX-CLUB-1', joined_at: '2018-07-01', roles: ['lci.role.club_president'] },
