@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { cookies } from 'next/headers';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
+import { resolveOrBootstrapDefaultDistrict, explainBootstrapFailure } from '@/lib/default-district';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,8 +13,6 @@ const schema = z.object({
   code: z.string().max(32).optional(),
   district_id: z.string().uuid().optional(),
   region_id: z.string().uuid().optional(),
-  // Both the new and the old prop names — quick-add preset uses
-  // zone_chairperson_name but we map it to chairperson_name.
   chairperson_name: z.string().max(200).optional(),
   zone_chairperson_name: z.string().max(200).optional(),
 });
@@ -21,8 +21,8 @@ function friendlyError(message: string): string {
   if (/invalid api key/i.test(message)) {
     return 'Database auth failed. Set SUPABASE_SERVICE_ROLE_KEY for your project — or apply migration 0037_federation_rls.sql so admin members can write via their own session.';
   }
-  if (/row.level security/i.test(message)) {
-    return 'Row-level security blocked the insert. Apply migration 0037_federation_rls.sql to allow admin members to manage zones.';
+  if (/row.level security|new row violates|permission denied/i.test(message)) {
+    return 'Row-level security blocked the insert. Apply migration 0037_federation_rls.sql, or sign in as a member whose role is "admin", or set SUPABASE_SERVICE_ROLE_KEY.';
   }
   if (/duplicate key/i.test(message)) {
     return 'A zone with that code already exists in this district.';
@@ -53,7 +53,6 @@ export async function POST(req: Request) {
   // Pre-flight: synthetic admin (lcbr_crm / ADMIN_AUTH_BYPASS) cannot write
   // through RLS because auth.uid() is null. Fast-fail with actionable advice.
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    const { cookies } = await import('next/headers');
     const cs = await cookies();
     const synthetic = cs.get('lcbr_crm')?.value === '1' || process.env.ADMIN_AUTH_BYPASS === '1';
     if (synthetic) {
@@ -61,7 +60,7 @@ export async function POST(req: Request) {
         error:
           'You are signed in via the diagnostic bypass (lcbr_crm cookie or ADMIN_AUTH_BYPASS=1) — ' +
           'Supabase has no real session, so RLS will deny the insert. Set SUPABASE_SERVICE_ROLE_KEY ' +
-          'in your environment, or sign in via /login with a real Supabase account.',
+          'in your environment, or sign in via /login with a real Supabase Auth account whose member role is "admin".',
       }, { status: 401 });
     }
   }
@@ -83,23 +82,14 @@ export async function POST(req: Request) {
     payload.code = `${base}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
   }
 
-  // Zones require a district per the federation schema. Try in order:
-  //   1. Pick the first district that already exists
-  //   2. If none exist, self-bootstrap "District 3232 FI" so the
-  //      empty-state Quick Add stays one-click — covers fresh installs
-  //      where migration 0038 hasn't been applied yet.
+  // Zones require a district. Resolve-or-bootstrap, surfacing the
+  // precise reason if the bootstrap fails.
   if (!payload.district_id) {
-    const supa0 = await createClient();
-    const { data: d } = await supa0.from('districts')
-      .select('id').is('deleted_at', null).order('code').limit(1).maybeSingle();
-    if (d?.id) {
-      payload.district_id = d.id;
+    const result = await resolveOrBootstrapDefaultDistrict();
+    if (result.id) {
+      payload.district_id = result.id;
     } else {
-      const created = await ensureDefaultDistrict();
-      if (created) payload.district_id = created;
-      else return NextResponse.json({
-        error: 'Could not auto-create the default district. Apply migration 0038 or create a district at /admin/districts first.',
-      }, { status: 500 });
+      return NextResponse.json({ error: explainBootstrapFailure(result) }, { status: 500 });
     }
   }
 
@@ -110,7 +100,7 @@ export async function POST(req: Request) {
   if (!first.error && first.data) return NextResponse.json({ zone: first.data }, { status: 201 });
 
   const firstMsg = first.error?.message ?? '';
-  const isAuthFail = /invalid api key|jwt/i.test(firstMsg) || /row.level security/i.test(firstMsg);
+  const isAuthFail = /invalid api key|jwt/i.test(firstMsg) || /row.level security|new row violates|permission denied/i.test(firstMsg);
 
   // 2) Fall back to the admin client only when RLS/auth blocked us
   //    and a service role is configured.
@@ -126,43 +116,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ error: friendlyError(firstMsg || 'unknown_error') }, { status: 500 });
-}
-
-/**
- * Self-bootstrap: create "District 3232 FI" if no districts exist
- * yet. Used on fresh installs where the seed migration hasn't run.
- * Returns the new district id, or null if both SSR and admin
- * inserts fail.
- */
-async function ensureDefaultDistrict(): Promise<string | null> {
-  const lionsYear = (() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const start = now.getMonth() >= 6 ? y : y - 1;
-    return `${start}-${String((start + 1) % 100).padStart(2, '0')}`;
-  })();
-  const row = {
-    code: '3232 FI',
-    name: 'District 3232 FI',
-    lions_year: lionsYear,
-  };
-
-  const supa = await createClient();
-  const ssrTry = await supa.from('districts').insert(row).select('id').single();
-  if (!ssrTry.error && ssrTry.data?.id) return ssrTry.data.id as string;
-
-  // Race: another concurrent insert might have created it.
-  const { data: existing } = await supa.from('districts').select('id').eq('code', row.code).maybeSingle();
-  if (existing?.id) return existing.id as string;
-
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      const admin = createAdminClient();
-      const adminTry = await admin.from('districts').insert(row).select('id').single();
-      if (!adminTry.error && adminTry.data?.id) return adminTry.data.id as string;
-      const { data: ex } = await admin.from('districts').select('id').eq('code', row.code).maybeSingle();
-      if (ex?.id) return ex.id as string;
-    } catch { /* fall through */ }
-  }
-  return null;
 }

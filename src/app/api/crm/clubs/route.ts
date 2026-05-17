@@ -3,7 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { clubSchema } from '@/lib/validation/schemas';
 import { writeAudit } from '@/lib/audit';
-import { resolveOrBootstrapDefaultDistrict, resolveDefaultDistrictCode } from '@/lib/default-district';
+import { resolveOrBootstrapDefaultDistrict, resolveDefaultDistrictCode, explainBootstrapFailure } from '@/lib/default-district';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,10 +102,15 @@ export async function POST(req: NextRequest) {
 
   // Self-bootstrap: when the form didn't supply a district_id (empty
   // dropdown on a fresh install), find or auto-create District 3232 FI
-  // so the Quick Add stays one-click.
+  // so the Quick Add stays one-click. Surface the precise reason if
+  // the bootstrap actually fails.
   if (!payload.district_id) {
-    const resolved = await resolveOrBootstrapDefaultDistrict();
-    if (resolved) payload.district_id = resolved;
+    const result = await resolveOrBootstrapDefaultDistrict();
+    if (result.id) {
+      payload.district_id = result.id;
+    } else {
+      return NextResponse.json({ error: explainBootstrapFailure(result) }, { status: 500 });
+    }
   }
 
   // Legacy clubs.district text column is NOT NULL — derive its value
