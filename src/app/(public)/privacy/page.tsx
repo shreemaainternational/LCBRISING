@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { PageHero } from '@/components/site/PageHero';
+import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -14,6 +14,7 @@ export default function PrivacyPage() {
         headline="We respect"
         accent="your privacy"
         subtitle="What we collect, how we use it, and how we keep it safe."
+        backgroundImage={PAGE_HERO_BG.privacy}
       />
       <article className="container-page py-16 max-w-3xl prose prose-navy">
         <p className="text-gray-600 text-sm">Last updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</p>

@@ -73,8 +73,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </aside>
 
-      <main className="flex-1 p-6 md:p-10 overflow-x-auto">
-        {children}
+      <main className="relative flex-1 overflow-x-auto">
+        {/* Ambient topical banner — fades out so data stays readable. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-64 opacity-[0.07] [mask-image:linear-gradient(to_bottom,black,transparent)]"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1920&q=80&auto=format&fit=crop')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        <div className="relative p-6 md:p-10">
+          {children}
+        </div>
       </main>
     </div>
   );
