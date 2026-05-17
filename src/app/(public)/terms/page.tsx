@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { PageHero } from '@/components/site/PageHero';
+import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
@@ -14,6 +14,7 @@ export default function TermsPage() {
         headline="Terms of"
         accent="Service"
         subtitle="The rules for using this website, donating, and participating in club activities."
+        backgroundImage={PAGE_HERO_BG.terms}
       />
       <article className="container-page py-16 max-w-3xl">
         <p className="text-gray-600 text-sm">Last updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</p>

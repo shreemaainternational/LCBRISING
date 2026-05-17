@@ -35,8 +35,17 @@ export default async function PortalHomePage() {
   const masked = `+91 ${session.phone.slice(0, 5)} ${session.phone.slice(5)}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1a0f3e] via-[#3b1a78] to-[#5b21b6] py-8 px-4">
-      <div className="max-w-2xl mx-auto space-y-4">
+    <div className="relative min-h-screen bg-gradient-to-br from-[#1a0f3e] via-[#3b1a78] to-[#5b21b6] py-8 px-4 overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.18]"
+        style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=1920&q=80&auto=format&fit=crop')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      <div className="relative max-w-2xl mx-auto space-y-4">
         <div className="flex items-center justify-between text-white">
           <div>
             <h1 className="text-2xl font-bold">My invoices</h1>
