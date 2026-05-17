@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/server';
 import { requireDistrictGovernor } from '@/lib/district-portal';
-import { broadcastToTopic, isPushConfigured } from '@/lib/push';
+import { broadcastToTopic, isPushConfiguredAsync } from '@/lib/push';
 import { sendEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
       }
     }
 
-    if (parsed.data.channels.includes('push') && isPushConfigured()) {
+    if (parsed.data.channels.includes('push') && (await isPushConfiguredAsync())) {
       try {
         const r = await broadcastToTopic('district-circulars', {
           title: parsed.data.subject,

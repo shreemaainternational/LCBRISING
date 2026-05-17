@@ -7,6 +7,7 @@ import { integrations, env } from '@/lib/env';
 import { isLionsApiConfigured } from '@/lib/oidc/lions';
 import { isOidcConfigured as isOidcConfiguredAtAll } from '@/lib/oidc';
 import { isCronAuthConfigured } from '@/lib/cron-auth';
+import { isPushAutoConfigured } from '@/lib/push-config';
 
 export type IntegrationCategory =
   | 'identity'
@@ -192,16 +193,16 @@ export function getIntegrationRegistry(): IntegrationDescriptor[] {
       key: 'web_push',
       name: 'Web Push (VAPID)',
       category: 'messaging',
-      description: 'PWA push notifications. Broadcast / topic / per-member. Auto-deactivates dead endpoints.',
-      configured: integrations.webPush,
+      description: 'PWA push notifications. Broadcast / topic / per-member. Keypair is auto-generated on first install and stored in push_settings.',
+      configured: integrations.webPush || isPushAutoConfigured(),
       envVars: [
-        v('VAPID_PUBLIC_KEY', true),
-        v('VAPID_PRIVATE_KEY', true),
+        v('VAPID_PUBLIC_KEY', false, { hint: 'Optional — env value overrides the DB-stored keypair' }),
+        v('VAPID_PRIVATE_KEY', false, { hint: 'Optional — env value overrides the DB-stored keypair' }),
         v('VAPID_SUBJECT', false, { hint: 'mailto:admin@yourdomain — defaults to mailto:admin@lcbaroda.org' }),
-        v('NEXT_PUBLIC_VAPID_PUBLIC_KEY', true, { public: true, hint: 'Same value as VAPID_PUBLIC_KEY, exposed to browser' }),
+        v('NEXT_PUBLIC_VAPID_PUBLIC_KEY', false, { public: true, hint: 'Optional — runtime API serves the public key dynamically' }),
       ],
       whenMissing: '/admin/notifications broadcast is disabled and mobile push toggle is inert.',
-      adminHref: '/admin/notifications',
+      adminHref: '/admin/integrations/push',
     },
 
     // ---------------- AI ----------------

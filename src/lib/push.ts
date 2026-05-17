@@ -2,34 +2,41 @@
  * Web Push notification helpers.
  *
  * Server-side: sends VAPID-signed notifications via web-push.
- * Subscription/unsubscription endpoints persist to the
- * `push_subscriptions` table (migration 0021).
+ * VAPID keys are resolved at runtime via src/lib/push-config.ts —
+ * env vars take precedence, then a singleton row in `push_settings`,
+ * and finally a freshly generated keypair on first call.
  *
- * Configure with VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT.
- * Generate keys once with: `npx web-push generate-vapid-keys`.
+ * Subscription endpoints persist to `push_subscriptions` (migration 0021).
  */
 import webpush from 'web-push';
-import { env, integrations } from '@/lib/env';
 import { createAdminClient } from '@/lib/supabase/server';
+import { loadVapidConfig, peekVapidConfig } from '@/lib/push-config';
 
-let configured = false;
-function configure() {
-  if (configured) return;
-  if (!integrations.webPush) return;
-  webpush.setVapidDetails(
-    env.VAPID_SUBJECT ?? 'mailto:admin@lcbaroda.org',
-    env.VAPID_PUBLIC_KEY!,
-    env.VAPID_PRIVATE_KEY!,
-  );
-  configured = true;
+let configuredSig: string | null = null;
+async function configure(): Promise<boolean> {
+  const cfg = await loadVapidConfig();
+  if (!cfg) return false;
+  const sig = `${cfg.publicKey}|${cfg.subject}`;
+  if (configuredSig === sig) return true;
+  webpush.setVapidDetails(cfg.subject, cfg.publicKey, cfg.privateKey);
+  configuredSig = sig;
+  return true;
 }
 
 export function isPushConfigured(): boolean {
-  return Boolean(integrations.webPush);
+  return !!peekVapidConfig();
+}
+
+export async function isPushConfiguredAsync(): Promise<boolean> {
+  return !!(await loadVapidConfig());
 }
 
 export function getVapidPublicKey(): string | null {
-  return env.VAPID_PUBLIC_KEY ?? null;
+  return peekVapidConfig()?.publicKey ?? null;
+}
+
+export async function getVapidPublicKeyAsync(): Promise<string | null> {
+  return (await loadVapidConfig())?.publicKey ?? null;
 }
 
 export interface PushNotificationPayload {
@@ -64,10 +71,10 @@ export async function sendPushToSubscriptions(
   subs: SubscriptionRow[],
   payload: PushNotificationPayload,
 ): Promise<SendResult> {
-  if (!isPushConfigured()) {
+  const ready = await configure();
+  if (!ready) {
     return { sent: 0, failed: subs.length, invalidated: 0, errors: subs.map((s) => ({ endpoint: s.endpoint, error: 'web_push_not_configured' })) };
   }
-  configure();
   const db = createAdminClient();
   const json = JSON.stringify(payload);
   const result: SendResult = { sent: 0, failed: 0, invalidated: 0, errors: [] };
@@ -86,7 +93,6 @@ export async function sendPushToSubscriptions(
       const status = err.statusCode;
       result.failed++;
       result.errors.push({ endpoint: s.endpoint, status, error: err.message ?? String(e) });
-      // 404/410 → endpoint is dead, deactivate it.
       if (status === 404 || status === 410) invalid.push(s.id);
     }
   }));
@@ -103,14 +109,12 @@ export async function sendPushToSubscriptions(
   return result;
 }
 
-/** Convenience: broadcast a notification to all active subscribers. */
 export async function broadcastPush(payload: PushNotificationPayload): Promise<SendResult> {
   const db = createAdminClient();
   const { data } = await db.from('push_subscriptions').select('*').eq('is_active', true);
   return sendPushToSubscriptions((data ?? []) as SubscriptionRow[], payload);
 }
 
-/** Broadcast filtered by topic membership (string match). */
 export async function broadcastToTopic(topic: string, payload: PushNotificationPayload): Promise<SendResult> {
   const db = createAdminClient();
   const { data } = await db.from('push_subscriptions').select('*')
@@ -118,7 +122,6 @@ export async function broadcastToTopic(topic: string, payload: PushNotificationP
   return sendPushToSubscriptions((data ?? []) as SubscriptionRow[], payload);
 }
 
-/** Send to a specific member's devices. */
 export async function pushToMember(memberId: string, payload: PushNotificationPayload): Promise<SendResult> {
   const db = createAdminClient();
   const { data } = await db.from('push_subscriptions').select('*')
