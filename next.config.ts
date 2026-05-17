@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
     return [
       { source: '/admin/dashboard', destination: '/admin', permanent: true },
       { source: '/admin/dashboard/:path*', destination: '/admin/:path*', permanent: true },
+      // Collapse accidental /admin/admin/* → /admin/* (typed URLs, stale bookmarks).
+      { source: '/admin/admin', destination: '/admin', permanent: true },
+      { source: '/admin/admin/:path*', destination: '/admin/:path*', permanent: true },
     ];
   },
 };
