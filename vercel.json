@@ -8,19 +8,19 @@
     },
     {
       "path": "/api/cron/reports?type=monthly",
-      "schedule": "0 4 1 * *"
+      "schedule": "0 4 * * *"
     },
     {
       "path": "/api/cron/reports?type=quarterly",
-      "schedule": "0 5 1 1,4,7,10 *"
+      "schedule": "0 5 * * *"
     },
     {
       "path": "/api/cron/reports?type=half_yearly",
-      "schedule": "0 6 1 1,7 *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/reports?type=yearly",
-      "schedule": "0 7 1 7 *"
+      "schedule": "0 7 * * *"
     },
     {
       "path": "/api/cron/action-items",
@@ -28,11 +28,11 @@
     },
     {
       "path": "/api/cron/donor-pack",
-      "schedule": "0 9 1-7 4 0"
+      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/sync-worker",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 10 * * *"
     }
   ],
   "headers": [
