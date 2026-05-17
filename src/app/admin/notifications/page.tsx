@@ -1,13 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createAdminClient } from '@/lib/supabase/server';
-import { isPushConfigured } from '@/lib/push';
+import { isPushConfiguredAsync } from '@/lib/push';
 import { Bell, CheckCircle2, XCircle } from 'lucide-react';
 import { PushBroadcastForm } from './PushBroadcastForm';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NotificationsPage() {
-  const configured = isPushConfigured();
+  const configured = await isPushConfiguredAsync();
   const db = createAdminClient();
   const [{ count: total }, { count: active }, { data: recent }] = await Promise.all([
     db.from('push_subscriptions').select('*', { count: 'exact', head: true }),

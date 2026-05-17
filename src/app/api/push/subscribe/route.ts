@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentMember } from '@/lib/auth';
-import { isPushConfigured, getVapidPublicKey } from '@/lib/push';
+import { isPushConfiguredAsync, getVapidPublicKeyAsync } from '@/lib/push';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,10 +16,11 @@ const schema = z.object({
 
 /** GET — return public VAPID key the client needs to subscribe. */
 export async function GET() {
-  return NextResponse.json({
-    configured: isPushConfigured(),
-    publicKey: getVapidPublicKey(),
-  });
+  const [configured, publicKey] = await Promise.all([
+    isPushConfiguredAsync(),
+    getVapidPublicKeyAsync(),
+  ]);
+  return NextResponse.json({ configured, publicKey });
 }
 
 /** POST — register / upsert a subscription. */

@@ -3,6 +3,7 @@ import { ZoneTabs } from '../ZoneTabs';
 import { AdvisoryComposer } from './AdvisoryComposer';
 import { createAdminClient } from '@/lib/supabase/server';
 import { Bell, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { AdvisoryVoteCard } from './AdvisoryVoteCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +70,15 @@ export default async function ZoneAdvisoriesPage({ searchParams }: Props) {
                   <p className="text-xs text-gray-600 leading-snug">{a.body}</p>
                   {a.action_required && (
                     <p className="text-xs text-gray-700 mt-1"><strong>Action:</strong> {a.action_required}</p>
+                  )}
+                  {a.voting_enabled && Array.isArray(a.voting_options) && a.voting_options.length >= 2 && (
+                    <AdvisoryVoteCard
+                      advisoryId={a.id}
+                      options={a.voting_options as string[]}
+                      question={a.voting_question ?? null}
+                      closesAt={a.voting_closes_at ?? null}
+                      anonymous={!!a.voting_anonymous}
+                    />
                   )}
                   <div className="text-[11px] text-gray-500 mt-1.5">
                     To <strong>{(a.clubs as { name?: string } | null)?.name ?? 'Zone'}</strong>

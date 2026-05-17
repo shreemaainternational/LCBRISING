@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/auth';
-import { broadcastPush, broadcastToTopic, pushToMember, isPushConfigured } from '@/lib/push';
+import { broadcastPush, broadcastToTopic, pushToMember, isPushConfiguredAsync } from '@/lib/push';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,7 @@ const schema = z.object({
 /** POST /api/push/send — admin-only push dispatcher. */
 export async function POST(req: Request) {
   try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
-  if (!isPushConfigured()) {
+  if (!(await isPushConfiguredAsync())) {
     return NextResponse.json({ error: 'web_push_not_configured' }, { status: 503 });
   }
   const body = await req.json().catch(() => null);

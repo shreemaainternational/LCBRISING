@@ -20,10 +20,21 @@ export function AdvisoryComposer({ zoneId, districtId, clubs, initialClubId }: P
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  const [votingEnabled, setVotingEnabled] = useState(false);
+  const [votingQuestion, setVotingQuestion] = useState('');
+  const [votingOptionsRaw, setVotingOptionsRaw] = useState('Yes\nNo');
+  const [votingClosesAt, setVotingClosesAt] = useState('');
+  const [votingAnonymous, setVotingAnonymous] = useState(false);
+
   function submit() {
     setResult(null);
     if (!subject.trim() || !body.trim()) {
       setResult({ ok: false, msg: 'Subject and message are required' });
+      return;
+    }
+    const votingOptions = votingOptionsRaw.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+    if (votingEnabled && votingOptions.length < 2) {
+      setResult({ ok: false, msg: 'Voting needs at least 2 options.' });
       return;
     }
     start(async () => {
@@ -37,6 +48,11 @@ export function AdvisoryComposer({ zoneId, districtId, clubs, initialClubId }: P
           priority,
           subject, body,
           action_required: action || null,
+          voting_enabled: votingEnabled,
+          voting_question: votingEnabled ? (votingQuestion || subject) : undefined,
+          voting_options: votingEnabled ? votingOptions : undefined,
+          voting_closes_at: votingEnabled && votingClosesAt ? new Date(votingClosesAt).toISOString() : undefined,
+          voting_anonymous: votingEnabled ? votingAnonymous : undefined,
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -78,6 +94,31 @@ export function AdvisoryComposer({ zoneId, districtId, clubs, initialClubId }: P
           <input value={action} onChange={(e) => setAction(e.target.value)} className={cls}
             placeholder="Submit attendance log by next Monday" />
         </Field>
+
+        <div className="border-t pt-3">
+          <label className="inline-flex items-center gap-2 text-sm font-semibold text-navy-800">
+            <input type="checkbox" checked={votingEnabled} onChange={(e) => setVotingEnabled(e.target.checked)} />
+            Attach a vote
+          </label>
+          {votingEnabled && (
+            <div className="mt-2 space-y-2 pl-5 border-l-2 border-blue-200">
+              <Field label="Question (optional — falls back to subject)">
+                <input value={votingQuestion} onChange={(e) => setVotingQuestion(e.target.value)} className={cls}
+                  placeholder="Do you agree to the proposed resolution?" />
+              </Field>
+              <Field label="Options (one per line, 2–8)">
+                <textarea rows={3} value={votingOptionsRaw} onChange={(e) => setVotingOptionsRaw(e.target.value)} className={cls} />
+              </Field>
+              <Field label="Closes at (optional)">
+                <input type="datetime-local" value={votingClosesAt} onChange={(e) => setVotingClosesAt(e.target.value)} className={cls} />
+              </Field>
+              <label className="inline-flex items-center gap-2 text-xs text-gray-700">
+                <input type="checkbox" checked={votingAnonymous} onChange={(e) => setVotingAnonymous(e.target.checked)} />
+                Anonymous (voters not shown)
+              </label>
+            </div>
+          )}
+        </div>
 
         <button type="button" onClick={submit} disabled={pending}
           className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold disabled:opacity-60">
