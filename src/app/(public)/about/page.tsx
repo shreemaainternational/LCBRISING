@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Target, Eye, Heart, Users, Award, Calendar } from 'lucide-react';
+import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -82,18 +83,11 @@ function avatar(name: string) {
 export default function AboutPage() {
   return (
     <>
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-navy-700 via-blue-500 to-navy-800 text-white border-t border-white/15">
-        <div className="container-page py-20 md:py-24 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
-            About Lions Club of Baroda Rising Star
-          </h1>
-          <p className="text-base md:text-lg text-blue-100 max-w-2xl mx-auto">
-            A story of community, compassion, and the unwavering belief that
-            together, we can create lasting change.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        headline="About Lions Club of Baroda Rising Star"
+        subtitle="A story of community, compassion, and the unwavering belief that together, we can create lasting change."
+        backgroundImage={PAGE_HERO_BG.about}
+      />
 
       {/* Mission & Vision */}
       <section className="container-page py-16 md:py-20">

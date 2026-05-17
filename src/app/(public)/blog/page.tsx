@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { BookOpen } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { BlogExplorer, type BlogStory } from '@/components/site/BlogExplorer';
 import { formatDate } from '@/lib/utils';
+import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
   title: 'Blog',
@@ -130,24 +130,12 @@ export default async function BlogPage() {
 
   return (
     <>
-      {/* Hero */}
-      <section className="bg-navy-900 text-white border-t border-white/15">
-        <div className="container-page py-20 md:py-24 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 mb-6">
-            <BookOpen size={14} className="text-brand-400" aria-hidden />
-            <span className="text-xs font-semibold tracking-[0.15em] text-brand-400">
-              LIONS BLOG
-            </span>
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
-            Latest News &amp; Stories
-          </h1>
-          <p className="text-base md:text-lg text-gray-300 max-w-2xl mx-auto">
-            Stories of service, impact, and community from Lions Clubs
-            International and our local club activities.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        pillText="LIONS BLOG"
+        headline="Latest News & Stories"
+        subtitle="Stories of service, impact, and community from Lions Clubs International and our local club activities."
+        backgroundImage={PAGE_HERO_BG.blog}
+      />
 
       <BlogExplorer stories={stories} />
     </>

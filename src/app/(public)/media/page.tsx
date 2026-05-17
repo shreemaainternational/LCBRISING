@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { Camera } from 'lucide-react';
 import { MediaExplorer, type MediaItem } from '@/components/site/MediaExplorer';
+import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
   title: 'Media',
@@ -69,24 +69,12 @@ const COVERAGE: MediaItem[] = [
 export default function MediaPage() {
   return (
     <>
-      {/* Hero */}
-      <section className="bg-navy-900 text-white border-t border-white/15">
-        <div className="container-page py-20 md:py-24 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 mb-6">
-            <Camera size={14} className="text-brand-400" aria-hidden />
-            <span className="text-xs font-semibold tracking-[0.15em] text-brand-400">
-              MEDIA
-            </span>
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
-            Media Coverage
-          </h1>
-          <p className="text-base md:text-lg text-gray-300 max-w-2xl mx-auto">
-            News articles, TV features, and online coverage of our service
-            activities and community impact.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        pillText="MEDIA"
+        headline="Media Coverage"
+        subtitle="News articles, TV features, and online coverage of our service activities and community impact."
+        backgroundImage={PAGE_HERO_BG.media}
+      />
 
       <MediaExplorer items={COVERAGE} />
     </>
