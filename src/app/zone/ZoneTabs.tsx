@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 const TABS = [
   { href: '/zone',             label: 'Overview',      emoji: '' },
   { href: '/zone/clubs',       label: 'Clubs',         emoji: '' },
+  { href: '/zone/analytics',   label: 'Analytics',     emoji: '📊' },
+  { href: '/zone/awards',      label: 'Awards',        emoji: '🏆' },
   { href: '/zone/portal',      label: 'Lions Portal',  emoji: '🌐' },
   { href: '/zone/calendar',    label: 'Zone Calendar', emoji: '🦁' },
   { href: '/zone/lions-year',  label: 'Lions Year',    emoji: '📅' },

@@ -99,6 +99,8 @@ export const CRM_ACTIONS: CrmAction[] = [
   { key: 'gov.audit', label: 'Audit Log', description: 'Append-only log of every significant action', href: '/admin/audit', category: 'governance', icon: ScrollText, modes: ['trigger'], integrations: ['supabase'] },
   { key: 'gov.approvals', label: 'Activity Approvals', description: 'Zone-chair queue for approving club activities', href: '/zone/approvals', category: 'governance', icon: CheckSquare, modes: ['trigger', 'manual'], integrations: ['supabase'] },
   { key: 'gov.voting', label: 'Digital Voting', description: 'Cast votes on attached advisories', href: '/zone/advisories', category: 'governance', icon: Vote, modes: ['manual'], integrations: ['supabase'] },
+  { key: 'gov.zone-analytics', label: 'Zone Analytics & Forecast', description: 'Power-BI-style cross-club comparison with 3-month predictions', href: '/zone/analytics', category: 'governance', icon: Sparkles, modes: ['manual', 'ai-assisted'], integrations: ['supabase'] },
+  { key: 'gov.zone-awards', label: 'Award Eligibility', description: 'Live scorecard for Club Excellence / 100% President / DG Honor', href: '/zone/awards', category: 'governance', icon: Award, modes: ['manual'], integrations: ['supabase'] },
 
   // ---------------- FINANCE ----------------
   { key: 'fin.dues', label: 'Dues — All Tiers', description: 'Club / District / International dues + ageing', href: '/admin/dues', category: 'finance', icon: Banknote, modes: ['cron', 'manual'], integrations: ['supabase'] },
