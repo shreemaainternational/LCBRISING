@@ -39,7 +39,21 @@ export async function POST(req: NextRequest) {
   if (isGuardFailure(actor)) return actor;
 
   const supa = await createClient();
-  const { data, error } = await supa.from('clubs').insert(parsed.data).select().single();
+
+  // Backfill the legacy `clubs.district` text column (NOT NULL) from
+  // the linked district's code when the form only sent a UUID.
+  const payload: Record<string, unknown> = { ...parsed.data };
+  if (!payload.district && payload.district_id) {
+    const { data: d } = await supa.from('districts').select('code')
+      .eq('id', payload.district_id as string).maybeSingle();
+    if (d?.code) payload.district = d.code;
+  }
+  if (!payload.district) payload.district = '3232 FI';
+  // Drop empty optional fields so Postgres uses column defaults / NULL.
+  for (const k of Object.keys(payload)) if (payload[k] === '' || payload[k] == null) delete payload[k];
+  if (!payload.district) payload.district = '3232 FI';
+
+  const { data, error } = await supa.from('clubs').insert(payload).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   await writeAudit({

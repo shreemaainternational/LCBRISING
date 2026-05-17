@@ -44,6 +44,7 @@ export const clubSchema = z.object({
   city: z.string().max(120).optional().nullable(),
   state: z.string().max(120).optional().nullable(),
   country: z.string().max(120).default('India'),
+  charter_date: z.string().optional().nullable(),
 });
 
 export const officerSchema = z.object({

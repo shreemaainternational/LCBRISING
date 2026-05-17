@@ -140,7 +140,15 @@ export function QuickAddCard({
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setResult({ ok: false, message: j.error ?? `Save failed (${res.status})` });
+        let msg = j.error ?? `Save failed (${res.status})`;
+        if (msg === 'forbidden') {
+          msg = j.permission
+            ? `Your account does not have the "${j.permission}" permission. Sign in as an admin or ask one to grant it.`
+            : 'Your account does not have permission for this action.';
+        } else if (msg === 'unauthenticated') {
+          msg = 'You are not signed in. Reload the page and try again.';
+        }
+        setResult({ ok: false, message: msg });
         return;
       }
       const key = responseKey ?? Object.keys(j).find((k) => k !== 'ok') ?? '';
