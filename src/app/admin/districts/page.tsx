@@ -58,7 +58,7 @@ export default async function DistrictsPage() {
           title="No districts yet"
           description="Add your first district below. You can also bulk-import via CSV or sync directly from MyLCI under Sync → Lions."
           cta={<QuickAddCard title="District" {...preset} />}
-          hint={<>Tip: District codes look like <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">3232-F1</code></>}
+          hint={<>Tip: District codes look like <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">3232 FI</code></>}
         />
       ) : (
         <Card>

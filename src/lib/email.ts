@@ -93,7 +93,7 @@ function layout(body: string) {
         </div>
         ${body}
         <hr style="margin-top:24px;border:none;border-top:1px solid #eee"/>
-        <p style="font-size:12px;color:#666">District 3232-F1 · Vadodara · India</p>
+        <p style="font-size:12px;color:#666">District 3232 FI · Vadodara · India</p>
       </td></tr>
     </table>
   </body></html>`;

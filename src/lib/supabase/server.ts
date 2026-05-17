@@ -15,6 +15,10 @@ export async function createClient() {
     url,
     anonKey,
     {
+      // Pin the schema explicitly so PostgREST doesn't fall back to a
+      // project default that may not include "public". This prevents
+      // the cryptic "Invalid schema: public" error from supabase-js.
+      db: { schema: 'public' },
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -46,6 +50,9 @@ export function createAdminClient() {
   return createServiceClient(
     url,
     env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false, autoRefreshToken: false } },
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      db: { schema: 'public' },
+    },
   );
 }

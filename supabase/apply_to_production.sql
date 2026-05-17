@@ -73,7 +73,7 @@ create table if not exists public.multiple_districts (
 );
 
 -- ---------------------------------------------------------------------
--- Districts (e.g. 3232-F1)
+-- Districts (e.g. 3232 FI)
 -- ---------------------------------------------------------------------
 create table if not exists public.districts (
   id uuid primary key default uuid_generate_v4(),
@@ -486,14 +486,14 @@ values ('MD-3232', 'Multiple District 3232', 'India')
 on conflict (code) do nothing;
 
 insert into public.districts (code, name, multiple_district_id, lions_year)
-select '3232-F1', 'District 3232-F1', md.id, '2025-26'
+select '3232 FI', 'District 3232 FI', md.id, '2025-26'
 from public.multiple_districts md
 where md.code = 'MD-3232'
 on conflict (code) do nothing;
 
 -- Link the existing Baroda Rising Star club row to the new district.
 update public.clubs
-   set district_id = (select id from public.districts where code = '3232-F1')
+   set district_id = (select id from public.districts where code = '3232 FI')
  where name = 'Lions Club of Baroda Rising Star'
    and district_id is null;
 

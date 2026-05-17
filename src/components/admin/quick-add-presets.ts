@@ -51,7 +51,7 @@ export function districtsPreset(): Omit<QuickAddCardProps, 'title'> {
     description: 'Create a new Lions district. You can sync existing districts from the Lions Portal under Sync → Lions instead.',
     responseKey: 'district',
     fields: [
-      { name: 'code', label: 'District Code', type: 'text', required: true, placeholder: 'e.g. 3232-F1' },
+      { name: 'code', label: 'District Code', type: 'text', required: true, placeholder: 'e.g. 3232 FI' },
       { name: 'name', label: 'District Name', type: 'text', required: true },
       { name: 'governor_name', label: 'Governor', type: 'text' },
       { name: 'cabinet_secretary_name', label: 'Cabinet Secretary', type: 'text' },
@@ -62,15 +62,28 @@ export function districtsPreset(): Omit<QuickAddCardProps, 'title'> {
 }
 
 export function zonesPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 'title'> {
+  const districtOptions = (o.districts ?? []).map((d) => ({
+    value: d.id,
+    label: `${d.code} — ${d.name}`,
+  }));
+  // Empty-state placeholder advertises the server's self-bootstrap so
+  // an admin who's never seeded districts still sees what will happen
+  // when they hit Create.
+  const placeholder = districtOptions.length === 0
+    ? 'District 3232 FI (default — will be created)'
+    : '— pick a district —';
+
   return {
     endpoint: '/api/zones',
     accent: 'cyan',
-    description: 'Add a new zone under a district.',
+    description: 'Add a new zone under a district. Leave the District menu on the default to auto-place under "District 3232 FI".',
     responseKey: 'zone',
     fields: [
       { name: 'name', label: 'Zone Name', type: 'text', required: true, placeholder: 'e.g. Zone B' },
       { name: 'district_id', label: 'District', type: 'select',
-        options: (o.districts ?? []).map((d) => ({ value: d.id, label: `${d.code} — ${d.name}` })) },
+        placeholder,
+        defaultValue: districtOptions[0]?.value ?? '',
+        options: districtOptions },
       { name: 'zone_chairperson_name', label: 'Zone Chairperson', type: 'text' },
     ],
   };

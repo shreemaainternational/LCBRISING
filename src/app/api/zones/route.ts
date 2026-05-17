@@ -67,14 +67,24 @@ export async function POST(req: Request) {
     payload.code = `${base}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
   }
 
-  // Zones require a district per the federation schema. If the admin
-  // didn't pick one, fall back to the first district we can see so
-  // the "No zones yet" empty-state Quick Add stays one-click.
+  // Zones require a district per the federation schema. Try in order:
+  //   1. Pick the first district that already exists
+  //   2. If none exist, self-bootstrap "District 3232 FI" so the
+  //      empty-state Quick Add stays one-click — covers fresh installs
+  //      where migration 0038 hasn't been applied yet.
   if (!payload.district_id) {
     const supa0 = await createClient();
-    const { data: d } = await supa0.from('districts').select('id').is('deleted_at', null).order('code').limit(1).maybeSingle();
-    if (d?.id) payload.district_id = d.id;
-    else return NextResponse.json({ error: 'No districts exist yet — create one at /admin/districts first.' }, { status: 400 });
+    const { data: d } = await supa0.from('districts')
+      .select('id').is('deleted_at', null).order('code').limit(1).maybeSingle();
+    if (d?.id) {
+      payload.district_id = d.id;
+    } else {
+      const created = await ensureDefaultDistrict();
+      if (created) payload.district_id = created;
+      else return NextResponse.json({
+        error: 'Could not auto-create the default district. Apply migration 0038 or create a district at /admin/districts first.',
+      }, { status: 500 });
+    }
   }
 
   // 1) Try the user's authenticated session first — RLS lets admin
@@ -100,4 +110,43 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ error: friendlyError(firstMsg || 'unknown_error') }, { status: 500 });
+}
+
+/**
+ * Self-bootstrap: create "District 3232 FI" if no districts exist
+ * yet. Used on fresh installs where the seed migration hasn't run.
+ * Returns the new district id, or null if both SSR and admin
+ * inserts fail.
+ */
+async function ensureDefaultDistrict(): Promise<string | null> {
+  const lionsYear = (() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const start = now.getMonth() >= 6 ? y : y - 1;
+    return `${start}-${String((start + 1) % 100).padStart(2, '0')}`;
+  })();
+  const row = {
+    code: '3232 FI',
+    name: 'District 3232 FI',
+    lions_year: lionsYear,
+  };
+
+  const supa = await createClient();
+  const ssrTry = await supa.from('districts').insert(row).select('id').single();
+  if (!ssrTry.error && ssrTry.data?.id) return ssrTry.data.id as string;
+
+  // Race: another concurrent insert might have created it.
+  const { data: existing } = await supa.from('districts').select('id').eq('code', row.code).maybeSingle();
+  if (existing?.id) return existing.id as string;
+
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const admin = createAdminClient();
+      const adminTry = await admin.from('districts').insert(row).select('id').single();
+      if (!adminTry.error && adminTry.data?.id) return adminTry.data.id as string;
+      const { data: ex } = await admin.from('districts').select('id').eq('code', row.code).maybeSingle();
+      if (ex?.id) return ex.id as string;
+    } catch { /* fall through */ }
+  }
+  return null;
 }

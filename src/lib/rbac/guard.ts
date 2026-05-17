@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { writeAudit } from '@/lib/audit';
+import { env } from '@/lib/env';
 import {
   authorize,
   can,
@@ -10,11 +12,30 @@ import {
 } from './permissions';
 import type { LionsRole } from './roles';
 
+const BYPASS_USER_ID = '00000000-0000-0000-0000-000000000000';
+
 /**
  * Resolve the current authenticated member into an RBAC actor scope.
  * Returns null when there is no logged-in user.
+ *
+ * Honours the same diagnostic bypass that getCurrentMember() uses
+ * (env ADMIN_AUTH_BYPASS=1 or the lcbr_crm cookie set by /crm) so
+ * an admin who entered via the dev shortcut isn't locked out of
+ * permission-gated routes.
  */
 export async function currentActor(): Promise<(ActorScope & { user_id: string }) | null> {
+  const cookieStore = await cookies();
+  const crmCookie = cookieStore.get('lcbr_crm')?.value === '1';
+  if (env.ADMIN_AUTH_BYPASS === '1' || crmCookie) {
+    return {
+      user_id: BYPASS_USER_ID,
+      role: 'international_admin',
+      member_id: null,
+      club_id: null,
+      district_id: null,
+    };
+  }
+
   const supa = await createClient();
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return null;
@@ -25,10 +46,13 @@ export async function currentActor(): Promise<(ActorScope & { user_id: string })
     .eq('user_id', user.id)
     .maybeSingle();
 
-  // Fall back to legacy member_role when lions_role is null.
-  const role: LionsRole =
-    (data?.lions_role as LionsRole | undefined) ??
-    legacyToLions((data?.role as string | undefined) ?? 'member');
+  // Members with the legacy role 'admin' are platform owners — always
+  // promote them to international_admin regardless of lions_role.
+  const legacyAdmin = (data?.role as string | undefined) === 'admin';
+  const role: LionsRole = legacyAdmin
+    ? 'international_admin'
+    : ((data?.lions_role as LionsRole | undefined) ??
+       legacyToLions((data?.role as string | undefined) ?? 'member'));
 
   return {
     user_id: user.id,
