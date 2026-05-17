@@ -91,8 +91,7 @@ export default async function IntegrationsPage() {
             MyLCI sync work end-to-end with synthetic data.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <QuickEnableSandbox target="oidc" />
-            <QuickEnableSandbox target="api" />
+            <QuickEnableSandbox />
             <a href="/admin/integrations/oidc"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border text-xs font-semibold text-gray-800 hover:bg-gray-50">
               Open setup wizard →
@@ -158,8 +157,7 @@ function IntegrationCard({ item }: { item: IntegrationDescriptor }) {
           </p>
         )}
 
-        {!item.configured && item.key === 'lions_oidc' && <QuickEnableSandbox target="oidc" />}
-        {!item.configured && item.key === 'lions_rest' && <QuickEnableSandbox target="api" />}
+        {!item.configured && (item.key === 'lions_oidc' || item.key === 'lions_rest') && <QuickEnableSandbox />}
 
         {item.envVars.length > 0 && (
           <details className="text-xs">
