@@ -297,7 +297,7 @@ function FieldRenderer({ field, value, onChange, onCaptionsChange }: {
           onChange={(e) => onChange(e.target.value)}
           className={cls}
         >
-          <option value="">—</option>
+          <option value="">{field.placeholder ?? '—'}</option>
           {field.options?.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
