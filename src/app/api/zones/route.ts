@@ -50,6 +50,22 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
 
+  // Pre-flight: synthetic admin (lcbr_crm / ADMIN_AUTH_BYPASS) cannot write
+  // through RLS because auth.uid() is null. Fast-fail with actionable advice.
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const { cookies } = await import('next/headers');
+    const cs = await cookies();
+    const synthetic = cs.get('lcbr_crm')?.value === '1' || process.env.ADMIN_AUTH_BYPASS === '1';
+    if (synthetic) {
+      return NextResponse.json({
+        error:
+          'You are signed in via the diagnostic bypass (lcbr_crm cookie or ADMIN_AUTH_BYPASS=1) — ' +
+          'Supabase has no real session, so RLS will deny the insert. Set SUPABASE_SERVICE_ROLE_KEY ' +
+          'in your environment, or sign in via /login with a real Supabase account.',
+      }, { status: 401 });
+    }
+  }
+
   // Merge synonymous chair-name fields into the canonical column.
   const chairName = parsed.data.chairperson_name ?? parsed.data.zone_chairperson_name;
   const payload: Record<string, unknown> = {

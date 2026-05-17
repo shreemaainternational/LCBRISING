@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { clubSchema } from '@/lib/validation/schemas';
 import { writeAudit } from '@/lib/audit';
+import { resolveOrBootstrapDefaultDistrict, resolveDefaultDistrictCode } from '@/lib/default-district';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +12,9 @@ function friendlyError(message: string): string {
     return 'Supabase rejected the request schema. The anon key is not allowed to access "public" — set SUPABASE_SERVICE_ROLE_KEY to enable the admin fallback, or add "public" to your project\'s Exposed Schemas under Database → API.';
   }
   if (/invalid api key/i.test(message)) {
-    return 'Database auth failed. Check that NEXT_PUBLIC_SUPABASE_ANON_KEY belongs to the same project as NEXT_PUBLIC_SUPABASE_URL.';
+    return process.env.SUPABASE_SERVICE_ROLE_KEY
+      ? 'Database auth failed. Check that NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY both belong to the same project as NEXT_PUBLIC_SUPABASE_URL.'
+      : 'Database auth failed and no SUPABASE_SERVICE_ROLE_KEY is configured to fall back to. Either sign in as an admin so RLS lets you write, or set SUPABASE_SERVICE_ROLE_KEY in your environment.';
   }
   if (/row.level security/i.test(message)) {
     return 'Row-level security blocked the insert. Apply migration 0037_federation_rls.sql or set SUPABASE_SERVICE_ROLE_KEY.';
@@ -20,7 +23,7 @@ function friendlyError(message: string): string {
     return 'A club with that LCI number already exists.';
   }
   if (/null value in column "district"/i.test(message)) {
-    return 'District is required — pick one from the dropdown.';
+    return 'District is required — pick one from the dropdown, or leave it blank to auto-create District 3232 FI.';
   }
   return message;
 }
@@ -78,26 +81,41 @@ export async function POST(req: NextRequest) {
   const actor = await requirePermission('club.create', { district_id: parsed.data.district_id ?? null });
   if (isGuardFailure(actor)) return actor;
 
+  // Pre-flight: detect the unhelpful "synthetic admin without service role"
+  // combo (lcbr_crm cookie / ADMIN_AUTH_BYPASS but no SUPABASE_SERVICE_ROLE_KEY).
+  // RLS would silently deny because auth.uid() is null. Fast-fail with a
+  // message that actually unblocks the user.
+  const SYNTHETIC_USER = '00000000-0000-0000-0000-000000000000';
+  if (actor.user_id === SYNTHETIC_USER && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({
+      error:
+        'You are signed in via the diagnostic bypass (lcbr_crm cookie or ADMIN_AUTH_BYPASS=1) — ' +
+        'Supabase has no real session for this request, so RLS will deny the insert. ' +
+        'Set SUPABASE_SERVICE_ROLE_KEY in your environment, or sign in via /login with a real Supabase account.',
+    }, { status: 401 });
+  }
+
   // Build the payload — strip empty optional fields so Postgres uses
   // column defaults / NULL.
   const payload: Record<string, unknown> = { ...parsed.data };
   for (const k of Object.keys(payload)) if (payload[k] === '' || payload[k] == null) delete payload[k];
 
-  // Backfill the legacy `clubs.district` NOT NULL text column from the
-  // linked district's code when only district_id was supplied.
-  async function backfillDistrict(client: ReturnType<typeof createAdminClient>) {
-    if (!payload.district && payload.district_id) {
-      const { data: d } = await client.from('districts').select('code')
-        .eq('id', payload.district_id as string).maybeSingle();
-      if (d?.code) payload.district = d.code;
-    }
-    if (!payload.district) payload.district = '3232 FI';
+  // Self-bootstrap: when the form didn't supply a district_id (empty
+  // dropdown on a fresh install), find or auto-create District 3232 FI
+  // so the Quick Add stays one-click.
+  if (!payload.district_id) {
+    const resolved = await resolveOrBootstrapDefaultDistrict();
+    if (resolved) payload.district_id = resolved;
+  }
+
+  // Legacy clubs.district text column is NOT NULL — derive its value
+  // from the resolved district's code.
+  if (!payload.district) {
+    payload.district = await resolveDefaultDistrictCode(payload.district_id as string | undefined);
   }
 
   // 1) Try the user's SSR session first — RLS gates the insert.
   const supa = await createClient();
-  try { await backfillDistrict(supa as unknown as ReturnType<typeof createAdminClient>); } catch { /* ignore */ }
-  if (!payload.district) payload.district = '3232 FI';
 
   const first = await supa.from('clubs').insert(payload).select().single();
   if (!first.error && first.data) {
@@ -117,8 +135,9 @@ export async function POST(req: NextRequest) {
   if (isInfraFail && process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
       const admin = createAdminClient();
-      await backfillDistrict(admin);
-      if (!payload.district) payload.district = '3232 FI';
+      if (!payload.district) {
+        payload.district = await resolveDefaultDistrictCode(payload.district_id as string | undefined);
+      }
       const second = await admin.from('clubs').insert(payload).select().single();
       if (!second.error && second.data) {
         await writeAudit({
