@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Mail, Phone, MapPin, Clock, ExternalLink } from 'lucide-react';
 import { ContactForm } from './ContactForm';
+import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = { title: 'Contact' };
 
@@ -10,18 +11,11 @@ const MAP_QUERY = encodeURIComponent(ADDRESS);
 export default function ContactPage() {
   return (
     <>
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-navy-700 via-blue-500 to-navy-800 text-white border-t border-white/15">
-        <div className="container-page py-20 md:py-24 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
-            Contact Us
-          </h1>
-          <p className="text-base md:text-lg text-blue-100 max-w-2xl mx-auto">
-            Have questions, want to volunteer, or need to reach our team? We
-            would love to hear from you.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        headline="Contact Us"
+        subtitle="Have questions, want to volunteer, or need to reach our team? We would love to hear from you."
+        backgroundImage={PAGE_HERO_BG.contact}
+      />
 
       <section className="container-page py-16 md:py-20">
         <div className="grid lg:grid-cols-[1.4fr_1fr] gap-8">

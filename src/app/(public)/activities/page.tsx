@@ -10,6 +10,7 @@ import {
   Users,
   Heart,
 } from 'lucide-react';
+import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
   title: 'Service Activities',
@@ -119,23 +120,12 @@ const CAUSES: Cause[] = [
 export default function ActivitiesPage() {
   return (
     <>
-      {/* Hero */}
-      <section className="bg-navy-900 text-white border-t border-white/15">
-        <div className="container-page py-20 md:py-24 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 mb-6">
-            <span className="text-xs font-semibold tracking-[0.12em] text-brand-400">
-              Lions International Global Causes
-            </span>
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
-            Our Service Activities
-          </h1>
-          <p className="text-base md:text-lg text-gray-300 max-w-2xl mx-auto">
-            Lions Club of Baroda Rising Star serves the community through these
-            8 global cause areas identified by Lions Clubs International.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        pillText="Lions International Global Causes"
+        headline="Our Service Activities"
+        subtitle="Lions Club of Baroda Rising Star serves the community through these 8 global cause areas identified by Lions Clubs International."
+        backgroundImage={PAGE_HERO_BG.activities}
+      />
 
       {/* Cause cards */}
       <section className="container-page py-16 md:py-20">

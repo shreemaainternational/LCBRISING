@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Heart, CheckCircle2 } from 'lucide-react';
 import { DonateForm } from './DonateForm';
+import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
   title: 'Donate',
@@ -35,24 +36,11 @@ const OTHER_WAYS = [
 export default function DonatePage() {
   return (
     <>
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-navy-700 via-blue-500 to-navy-800 text-white border-t border-white/15">
-        <div className="container-page py-20 md:py-24 text-center">
-          <Heart
-            size={44}
-            strokeWidth={2.5}
-            className="text-brand-400 mx-auto mb-6"
-            aria-hidden
-          />
-          <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
-            Make a Donation
-          </h1>
-          <p className="text-base md:text-lg text-blue-100 max-w-2xl mx-auto">
-            Your generosity powers everything we do. Every rupee goes directly
-            toward programs that uplift our communities.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        headline="Make a Donation"
+        subtitle="Your generosity powers everything we do. Every rupee goes directly toward programs that uplift our communities."
+        backgroundImage={PAGE_HERO_BG.donate}
+      />
 
       {/* Form + Impact */}
       <section className="container-page py-16 md:py-20">

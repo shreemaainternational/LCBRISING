@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
+import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = { title: 'Events' };
 export const revalidate = 60;
@@ -61,24 +62,12 @@ export default async function EventsPage() {
 
   return (
     <>
-      {/* Hero */}
-      <section className="bg-navy-900 text-white border-t border-white/15">
-        <div className="container-page py-20 md:py-24 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 mb-6">
-            <Calendar size={14} className="text-brand-400" aria-hidden />
-            <span className="text-xs font-semibold tracking-[0.15em] text-brand-400">
-              EVENTS
-            </span>
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
-            Upcoming Events
-          </h1>
-          <p className="text-base md:text-lg text-gray-300 max-w-2xl mx-auto">
-            Join us at our upcoming service activities, meetings, and community
-            events. Everyone is welcome!
-          </p>
-        </div>
-      </section>
+      <PageHero
+        pillText="EVENTS"
+        headline="Upcoming Events"
+        subtitle="Join us at our upcoming service activities, meetings, and community events. Everyone is welcome!"
+        backgroundImage={PAGE_HERO_BG.events}
+      />
 
       {/* Upcoming events grid */}
       <section className="container-page py-16 md:py-20">
