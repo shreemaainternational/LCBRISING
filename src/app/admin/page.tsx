@@ -7,6 +7,7 @@ import {
   MembershipPieChart,
   ActivitiesByCategoryChart,
 } from './DashboardCharts';
+import { QuickActionsBar } from '@/components/admin/QuickActionsBar';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,7 +84,11 @@ export default async function AdminDashboard() {
   return (
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Dashboard</h1>
-      <p className="text-gray-600 mb-8">Overview of club operations.</p>
+      <p className="text-gray-600 mb-6">Overview of club operations.</p>
+
+      <div className="mb-6">
+        <QuickActionsBar />
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Stat icon={<Users />} label="Total Members" value={String(d.totalMembers)} sub={`${d.activeMembers} active`} />
