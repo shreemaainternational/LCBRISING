@@ -7,6 +7,7 @@ const TABS = [
   { href: '/district/regions',   label: 'Regions',   emoji: '🗺️' },
   { href: '/district/zones',     label: 'Zones',     emoji: '🦁' },
   { href: '/district/clubs',     label: 'Clubs',     emoji: '' },
+  { href: '/district/map',       label: 'Map',       emoji: '📍' },
   { href: '/district/calendar',  label: 'Calendar',  emoji: '📅' },
   { href: '/district/circulars', label: 'Circulars', emoji: '📢' },
   { href: '/district/sync',      label: 'Sync',      emoji: '🔄' },
