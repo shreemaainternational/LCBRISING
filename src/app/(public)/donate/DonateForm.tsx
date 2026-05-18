@@ -1,22 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input, Label, Textarea } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Gift, Repeat, ShieldCheck, CreditCard, Smartphone } from 'lucide-react';
 
 declare global {
-  interface Window { Razorpay: new (options: Record<string, unknown>) => { open: () => void } }
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
+  }
 }
 
-const PRESETS = [500, 1000, 2500, 5000, 10000];
+const PRESETS = [500, 1000, 2500, 5000, 10000, 25000];
 
 export function DonateForm() {
-  const [amount, setAmount] = useState(1000);
-  const [donor, setDonor] = useState({
-    name: '', email: '', phone: '', pan: '',
-    campaign: 'general', message: '', is_anonymous: false,
-  });
+  const [frequency, setFrequency] = useState<'one-time' | 'monthly'>('one-time');
+  const [method, setMethod] = useState<'razorpay' | 'phonepe'>('razorpay');
+  const [amount, setAmount] = useState(2500);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ receiptNo: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,28 +31,44 @@ export function DonateForm() {
     document.body.appendChild(s);
   }, []);
 
+  // Returning from a PhonePe redirect — show an optimistic thank-you
+  // while the webhook confirms the payment in the background.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('phonepe') === 'done') {
+      setSuccess({ receiptNo: 'is being confirmed' });
+    }
+  }, []);
+
   async function handleDonate(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    const name = `${firstName} ${lastName}`.trim();
 
     try {
       const orderRes = await fetch('/api/donations/intent', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          donor_name: donor.name,
-          donor_email: donor.email || null,
-          donor_phone: donor.phone || null,
-          donor_pan: donor.pan || null,
+          donor_name: name,
+          donor_email: email || null,
           amount,
-          campaign: donor.campaign,
-          message: donor.message,
-          is_anonymous: donor.is_anonymous,
+          campaign: 'general',
+          message: frequency === 'monthly' ? 'Monthly giving requested' : '',
+          method,
         }),
       });
-      if (!orderRes.ok) throw new Error((await orderRes.json()).error ?? 'Failed to start payment');
-      const { order, payment_record_id, key_id } = await orderRes.json();
+      if (!orderRes.ok)
+        throw new Error((await orderRes.json()).error ?? 'Failed to start payment');
+      const result = await orderRes.json();
+
+      // PhonePe — hand off to the hosted payment page.
+      if (result.method === 'phonepe') {
+        window.location.href = result.redirect_url;
+        return;
+      }
+
+      const { order, payment_record_id, key_id } = result;
 
       const rzp = new window.Razorpay({
         key: key_id,
@@ -59,8 +76,8 @@ export function DonateForm() {
         currency: order.currency,
         order_id: order.id,
         name: 'Lions Club Baroda Rising Star',
-        description: 'Donation',
-        prefill: { name: donor.name, email: donor.email, contact: donor.phone },
+        description: frequency === 'monthly' ? 'Monthly Donation' : 'Donation',
+        prefill: { name, email },
         theme: { color: '#1e3a8a' },
         handler: async (resp: Record<string, string>) => {
           const verify = await fetch('/api/donations/verify', {
@@ -74,7 +91,9 @@ export function DonateForm() {
             }),
           });
           if (!verify.ok) {
-            setError('Payment verification failed. Please contact us if you were charged.');
+            setError(
+              'Payment verification failed. Please contact us if you were charged.',
+            );
             return;
           }
           const { receipt_no } = await verify.json();
@@ -90,81 +109,167 @@ export function DonateForm() {
   }
 
   if (success) {
+    const pending = success.receiptNo === 'is being confirmed';
     return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <div className="text-5xl mb-4">🙏</div>
-          <h2 className="text-2xl font-bold text-navy-800">Thank you!</h2>
-          <p className="text-gray-600 mt-2">
-            Your donation has been received. Receipt #<strong>{success.receiptNo}</strong>.
-            A copy has been emailed to you.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="bg-gray-50 border border-gray-100 rounded-2xl p-10 text-center">
+        <div className="text-5xl mb-4">🙏</div>
+        <h2 className="text-2xl font-bold text-navy-800">Thank you!</h2>
+        <p className="text-gray-600 mt-2">
+          {pending ? (
+            <>
+              Your donation {success.receiptNo}. Once the payment clears, a
+              receipt will be emailed to you.
+            </>
+          ) : (
+            <>
+              Your donation has been received. Receipt #
+              <strong>{success.receiptNo}</strong>. A copy has been emailed to
+              you.
+            </>
+          )}
+        </p>
+      </div>
     );
   }
 
   return (
-    <form onSubmit={handleDonate} className="grid gap-4">
-      <Card>
-        <CardContent className="p-6">
-          <Label className="block mb-2">Choose amount (INR)</Label>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {PRESETS.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setAmount(p)}
-                className={`px-4 py-2 rounded-md border ${amount === p ? 'bg-brand-500 border-brand-500 text-navy-900 font-semibold' : 'border-gray-300'}`}
-              >
-                ₹{p.toLocaleString('en-IN')}
-              </button>
-            ))}
-          </div>
-          <Input type="number" min={100} value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
-        </CardContent>
-      </Card>
+    <form
+      onSubmit={handleDonate}
+      className="bg-gray-50 border border-gray-100 rounded-2xl p-8"
+    >
+      {/* Frequency toggle */}
+      <div className="grid grid-cols-2 gap-2 bg-white rounded-lg p-1 border border-gray-200 mb-8">
+        <button
+          type="button"
+          onClick={() => setFrequency('one-time')}
+          className={`inline-flex items-center justify-center gap-2 h-11 rounded-md text-sm font-semibold transition-colors ${
+            frequency === 'one-time'
+              ? 'btn-navy'
+              : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          <Gift size={16} aria-hidden />
+          One-Time
+        </button>
+        <button
+          type="button"
+          onClick={() => setFrequency('monthly')}
+          className={`inline-flex items-center justify-center gap-2 h-11 rounded-md text-sm font-semibold transition-colors ${
+            frequency === 'monthly'
+              ? 'btn-navy'
+              : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          <Repeat size={16} aria-hidden />
+          Monthly
+        </button>
+      </div>
 
-      <Card>
-        <CardContent className="p-6 grid gap-3">
-          <div>
-            <Label>Full name</Label>
-            <Input required value={donor.name} onChange={(e) => setDonor({ ...donor, name: e.target.value })} />
-          </div>
-          <div className="grid md:grid-cols-2 gap-3">
-            <div>
-              <Label>Email</Label>
-              <Input type="email" value={donor.email} onChange={(e) => setDonor({ ...donor, email: e.target.value })} />
-            </div>
-            <div>
-              <Label>Phone</Label>
-              <Input value={donor.phone} onChange={(e) => setDonor({ ...donor, phone: e.target.value })} />
-            </div>
-          </div>
-          <div>
-            <Label>PAN (optional, for 80G receipt)</Label>
-            <Input value={donor.pan} onChange={(e) => setDonor({ ...donor, pan: e.target.value.toUpperCase() })} />
-          </div>
-          <div>
-            <Label>Message (optional)</Label>
-            <Textarea value={donor.message} onChange={(e) => setDonor({ ...donor, message: e.target.value })} />
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={donor.is_anonymous}
-              onChange={(e) => setDonor({ ...donor, is_anonymous: e.target.checked })}
-            />
-            Make my donation anonymous
-          </label>
-        </CardContent>
-      </Card>
+      {/* Amount */}
+      <h3 className="font-bold text-navy-800 mb-3">Select Amount</h3>
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        {PRESETS.map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setAmount(p)}
+            className={`h-14 rounded-lg border text-base font-bold transition-colors ${
+              amount === p
+                ? 'btn-navy border-navy-800'
+                : 'bg-white border-gray-300 text-navy-800 hover:border-navy-400'
+            }`}
+          >
+            ₹{p.toLocaleString('en-IN')}
+          </button>
+        ))}
+      </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      <h3 className="font-bold text-navy-800 mb-3">Or Enter Custom Amount</h3>
+      <div className="relative mb-8">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+          ₹
+        </span>
+        <input
+          type="number"
+          min={100}
+          value={amount}
+          onChange={(e) => setAmount(Number(e.target.value))}
+          placeholder="Enter amount"
+          className="w-full h-12 pl-8 pr-3 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+        />
+      </div>
 
-      <Button type="submit" variant="primary" size="lg" disabled={submitting || !donor.name || amount < 100}>
-        {submitting ? 'Processing…' : `Donate ₹${amount.toLocaleString('en-IN')}`}
-      </Button>
+      {/* Donor info */}
+      <h3 className="font-bold text-navy-800 mb-3">Your Information</h3>
+      <div className="grid sm:grid-cols-2 gap-3 mb-3">
+        <input
+          required
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          placeholder="First Name"
+          className="h-12 px-3 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+        />
+        <input
+          required
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          placeholder="Last Name"
+          className="h-12 px-3 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+        />
+      </div>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email Address"
+        className="w-full h-12 px-3 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 mb-6"
+      />
+
+      {/* Payment method */}
+      <h3 className="font-bold text-navy-800 mb-3">Payment Method</h3>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <button
+          type="button"
+          onClick={() => setMethod('razorpay')}
+          className={`inline-flex items-center justify-center gap-2 h-12 rounded-lg border text-sm font-semibold transition-colors ${
+            method === 'razorpay'
+              ? 'btn-navy border-navy-800'
+              : 'bg-white border-gray-300 text-navy-800 hover:border-navy-400'
+          }`}
+        >
+          <CreditCard size={16} aria-hidden />
+          Card / Netbanking
+        </button>
+        <button
+          type="button"
+          onClick={() => setMethod('phonepe')}
+          className={`inline-flex items-center justify-center gap-2 h-12 rounded-lg border text-sm font-semibold transition-colors ${
+            method === 'phonepe'
+              ? 'btn-navy border-navy-800'
+              : 'bg-white border-gray-300 text-navy-800 hover:border-navy-400'
+          }`}
+        >
+          <Smartphone size={16} aria-hidden />
+          PhonePe / UPI
+        </button>
+      </div>
+
+      {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+
+      <button
+        type="submit"
+        disabled={submitting || !firstName || amount < 100}
+        className="btn-gold w-full h-14 inline-flex items-center justify-center gap-2 rounded-lg text-base disabled:opacity-60"
+      >
+        {submitting
+          ? 'Processing…'
+          : `Donate ₹${amount.toLocaleString('en-IN')}`}
+      </button>
+
+      <p className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-4">
+        <ShieldCheck size={15} aria-hidden />
+        Secure, encrypted payment processing
+      </p>
     </form>
   );
 }

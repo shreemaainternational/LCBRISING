@@ -7,14 +7,14 @@ import { isSupabaseConfigured, env } from '@/lib/env';
 export const revalidate = 30;
 
 const FOCUS_AREAS = [
-  { label: 'Environment', href: '/activities?category=environment' },
-  { label: 'Vision', href: '/activities?category=vision' },
-  { label: 'Hunger Relief', href: '/activities?category=hunger' },
-  { label: 'Disaster Relief', href: '/activities?category=relief' },
-  { label: 'Childhood Cancer', href: '/activities?category=cancer' },
-  { label: 'Diabetes', href: '/activities?category=diabetes' },
-  { label: 'Youth', href: '/activities?category=youth' },
-  { label: 'Humanitarian', href: '/activities?category=humanitarian' },
+  { label: 'Environment', href: '/activities#environment' },
+  { label: 'Vision', href: '/activities#vision' },
+  { label: 'Hunger Relief', href: '/activities#hunger' },
+  { label: 'Disaster Relief', href: '/activities#relief' },
+  { label: 'Childhood Cancer', href: '/activities#cancer' },
+  { label: 'Diabetes', href: '/activities#diabetes' },
+  { label: 'Youth', href: '/activities#youth' },
+  { label: 'Humanitarian', href: '/activities#humanitarian' },
 ];
 
 async function getVisitorCount(): Promise<number | null> {
@@ -37,7 +37,7 @@ export async function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-navy-900 text-white mt-20">
+    <footer className="bg-navy-900 text-white border-t border-white/15">
       <div className="container-page py-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
         {/* Brand */}
         <div>
@@ -48,7 +48,7 @@ export async function Footer() {
               alt="Lions Club of Baroda Rising Star"
               className="h-12 w-12 rounded-full object-cover ring-2 ring-brand-300"
             />
-            <span className="leading-tight">
+            <span className="leading-tight text-center">
               <span className="block text-[10px] tracking-[0.18em] text-brand-300 font-semibold">
                 LIONS CLUB OF
               </span>
@@ -63,7 +63,7 @@ export async function Footer() {
             href="/about"
             className="text-sm text-brand-300 hover:text-brand-200 transition-colors"
           >
-            District 3232-F1 · Region VI · Zone I
+            District 3232 FI · Region V · Zone I
           </Link>
           <div className="flex gap-2 mt-5">
             <SocialIcon href="https://facebook.com/lcbrisingstar" label="Facebook">

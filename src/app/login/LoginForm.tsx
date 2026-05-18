@@ -1,10 +1,9 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Input, Label } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { createClient } from '@/lib/supabase/client';
+import { useSearchParams } from 'next/navigation';
+import { Mail, Lock, Eye, EyeOff, LogIn, User } from 'lucide-react';
+import { signInAction, signUpAction } from './actions';
 
 export default function LoginForm() {
   return (
@@ -15,7 +14,6 @@ export default function LoginForm() {
 }
 
 function LoginInner() {
-  const router = useRouter();
   const params = useSearchParams();
   const redirectTo = params.get('redirectTo') ?? '/admin';
 
@@ -23,64 +21,153 @@ function LoginInner() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const supabase = createClient();
+    setNotice(null);
+
     try {
       if (mode === 'signin') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const result = await signInAction(email, password, redirectTo);
+        // On success the action calls redirect() and never returns a
+        // result here — Next.js performs the navigation. We only reach
+        // this branch on a real failure.
+        if (!result.ok) {
+          setError(result.error);
+          setLoading(false);
+        } else {
+          setNotice('Signed in successfully. Taking you to your dashboard…');
+        }
       } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { name } },
-        });
-        if (error) throw error;
+        const result = await signUpAction(email, password, name, redirectTo);
+        if (!result.ok) {
+          setError(result.error);
+          setLoading(false);
+        } else {
+          // Reaching here means Supabase requires email confirmation
+          // (no session created); otherwise the action would have
+          // redirected and we wouldn't be here.
+          setNotice(
+            'Account created. Please check your email to confirm your address before signing in.',
+          );
+          setLoading(false);
+        }
       }
-      router.replace(redirectTo);
-      router.refresh();
     } catch (err) {
+      // A NEXT_REDIRECT thrown by the server action is rethrown here on
+      // the client — let it propagate so Next.js handles the navigation.
+      if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err;
       setError(err instanceof Error ? err.message : String(err));
-    } finally {
       setLoading(false);
     }
   }
 
+  const fieldWrap = 'relative';
+  const iconClass =
+    'absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none';
+  const inputClass =
+    'w-full h-12 pl-10 pr-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400';
+  const labelClass = 'block text-sm font-semibold text-navy-800 mb-1.5';
+
   return (
     <>
-      <form onSubmit={submit} className="grid gap-3">
+      <form onSubmit={submit} className="grid gap-4">
         {mode === 'signup' && (
           <div>
-            <Label>Full name</Label>
-            <Input required value={name} onChange={(e) => setName(e.target.value)} />
+            <label className={labelClass} htmlFor="name">
+              Full Name
+            </label>
+            <div className={fieldWrap}>
+              <User size={16} className={iconClass} aria-hidden />
+              <input
+                id="name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={inputClass}
+              />
+            </div>
           </div>
         )}
+
         <div>
-          <Label>Email</Label>
-          <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label className={labelClass} htmlFor="email">
+            Email Address
+          </label>
+          <div className={fieldWrap}>
+            <Mail size={16} className={iconClass} aria-hidden />
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+            />
+          </div>
         </div>
+
         <div>
-          <Label>Password</Label>
-          <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+          <label className={labelClass} htmlFor="password">
+            Password
+          </label>
+          <div className={fieldWrap}>
+            <Lock size={16} className={iconClass} aria-hidden />
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`${inputClass} pr-10`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
         </div>
+
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <Button type="submit" disabled={loading}>
-          {loading ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Sign up'}
-        </Button>
+        {notice && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2.5 text-sm text-navy-800">
+            {notice}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="btn-navy w-full h-12 inline-flex items-center justify-center gap-2 rounded-lg text-sm disabled:opacity-60"
+        >
+          <LogIn size={16} aria-hidden />
+          {loading
+            ? 'Please wait…'
+            : mode === 'signin'
+              ? 'Sign In'
+              : 'Create Account'}
+        </button>
       </form>
 
       <button
         type="button"
         onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-        className="text-sm text-navy-700 mt-4 w-full text-center hover:underline"
+        className="text-sm text-navy-700 mt-5 w-full text-center hover:underline"
       >
-        {mode === 'signin' ? 'Need an account? Sign up' : 'Have an account? Sign in'}
+        {mode === 'signin'
+          ? 'Need an account? Sign up'
+          : 'Have an account? Sign in'}
       </button>
     </>
   );

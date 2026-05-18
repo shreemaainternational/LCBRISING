@@ -44,6 +44,7 @@ export const clubSchema = z.object({
   city: z.string().max(120).optional().nullable(),
   state: z.string().max(120).optional().nullable(),
   country: z.string().max(120).default('India'),
+  charter_date: z.string().optional().nullable(),
 });
 
 export const officerSchema = z.object({
@@ -90,6 +91,7 @@ export const donationIntentSchema = z.object({
   campaign: z.string().max(120).optional().nullable(),
   message: z.string().max(500).optional().nullable(),
   is_anonymous: z.boolean().default(false),
+  method: z.enum(['razorpay', 'phonepe']).default('razorpay'),
 });
 
 export const activitySchema = z.object({
@@ -102,6 +104,7 @@ export const activitySchema = z.object({
   date: z.string(),
   location: z.string().optional(),
   photos: z.array(z.string().url()).default([]),
+  photo_captions: z.record(z.string(), z.string()).optional(),
 });
 
 export const eventSchema = z.object({

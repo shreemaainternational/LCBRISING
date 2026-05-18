@@ -31,7 +31,7 @@ export async function renderDonationReceipt(data: ReceiptData): Promise<Buffer> 
       .moveDown(0.2)
       .fontSize(10)
       .fillColor('#444')
-      .text('District 3232-F1 · Vadodara, Gujarat, India', { align: 'center' })
+      .text('District 3232 FI · Vadodara, Gujarat, India', { align: 'center' })
       .moveDown(0.4)
       .strokeColor('#fbbf24')
       .lineWidth(2)

@@ -2,7 +2,15 @@
 
 import { useState } from 'react';
 
-const ENTITIES = ['members', 'clubs', 'officers', 'attendance'] as const;
+const ENTITIES = [
+  'members',
+  'clubs',
+  'officers',
+  'attendance',
+  'donations',
+  'activities',
+  'events',
+] as const;
 type Entity = typeof ENTITIES[number];
 
 type RunResult = {

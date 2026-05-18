@@ -87,7 +87,7 @@ export async function generateContent(args: {
 function systemPromptFor(args: { type: string; language?: string; platform?: string; tone?: string }) {
   const lang = ({ en: 'English', gu: 'Gujarati', hi: 'Hindi' } as Record<string, string>)[args.language ?? 'en'];
   return [
-    `You are a senior content writer for the Lions Club of Baroda Rising Star — a service NGO in Vadodara, India under Lions Clubs International District 3232-F1. Motto: "We Serve."`,
+    `You are a senior content writer for the Lions Club of Baroda Rising Star — a service NGO in Vadodara, India under Lions Clubs International District 3232 FI. Motto: "We Serve."`,
     `Write in ${lang}. Tone: ${args.tone ?? 'inspirational'}. Always factual; never invent statistics.`,
     `Output VALID JSON only — no preface, no markdown fences. Schema depends on the requested type below.`,
   ].join(' ');
@@ -125,7 +125,13 @@ function userPromptFor(args: {
     video_script:
       `Return: { "scenes": [ { "text": string (<= 12 words), "duration_seconds": number 2-4 } ] (5-7 scenes total), "caption": string }`,
     blog_article:
-      `Return: { "headline": string, "subheading": string, "body": string (markdown, 600-900 words, with ## sections), "cta": string }`,
+      `Return: { "headline": string, "subheading": string, "body": string (markdown, 600-900 words, with ## sections, opening with an emotional hook and closing with a clear CTA), "cta": string }`,
+    seo_meta:
+      `Return: { "seo_title": string (<= 60 chars, includes primary keyword), "seo_description": string (<= 160 chars, action-oriented), "tags": string[] (5-8 lowercase keywords, no #) }`,
+    title_brainstorm:
+      `Return: { "titles": string[] (6 distinct, emotionally compelling, news-headline style, <= 70 chars each) }`,
+    translate_blog:
+      `Return: { "title": string (translated), "body": string (translated, preserve markdown structure) } — keep "Lions Club", "Baroda Rising Star", "Vadodara" untranslated`,
   };
 
   return [

@@ -5,13 +5,13 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Lions CRM — Baroda Rising Star',
     short_name: 'Lions CRM',
     description:
-      'Enterprise CRM + payment collection for Lions International members, clubs, and districts. District 3232-F1 · Vadodara.',
-    start_url: '/admin',
+      'Enterprise NGO CRM, reporting and on-the-go field tools for Lions International — members, clubs, districts, beneficiaries. District 3232 FI · Vadodara.',
+    start_url: '/m',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#0b1220',
-    theme_color: '#1e3a8a',
+    theme_color: '#0B1F4D',
     icons: [
       {
         src: '/icon-192.png',
@@ -35,9 +35,10 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['productivity', 'business', 'social', 'finance'],
     lang: 'en',
     shortcuts: [
-      { name: 'Pay an invoice', url: '/invoices/lookup' },
-      { name: 'My invoices', url: '/portal' },
-      { name: 'Admin payments', url: '/admin/payments' },
+      { name: 'Log activity', short_name: 'Log activity', url: '/m/activities/new' },
+      { name: 'QR check-in', short_name: 'Check-in', url: '/m/checkin' },
+      { name: 'Add beneficiary', short_name: 'Beneficiary', url: '/m/beneficiaries/new' },
+      { name: 'Reports', short_name: 'Reports', url: '/m/reports' },
     ],
   };
 }

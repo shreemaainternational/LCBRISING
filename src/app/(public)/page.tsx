@@ -9,10 +9,11 @@ import { StatsBanner } from '@/components/site/StatsBanner';
 import { AboutSection } from '@/components/site/AboutSection';
 import { FeaturedActivities } from '@/components/site/FeaturedActivities';
 import { UpcomingEventsStrip } from '@/components/site/UpcomingEventsStrip';
-import { TestimonialsCarousel } from '@/components/site/TestimonialsCarousel';
+import { TestimonialsGrid } from '@/components/site/TestimonialsGrid';
 import { DonateCTABanner } from '@/components/site/DonateCTABanner';
 import { DonationThermometer } from '@/components/site/DonationThermometer';
 import { NewsletterSignup } from '@/components/site/NewsletterSignup';
+import { FinalCTA } from '@/components/site/FinalCTA';
 
 export const revalidate = 300; // ISR: refresh every 5 min
 
@@ -81,8 +82,11 @@ export default async function HomePage() {
       {/* About Us section — 2x2 collage with years badge */}
       <AboutSection />
 
-      {/* Featured Service Activities — 3-card grid */}
+      {/* Featured Service Activities — 3-card grid ("Our Work") */}
       <FeaturedActivities />
+
+      {/* Donate CTA banner — sits right below "Our Work" */}
+      <DonateCTABanner />
 
       {/* Upcoming Events strip (auto-hides if no public future events) */}
       <UpcomingEventsStrip />
@@ -119,18 +123,19 @@ export default async function HomePage() {
         )}
       </section>
 
-      {/* Testimonials — rotating quotes */}
-      <TestimonialsCarousel />
-
-      {/* ---- Donation block: thermometer + CTA together, near the
-             bottom so every content section sits above it ---- */}
+      {/* Donation thermometer */}
       <section className="container-page py-10">
         <DonationThermometer />
       </section>
-      <DonateCTABanner />
+
+      {/* Testimonials — "Voices of Impact" 3-card grid */}
+      <TestimonialsGrid />
 
       {/* Newsletter capture — final conversion */}
       <NewsletterSignup />
+
+      {/* Closing CTA — last section before the footer */}
+      <FinalCTA />
     </>
   );
 }

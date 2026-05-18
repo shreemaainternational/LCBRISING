@@ -60,7 +60,7 @@ export function NewsletterSignup() {
   }
 
   return (
-    <section className="bg-navy-900 text-white py-16 md:py-24">
+    <section className="bg-navy-900 text-white py-16 md:py-24 border-t border-white/15">
       <div className="container-page grid lg:grid-cols-2 gap-12 items-center">
         {/* Left — copy */}
         <div>
@@ -170,7 +170,7 @@ export function NewsletterSignup() {
               <button
                 type="submit"
                 disabled={state === 'pending' || !name || !email}
-                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-brand-500 hover:bg-brand-600 text-navy-900 font-semibold disabled:opacity-60 transition-colors"
+                className="btn-gold w-full h-12 inline-flex items-center justify-center gap-2 rounded-md disabled:opacity-60"
               >
                 {state === 'pending' ? 'Subscribing…' : (
                   <>

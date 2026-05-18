@@ -18,7 +18,7 @@ export interface SendEmailArgs {
 }
 
 export async function sendEmail({ to, subject, html, text, attachments }: SendEmailArgs) {
-  const from = env.RESEND_FROM_EMAIL || 'noreply@lcbrising.org';
+  const from = env.RESEND_FROM_EMAIL || 'noreply@barodarisingstar.com';
   const result = await client().emails.send({
     from,
     to: Array.isArray(to) ? to : [to],
@@ -93,7 +93,7 @@ function layout(body: string) {
         </div>
         ${body}
         <hr style="margin-top:24px;border:none;border-top:1px solid #eee"/>
-        <p style="font-size:12px;color:#666">District 3232-F1 · Vadodara · India</p>
+        <p style="font-size:12px;color:#666">District 3232 FI · Vadodara · India</p>
       </td></tr>
     </table>
   </body></html>`;

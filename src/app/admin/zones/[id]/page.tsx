@@ -7,6 +7,11 @@ import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
+// Computed outside the component so the render stays pure.
+function thirtyDaysAgoIso() {
+  return new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+}
+
 type Zone = {
   id: string;
   code: string;
@@ -61,10 +66,7 @@ export default async function ZoneDetailPage({
           .from('attendance')
           .select('id', { count: 'exact', head: true })
           .in('club_id', clubIds)
-          .gte(
-            'occurred_at',
-            new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString(),
-          ),
+          .gte('occurred_at', thirtyDaysAgoIso()),
     clubIds.length === 0
       ? Promise.resolve({ data: [] })
       : supa

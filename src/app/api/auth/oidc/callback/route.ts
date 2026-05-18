@@ -10,6 +10,7 @@ import { verifyIdToken } from '@/lib/oidc/jwks';
 import { upsertOAuthAccount } from '@/lib/oidc/persistence';
 import { createSession } from '@/lib/oidc/session';
 import { writeAudit } from '@/lib/audit';
+import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 
 const SESSION_COOKIE = 'lcr.session';
 
@@ -27,6 +28,7 @@ function clearTransientCookies(res: NextResponse) {
 }
 
 export async function GET(req: NextRequest) {
+  await loadOidcSettings();
   if (!isOidcConfigured()) {
     return NextResponse.json(
       { error: 'oidc_not_configured' },

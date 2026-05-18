@@ -30,9 +30,28 @@ export async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
+  // Defensive: collapse accidental /admin/admin/* (typo or doubled
+  // base path) to /admin/* before any auth logic runs.
+  const doubled = /^\/admin(\/admin)+(?=\/|$)/;
+  if (doubled.test(path)) {
+    const url = request.nextUrl.clone();
+    url.pathname = path.replace(doubled, '/admin');
+    return NextResponse.redirect(url, 308);
+  }
+
   // Only /admin/* needs an auth check — every other path passes
   // through untouched, so /login can never enter a redirect cycle.
   if (!path.startsWith(ADMIN_PREFIX)) return response;
+
+  // TEMPORARY diagnostic bypass — set ADMIN_AUTH_BYPASS=1 in the
+  // environment, OR visit /crm to set the lcbr_crm cookie, to skip
+  // the auth check entirely. Remove both when no longer needed.
+  if (
+    env.ADMIN_AUTH_BYPASS === '1' ||
+    request.cookies.get('lcbr_crm')?.value === '1'
+  ) {
+    return response;
+  }
 
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL!,

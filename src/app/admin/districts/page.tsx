@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
+import { QuickAddCard } from '@/components/admin/QuickAddCard';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { districtsPreset } from '@/components/admin/quick-add-presets';
+import { Globe } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,24 +38,34 @@ export default async function DistrictsPage() {
   }
 
   const rows = (districts ?? []) as DistrictRow[];
+  const preset = districtsPreset();
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-navy-800 mb-1">Districts</h1>
-      <p className="text-gray-600 mb-8">
-        Lions federation hierarchy. Click a district to drill into clubs, officers, and analytics.
-      </p>
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-navy-800 mb-1">Districts</h1>
+          <p className="text-gray-600">
+            Lions federation hierarchy. Click a district to drill into clubs, officers, and analytics.
+          </p>
+        </div>
+        <QuickAddCard title="District" {...preset} />
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{rows.length} districts</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {rows.length === 0 ? (
-            <div className="p-8 text-center text-sm text-gray-500">
-              No districts yet. Run the federation bootstrap SQL or import via CSV.
-            </div>
-          ) : (
+      {rows.length === 0 ? (
+        <EmptyState
+          icon={<Globe size={26} />}
+          title="No districts yet"
+          description="Add your first district below. You can also bulk-import via CSV or sync directly from MyLCI under Sync → Lions."
+          cta={<QuickAddCard title="District" {...preset} />}
+          hint={<>Tip: District codes look like <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">3232 FI</code></>}
+        />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>{rows.length} districts</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -78,9 +92,9 @@ export default async function DistrictsPage() {
                 ))}
               </tbody>
             </table>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

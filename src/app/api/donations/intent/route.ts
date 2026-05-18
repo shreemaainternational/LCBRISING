@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { donationIntentSchema } from '@/lib/validation/schemas';
 import { createOrder } from '@/lib/razorpay';
+import { initiatePayment, phonepeConfigured } from '@/lib/phonepe';
 import { createAdminClient } from '@/lib/supabase/server';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { buildReceiptNo } from '@/lib/utils';
@@ -58,6 +59,47 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: payErr?.message ?? 'DB error' }, { status: 500 });
   }
 
+  await supabase.from('donations')
+    .update({ payment_id: payment.id })
+    .eq('id', donation.id);
+
+  // --- PhonePe PAY_PAGE flow -------------------------------------------
+  if (data.method === 'phonepe') {
+    if (!phonepeConfigured()) {
+      return NextResponse.json({ error: 'PhonePe not configured' }, { status: 503 });
+    }
+    const result = await initiatePayment({
+      merchantTransactionId: receiptNo,
+      merchantUserId: `DON-${donation.id.slice(0, 12)}`,
+      amount: data.amount,
+      redirectUrl: `${env.NEXT_PUBLIC_SITE_URL}/donate?phonepe=done`,
+      callbackUrl: `${env.NEXT_PUBLIC_SITE_URL}/api/webhooks/phonepe`,
+      mobile: data.donor_phone ?? undefined,
+    });
+    if (!result.success || !result.redirectUrl) {
+      await supabase.from('payment_audit_logs').insert({
+        actor_kind: 'system',
+        action: 'phonepe_donation_initiate_failed',
+        detail: { donation_id: donation.id, error: result.error },
+      });
+      return NextResponse.json(
+        { error: result.error ?? 'PhonePe initiate failed' },
+        { status: 502 },
+      );
+    }
+    await supabase.from('payments')
+      .update({ raw_event: { phonepe_initiated: result.raw } as unknown })
+      .eq('id', payment.id);
+    return NextResponse.json({
+      method: 'phonepe',
+      redirect_url: result.redirectUrl,
+      donation_id: donation.id,
+      payment_record_id: payment.id,
+      receipt_no: receiptNo,
+    });
+  }
+
+  // --- Razorpay checkout flow ------------------------------------------
   let order;
   try {
     order = await createOrder({
@@ -75,11 +117,9 @@ export async function POST(req: Request) {
   await supabase.from('payments')
     .update({ razorpay_order_id: order.id })
     .eq('id', payment.id);
-  await supabase.from('donations')
-    .update({ payment_id: payment.id })
-    .eq('id', donation.id);
 
   return NextResponse.json({
+    method: 'razorpay',
     order,
     donation_id: donation.id,
     payment_record_id: payment.id,

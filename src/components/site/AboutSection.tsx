@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
-const FOUNDING_YEAR = 2020;
+const FOUNDING_YEAR = 2024;
 
 const TAGS = [
   'Community Service',
@@ -38,7 +38,7 @@ const COLLAGE = [
 ];
 
 export function AboutSection() {
-  const yearsOfService = Math.max(0, new Date().getFullYear() - FOUNDING_YEAR);
+  const yearsOfService = 3;
 
   return (
     <section className="container-page py-16 md:py-24">
@@ -74,7 +74,7 @@ export function AboutSection() {
 
           <Link
             href="/about"
-            className="inline-flex items-center gap-2 rounded-md bg-navy-800 hover:bg-navy-900 text-white px-5 py-3 text-sm font-semibold transition-colors"
+            className="btn-navy inline-flex items-center gap-2 rounded-md px-5 py-3 text-sm"
           >
             Learn More About Us
             <ArrowRight size={16} aria-hidden />

@@ -3,36 +3,60 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { ChevronDown, Menu, Phone, X } from 'lucide-react';
+import {
+  ChevronDown,
+  Menu,
+  Phone,
+  X,
+  Leaf,
+  Eye,
+  Utensils,
+  Shield,
+  Ribbon,
+  Droplet,
+  Users,
+  Heart,
+  ArrowRight,
+} from 'lucide-react';
 import { env } from '@/lib/env';
 
 type NavItem = {
   href: string;
   label: string;
-  children?: { href: string; label: string }[];
+  hasDropdown?: boolean;
+};
+
+type Cause = {
+  href: string;
+  label: string;
+  icon: typeof Leaf;
 };
 
 const NAV: NavItem[] = [
   { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
-  {
-    href: '/activities',
-    label: 'Service Activities',
-    children: [
-      { href: '/activities', label: 'All Activities' },
-      { href: '/activities?category=health', label: 'Health & Sight' },
-      { href: '/activities?category=education', label: 'Education & Youth' },
-      { href: '/activities?category=environment', label: 'Environment' },
-      { href: '/activities?category=relief', label: 'Disaster Relief' },
-    ],
-  },
+  { href: '/activities', label: 'Service Activities', hasDropdown: true },
+  { href: '/stories', label: 'Stories' },
+  { href: '/campaigns', label: 'Campaigns' },
+  { href: '/impact', label: 'Impact' },
+  { href: '/blog', label: 'Newsroom' },
   { href: '/events', label: 'Events' },
-  { href: '/blog', label: 'Blog' },
   { href: '/media', label: 'Media' },
   { href: '/contact', label: 'Contact' },
 ];
 
-const DISTRICT_LINE = 'District 3232-F1  |  Region VI  |  Zone I';
+const CAUSES: Cause[] = [
+  { href: '/activities#environment', label: 'Environment', icon: Leaf },
+  { href: '/activities#vision', label: 'Vision', icon: Eye },
+  { href: '/activities#hunger', label: 'Hunger Relief', icon: Utensils },
+  { href: '/activities#relief', label: 'Disaster Relief', icon: Shield },
+  { href: '/activities#cancer', label: 'Childhood Cancer', icon: Ribbon },
+  { href: '/activities#diabetes', label: 'Diabetes', icon: Droplet },
+  { href: '/activities#youth', label: 'Youth', icon: Users },
+  { href: '/activities#humanitarian', label: 'Humanitarian', icon: Heart },
+];
+
+const DISTRICT_LINE = 'District 3232 FI  |  Region V  |  Zone I';
 const CONTACT_PHONE = '+91-9712299333';
 
 export function PublicNav() {
@@ -73,7 +97,7 @@ export function PublicNav() {
               alt="Lions Club of Baroda Rising Star"
               className="h-12 w-12 rounded-full object-cover ring-2 ring-brand-300 shadow-md"
             />
-            <span className="leading-tight">
+            <span className="leading-tight text-center">
               <span className="block text-[10px] tracking-[0.18em] text-brand-300 font-semibold">
                 LIONS CLUB OF
               </span>
@@ -86,8 +110,12 @@ export function PublicNav() {
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
             {NAV.map((item) =>
-              item.children ? (
-                <DesktopDropdown key={item.href} item={item} active={isActive(item.href)} />
+              item.hasDropdown ? (
+                <ServiceActivitiesDropdown
+                  key={item.href}
+                  item={item}
+                  active={isActive(item.href)}
+                />
               ) : (
                 <Link
                   key={item.href}
@@ -108,16 +136,9 @@ export function PublicNav() {
           <div className="hidden lg:flex items-center gap-2">
             <Link
               href="/donate"
-              className="inline-flex items-center rounded-md bg-brand-500 hover:bg-brand-600 text-navy-900 font-semibold px-4 py-2 text-sm transition-colors shadow-sm"
+              className="btn-gold inline-flex items-center rounded-md px-4 py-2 text-sm"
             >
               Donate
-            </Link>
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-1.5 rounded-md border border-white/30 hover:bg-white/10 text-white px-4 py-2 text-sm font-medium transition-colors"
-            >
-              Admin
-              <span aria-hidden>→</span>
             </Link>
           </div>
 
@@ -148,15 +169,16 @@ export function PublicNav() {
                 >
                   {item.label}
                 </Link>
-                {item.children && (
-                  <div className="ml-4 mb-2 flex flex-col gap-1">
-                    {item.children.slice(1).map((c) => (
+                {item.hasDropdown && (
+                  <div className="ml-3 mb-2 grid grid-cols-2 gap-1">
+                    {CAUSES.map((c) => (
                       <Link
                         key={c.href}
                         href={c.href}
-                        className="block py-1 text-xs text-white/70 hover:text-brand-300"
+                        className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
                         onClick={() => setOpen(false)}
                       >
+                        <c.icon size={14} className="text-brand-400" aria-hidden />
                         {c.label}
                       </Link>
                     ))}
@@ -167,17 +189,10 @@ export function PublicNav() {
             <div className="mt-3 flex gap-2">
               <Link
                 href="/donate"
-                className="flex-1 text-center rounded-md bg-brand-500 hover:bg-brand-600 text-navy-900 font-semibold px-4 py-2 text-sm"
+                className="btn-gold flex-1 text-center rounded-md px-4 py-2 text-sm"
                 onClick={() => setOpen(false)}
               >
                 Donate
-              </Link>
-              <Link
-                href="/admin"
-                className="flex-1 text-center rounded-md border border-white/30 hover:bg-white/10 text-white px-4 py-2 text-sm font-medium"
-                onClick={() => setOpen(false)}
-              >
-                Admin →
               </Link>
             </div>
           </div>
@@ -187,7 +202,13 @@ export function PublicNav() {
   );
 }
 
-function DesktopDropdown({ item, active }: { item: NavItem; active: boolean }) {
+function ServiceActivitiesDropdown({
+  item,
+  active,
+}: {
+  item: NavItem;
+  active: boolean;
+}) {
   return (
     <div className="relative group">
       <Link
@@ -197,19 +218,35 @@ function DesktopDropdown({ item, active }: { item: NavItem; active: boolean }) {
         }`}
       >
         {item.label}
-        <ChevronDown size={14} className="opacity-80 transition-transform group-hover:rotate-180" />
+        <ChevronDown
+          size={14}
+          className="opacity-80 transition-transform group-hover:rotate-180"
+        />
       </Link>
       <div className="absolute left-0 top-full pt-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity">
-        <div className="bg-white text-navy-900 rounded-md shadow-lg border border-gray-200 min-w-[220px] py-2">
-          {item.children!.map((c) => (
-            <Link
-              key={c.href}
-              href={c.href}
-              className="block px-4 py-2 text-sm hover:bg-brand-50 hover:text-brand-700"
-            >
-              {c.label}
-            </Link>
-          ))}
+        <div className="bg-navy-800 text-white rounded-lg shadow-xl border border-white/10 w-[260px] overflow-hidden">
+          <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
+            LIONS GLOBAL CAUSES
+          </div>
+          <div className="pb-2">
+            {CAUSES.map((c) => (
+              <Link
+                key={c.href}
+                href={c.href}
+                className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
+              >
+                <c.icon size={16} className="text-brand-400" aria-hidden />
+                {c.label}
+              </Link>
+            ))}
+          </div>
+          <Link
+            href="/activities"
+            className="flex items-center justify-center gap-1.5 border-t border-white/10 px-4 py-3 text-sm font-semibold text-brand-300 hover:bg-white/5"
+          >
+            View All Activities
+            <ArrowRight size={14} aria-hidden />
+          </Link>
         </div>
       </div>
     </div>

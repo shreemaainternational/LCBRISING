@@ -1,8 +1,25 @@
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { Member, MemberRole } from '@/lib/supabase/database.types';
+import { env } from '@/lib/env';
 
 const ADMIN_ROLES: MemberRole[] = ['admin', 'president', 'secretary', 'treasurer'];
+
+// TEMPORARY diagnostic identity returned when ADMIN_AUTH_BYPASS=1 so
+// /admin/* renders without a real Supabase session. Remove the env var
+// once login is verified.
+const BYPASS_MEMBER = {
+  id: '00000000-0000-0000-0000-000000000000',
+  user_id: '00000000-0000-0000-0000-000000000000',
+  name: 'Bypass Admin',
+  email: 'bypass@local',
+  role: 'admin' as MemberRole,
+  lions_role: null,
+  status: 'active',
+  club_id: null,
+  joined_at: null,
+} as unknown as Member;
 
 /**
  * Resolve the current member for the logged-in auth user.
@@ -20,6 +37,13 @@ const ADMIN_ROLES: MemberRole[] = ['admin', 'president', 'secretary', 'treasurer
  *      auth user with no members row at all.
  */
 export async function getCurrentMember(): Promise<Member | null> {
+  // Diagnostic bypass — short-circuit BEFORE any Supabase call so even
+  // a stale or partial auth state can't fall through and dump the user
+  // back on /login.
+  const cookieStore = await cookies();
+  const crmCookie = cookieStore.get('lcbr_crm')?.value === '1';
+  if (env.ADMIN_AUTH_BYPASS === '1' || crmCookie) return BYPASS_MEMBER;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;

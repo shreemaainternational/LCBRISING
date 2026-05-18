@@ -5,6 +5,30 @@
     {
       "path": "/api/cron/automation?schedule=1",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/reports?type=monthly",
+      "schedule": "0 4 1 * *"
+    },
+    {
+      "path": "/api/cron/reports?type=quarterly",
+      "schedule": "0 5 1 1,4,7,10 *"
+    },
+    {
+      "path": "/api/cron/reports?type=half_yearly",
+      "schedule": "0 6 1 1,7 *"
+    },
+    {
+      "path": "/api/cron/reports?type=yearly",
+      "schedule": "0 7 1 7 *"
+    },
+    {
+      "path": "/api/cron/action-items",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/donor-pack",
+      "schedule": "0 9 1-7 4 *"
     }
   ],
   "headers": [

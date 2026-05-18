@@ -15,8 +15,17 @@ export default async function PortalLoginPage() {
   if (session) redirect('/portal');
 
   return (
-    <div className="min-h-[70vh] bg-gradient-to-br from-[#1a0f3e] via-[#3b1a78] to-[#5b21b6] py-12 px-4">
-      <div className="max-w-md mx-auto">
+    <div className="relative min-h-[70vh] bg-gradient-to-br from-[#1a0f3e] via-[#3b1a78] to-[#5b21b6] py-12 px-4 overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.18]"
+        style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=1920&q=80&auto=format&fit=crop')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      <div className="relative max-w-md mx-auto">
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           <header className="bg-gradient-to-r from-[#5f259f] to-[#7c3aed] text-white p-6 text-center">
             <div className="text-xs uppercase tracking-widest opacity-80">Customer portal</div>

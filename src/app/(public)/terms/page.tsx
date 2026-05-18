@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { PageHero } from '@/components/site/PageHero';
+import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
@@ -14,6 +14,7 @@ export default function TermsPage() {
         headline="Terms of"
         accent="Service"
         subtitle="The rules for using this website, donating, and participating in club activities."
+        backgroundImage={PAGE_HERO_BG.terms}
       />
       <article className="container-page py-16 max-w-3xl">
         <p className="text-gray-600 text-sm">Last updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
@@ -25,7 +26,7 @@ export default function TermsPage() {
 
         <h2 className="text-2xl font-semibold text-navy-800 mt-10 mb-3">2. About</h2>
         <p className="text-gray-700">
-          The Site is operated by the Lions Club of Baroda Rising Star, chartered under District 3232-F1 of Lions Clubs International. Vadodara, Gujarat, India.
+          The Site is operated by the Lions Club of Baroda Rising Star, chartered under District 3232 FI of Lions Clubs International. Vadodara, Gujarat, India.
         </p>
 
         <h2 className="text-2xl font-semibold text-navy-800 mt-10 mb-3">3. Donations</h2>

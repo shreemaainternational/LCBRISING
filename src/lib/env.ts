@@ -25,6 +25,9 @@ const schema = z.object({
 
   CRON_SECRET: z.string().optional(),
   ADMIN_BOOTSTRAP_EMAIL: z.string().email().optional(),
+  // TEMPORARY diagnostic bypass — set to "1" to skip auth on /admin/*
+  // and return a synthetic admin member. Remove in production.
+  ADMIN_AUTH_BYPASS: z.string().optional(),
 
   // --- AI ---
   OPENAI_API_KEY: z.string().optional(),
@@ -92,6 +95,23 @@ const schema = z.object({
   LIONS_OIDC_SCOPES: z.string().optional(),
   LIONS_OIDC_AUDIENCE: z.string().optional(),
   LIONS_OIDC_PROVIDER_LABEL: z.string().optional(),
+
+  // --- Lions International REST API (optional) ---
+  LIONS_API_BASE_URL: z.string().url().optional(),
+  LIONS_API_KEY: z.string().optional(),
+  LIONS_API_ACCESS_TOKEN: z.string().optional(),
+  LIONS_API_DISTRICT_CODE: z.string().optional(),
+  LIONS_API_MULTI_DISTRICT_CODE: z.string().optional(),
+  LIONS_WEBHOOK_SECRET: z.string().optional(),
+
+  // --- Secret encryption at rest (AES-256-GCM wrapper) ---
+  SECRET_ENCRYPTION_KEY: z.string().optional(),
+
+  // --- Web Push (VAPID) ---
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
 });
 
 const parsed = schema.parse({
@@ -111,6 +131,7 @@ const parsed = schema.parse({
   TWILIO_WHATSAPP_FROM: process.env.TWILIO_WHATSAPP_FROM,
   CRON_SECRET: process.env.CRON_SECRET,
   ADMIN_BOOTSTRAP_EMAIL: process.env.ADMIN_BOOTSTRAP_EMAIL,
+  ADMIN_AUTH_BYPASS: process.env.ADMIN_AUTH_BYPASS,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_MODEL: process.env.OPENAI_MODEL,
   CANVA_CLIENT_ID: process.env.CANVA_CLIENT_ID,
@@ -155,6 +176,17 @@ const parsed = schema.parse({
   LIONS_OIDC_SCOPES: process.env.LIONS_OIDC_SCOPES,
   LIONS_OIDC_AUDIENCE: process.env.LIONS_OIDC_AUDIENCE,
   LIONS_OIDC_PROVIDER_LABEL: process.env.LIONS_OIDC_PROVIDER_LABEL,
+  LIONS_API_BASE_URL: process.env.LIONS_API_BASE_URL,
+  LIONS_API_KEY: process.env.LIONS_API_KEY,
+  LIONS_API_ACCESS_TOKEN: process.env.LIONS_API_ACCESS_TOKEN,
+  LIONS_API_DISTRICT_CODE: process.env.LIONS_API_DISTRICT_CODE,
+  LIONS_API_MULTI_DISTRICT_CODE: process.env.LIONS_API_MULTI_DISTRICT_CODE,
+  LIONS_WEBHOOK_SECRET: process.env.LIONS_WEBHOOK_SECRET,
+  SECRET_ENCRYPTION_KEY: process.env.SECRET_ENCRYPTION_KEY,
+  VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+  VAPID_SUBJECT: process.env.VAPID_SUBJECT,
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
 });
 
 export const env = parsed;
@@ -192,4 +224,5 @@ export const integrations = {
   upi: Boolean(parsed.UPI_VPA),
   phonepe: Boolean(parsed.PHONEPE_MERCHANT_ID && parsed.PHONEPE_SALT_KEY),
   lionsOidc: Boolean(parsed.LIONS_OIDC_ISSUER && parsed.LIONS_OIDC_CLIENT_ID && parsed.LIONS_OIDC_REDIRECT_URI),
+  webPush: Boolean(parsed.VAPID_PUBLIC_KEY && parsed.VAPID_PRIVATE_KEY),
 };

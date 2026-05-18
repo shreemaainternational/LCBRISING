@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { getValidAccessToken } from '@/lib/oidc/auto-refresh';
 import type { SyncAdapter, SyncContext, SyncResult } from '../types';
 
 const ApiMember = z.object({
@@ -24,10 +25,13 @@ export const restMembersAdapter: SyncAdapter = {
   entity: 'members',
   async run({ job }: SyncContext): Promise<SyncResult> {
     const endpoint = job.payload?.endpoint as string | undefined;
-    const bearer = job.payload?.bearer_token as string | undefined;
+    const oauthAccountId = job.payload?.oauth_account_id as string | undefined;
+    let bearer = job.payload?.bearer_token as string | undefined;
     const pageSize = (job.payload?.page_size as number | undefined) ?? 100;
-    if (!endpoint || !bearer) {
-      throw new Error('rest-members: endpoint and bearer_token are required in payload');
+    const updatedSince = job.payload?.updated_since as string | undefined;
+    if (!endpoint) throw new Error('rest-members: endpoint required');
+    if (!bearer && !oauthAccountId) {
+      throw new Error('rest-members: bearer_token or oauth_account_id required in payload');
     }
 
     const supa = createAdminClient();
@@ -35,16 +39,28 @@ export const restMembersAdapter: SyncAdapter = {
       total: 0, inserted: 0, updated: 0, skipped: 0, failed: 0, failures: [],
     };
     let cursor: string | null = (job.cursor as string | null) ?? null;
+    let did401Retry = false;
 
     while (true) {
+      if (oauthAccountId) {
+        bearer = (await getValidAccessToken(oauthAccountId)).access_token;
+      }
       const url = new URL(endpoint);
       url.searchParams.set('page_size', String(pageSize));
       if (cursor) url.searchParams.set('cursor', cursor);
+      if (updatedSince) url.searchParams.set('updated_since', updatedSince);
 
       const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${bearer}`, Accept: 'application/json' },
         cache: 'no-store',
       });
+      if (res.status === 401 && oauthAccountId && !did401Retry) {
+        did401Retry = true;
+        await supa.from('oauth_accounts')
+          .update({ access_token_expires_at: new Date(0).toISOString() })
+          .eq('id', oauthAccountId);
+        continue;
+      }
       if (!res.ok) {
         throw new Error(`rest-members: upstream ${res.status} ${res.statusText}`);
       }

@@ -1,197 +1,82 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { Image as ImageIcon, Newspaper, Video } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/env';
-import { Card, CardContent } from '@/components/ui/card';
-import { PageHero } from '@/components/site/PageHero';
+import { MediaExplorer, type MediaItem } from '@/components/site/MediaExplorer';
+import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
   title: 'Media',
-  description: 'Press coverage, photo galleries, and videos from Lions Club Baroda Rising Star.',
+  description:
+    'News articles, TV features, and online coverage of Lions Club Baroda Rising Star service activities.',
 };
 export const revalidate = 300;
 
-type Activity = {
-  id: string;
-  title: string;
-  date: string;
-  photos: string[] | null;
-};
+const COVERAGE: MediaItem[] = [
+  {
+    id: 'm-eye-camp',
+    title: 'Lions Club Baroda Rising Star conducts free eye camp',
+    outlet: 'Times of India',
+    date: '15 January 2025',
+    type: 'Newspaper',
+    image:
+      'https://images.unsplash.com/photo-1577401239170-897942555fb3?auto=format&fit=crop&w=900&q=70',
+  },
+  {
+    id: 'm-wheelchairs',
+    title: 'Lions Club donates wheelchairs to disabled persons',
+    outlet: 'Gujarat Samachar',
+    date: '20 February 2025',
+    type: 'Online',
+    image:
+      'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=900&q=70',
+  },
+  {
+    id: 'm-blood-camp',
+    title: 'Blood donation camp organized by Lions Club',
+    outlet: 'VTV News',
+    date: '10 March 2025',
+    type: 'TV',
+    image:
+      'https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&w=900&q=70',
+  },
+  {
+    id: 'm-tree-drive',
+    title: 'Lions Club tree plantation drive covers 500 saplings',
+    outlet: 'Divya Bhaskar',
+    date: '22 April 2025',
+    type: 'Newspaper',
+    image:
+      'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=900&q=70',
+  },
+  {
+    id: 'm-youth-program',
+    title: 'Youth leadership program launched by Lions Club',
+    outlet: 'Vadodara News',
+    date: '15 May 2025',
+    type: 'Online',
+    image:
+      'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=900&q=70',
+  },
+  {
+    id: 'm-food-packets',
+    title: 'Lions Club distributes food packets to 500 families',
+    outlet: 'Sandesh',
+    date: '5 June 2025',
+    type: 'Newspaper',
+    image:
+      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&q=70',
+  },
+];
 
-type Photo = {
-  id: string;
-  url: string;
-  title: string | null;
-  caption: string | null;
-  taken_on: string | null;
-  created_at: string;
-};
-
-export default async function MediaPage() {
-  let gallery: { id: string; title: string; date: string; photo: string }[] = [];
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = await createClient();
-
-      // Prefer curated photos from the new media library.
-      const { data: managed } = await supabase
-        .from('photos')
-        .select('id, url, title, caption, taken_on, created_at')
-        .is('deleted_at', null)
-        .in('category', ['gallery', 'event'])
-        .order('display_order')
-        .order('created_at', { ascending: false })
-        .limit(36);
-      const managedPhotos = (managed ?? []) as Photo[];
-
-      if (managedPhotos.length > 0) {
-        gallery = managedPhotos.map((p) => ({
-          id: p.id,
-          title: p.title ?? p.caption ?? '',
-          date: p.taken_on ?? p.created_at,
-          photo: p.url,
-        }));
-      } else {
-        // Fallback: scrape photos[] arrays from activities rows.
-        const { data } = await supabase
-          .from('activities')
-          .select('id, title, date, photos')
-          .order('date', { ascending: false })
-          .limit(24);
-        gallery = ((data ?? []) as Activity[])
-          .flatMap((a) =>
-            (a.photos ?? []).map((url) => ({
-              id: a.id + '__' + url,
-              title: a.title,
-              date: a.date,
-              photo: url,
-            })),
-          )
-          .slice(0, 18);
-      }
-    } catch {
-      gallery = [];
-    }
-  }
-
+export default function MediaPage() {
   return (
     <>
       <PageHero
-        pillText="Lions Club Baroda Rising Star · Media"
-        headline="Photos, video"
-        accent="& press"
-        subtitle="Every service project leaves a record — pictures from the field, video recaps, and the occasional newspaper clipping."
+        pillText="MEDIA"
+        headline="Media Coverage"
+        subtitle="News articles, TV features, and online coverage of our service activities and community impact."
+        backgroundImage={PAGE_HERO_BG.media}
       />
-      <section className="container-page py-16">
 
-      {/* Section nav */}
-      <div className="grid gap-4 sm:grid-cols-3 mb-12">
-        <SectionTile
-          icon={<ImageIcon size={20} />}
-          label="Photo gallery"
-          href="#gallery"
-          subtitle={`${gallery.length} images`}
-        />
-        <SectionTile
-          icon={<Video size={20} />}
-          label="Video"
-          href="#video"
-          subtitle="Coming soon"
-        />
-        <SectionTile
-          icon={<Newspaper size={20} />}
-          label="Press"
-          href="#press"
-          subtitle="Coming soon"
-        />
-      </div>
-
-      {/* Gallery */}
-      <div id="gallery" className="scroll-mt-24">
-        <h2 className="text-2xl font-semibold text-navy-800 mb-4">Photo gallery</h2>
-        {gallery.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-gray-600">
-              No photos uploaded yet. Officers can add them from{' '}
-              <Link href="/admin/activities" className="text-brand-700 underline">
-                /admin/activities
-              </Link>{' '}
-              — each activity supports a photo URL list.
-            </CardContent>
-          </Card>
-        ) : (
-          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {gallery.map((g) => (
-              <li key={g.id}>
-                <figure className="group relative overflow-hidden rounded-md aspect-square bg-gray-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={g.photo}
-                    alt={g.title}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
-                  <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent text-white text-xs p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {g.title}
-                  </figcaption>
-                </figure>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* Video placeholder */}
-      <div id="video" className="scroll-mt-24 mt-16">
-        <h2 className="text-2xl font-semibold text-navy-800 mb-4">Video</h2>
-        <Card>
-          <CardContent className="p-8 text-gray-600">
-            Highlight reels and project recaps coming soon. Until then, follow us
-            on social media for the latest.
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Press placeholder */}
-      <div id="press" className="scroll-mt-24 mt-16">
-        <h2 className="text-2xl font-semibold text-navy-800 mb-4">Press coverage</h2>
-        <Card>
-          <CardContent className="p-8 text-gray-600">
-            News articles and interviews about the club&rsquo;s work will be listed
-            here. Drop us a note via{' '}
-            <Link href="/contact" className="text-brand-700 underline">
-              /contact
-            </Link>{' '}
-            if you&rsquo;ve covered one of our projects.
-          </CardContent>
-        </Card>
-      </div>
-      </section>
+      <MediaExplorer items={COVERAGE} />
     </>
-  );
-}
-
-function SectionTile({
-  icon, label, subtitle, href,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  subtitle: string;
-  href: string;
-}) {
-  return (
-    <Link href={href} className="block">
-      <Card className="hover:border-brand-300 transition-colors">
-        <CardContent className="p-5 flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-700">
-            {icon}
-          </span>
-          <div>
-            <div className="font-semibold text-navy-800">{label}</div>
-            <div className="text-xs text-gray-500">{subtitle}</div>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
   );
 }
