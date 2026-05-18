@@ -23,8 +23,26 @@ export async function GET(req: Request) {
 
   const type = (url.searchParams.get('type') ?? 'monthly') as ReportType;
   const formats = (url.searchParams.get('formats')?.split(',') ?? ['pdf','pptx']) as ReportFormat[];
+  const force = url.searchParams.get('force') === '1';
 
   const today = new Date();
+
+  // Day-of-the-month / month-of-the-year gating. Vercel Hobby only
+  // allows once-per-day cron, so we fire every day but no-op unless
+  // it's the correct boundary day. Pass ?force=1 to bypass for ad-hoc runs.
+  if (!force) {
+    const d = today.getDate();
+    const m = today.getMonth(); // 0-11
+    const skip =
+      (type === 'monthly'    && d !== 1) ||
+      (type === 'quarterly'  && (d !== 1 || ![0, 3, 6, 9].includes(m))) ||
+      (type === 'half_yearly' && (d !== 1 || ![0, 6].includes(m))) ||
+      (type === 'yearly'     && (d !== 1 || m !== 6));   // July 1 → previous Lions year
+    if (skip) {
+      return NextResponse.json({ ok: true, skipped: true, reason: 'not a ' + type + ' boundary day' });
+    }
+  }
+
   let period;
   if (type === 'monthly') {
     const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1);

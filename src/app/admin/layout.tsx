@@ -7,12 +7,13 @@ import {
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell, Plug, Building2, ShieldCheck,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
-  KeyRound, Command, BookOpen,
+  KeyRound, Command, Stethoscope, BookOpen,
 } from 'lucide-react';
 
 const navItems = [
   { href: '/admin',             label: 'Dashboard',     icon: LayoutDashboard },
   { href: '/admin/operations',  label: 'Command Center', icon: Command },
+  { href: '/admin/diagnostics', label: 'Diagnostics',    icon: Stethoscope },
   { href: '/admin/reports',     label: 'Reports',       icon: BarChart3 },
   { href: '/admin/beneficiaries', label: 'Beneficiaries', icon: HeartHandshake },
   { href: '/admin/districts',   label: 'Districts',     icon: Globe },

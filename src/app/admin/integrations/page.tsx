@@ -5,6 +5,7 @@ import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
 import { loadCronSecret } from '@/lib/cron-auth';
 import { loadVapidConfig } from '@/lib/push-config';
+import { loadOpenAiConfig } from '@/lib/ai/openai-config';
 import { QuickEnableSandbox } from './QuickEnableSandbox';
 import {
   Plug, CheckCircle2, XCircle, Lock, Database, CreditCard, MessageSquare,
@@ -29,7 +30,7 @@ const CATEGORY_ORDER: IntegrationCategory[] = [
 ];
 
 export default async function IntegrationsPage() {
-  await Promise.all([loadOidcSettings(true), loadLionsApiSettings(true), loadCronSecret(true), loadVapidConfig(true)]);
+  await Promise.all([loadOidcSettings(true), loadLionsApiSettings(true), loadCronSecret(true), loadVapidConfig(true), loadOpenAiConfig(true)]);
   const registry = getIntegrationRegistry();
   const summary = summarizeIntegrations();
   const pct = summary.total ? Math.round((summary.configured / summary.total) * 100) : 0;

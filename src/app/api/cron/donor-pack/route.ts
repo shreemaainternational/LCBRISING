@@ -24,6 +24,20 @@ export async function GET(req: Request) {
   }
   const url = new URL(req.url);
   const force = url.searchParams.get('force') === '1';
+
+  // Day-gating: Vercel Hobby only allows daily cron, so we fire every
+  // day in April and only run on the first Sunday. Pass ?force=1 for
+  // ad-hoc runs the rest of the year.
+  if (!force) {
+    const now = new Date();
+    const isApril = now.getMonth() === 3;
+    const isSunday = now.getDay() === 0;
+    const isFirstWeekOfMonth = now.getDate() <= 7;
+    if (!(isApril && isSunday && isFirstWeekOfMonth)) {
+      return NextResponse.json({ ok: true, skipped: true, reason: 'donor pack only runs on the first Sunday of April' });
+    }
+  }
+
   const fy = indianFiscalYearForCron(new Date());
 
   const results = await generateAndSendPacks(fy, { force });

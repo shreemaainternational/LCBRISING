@@ -101,22 +101,64 @@ export async function resolveDefaultDistrictCode(districtId: string | null | und
 /** Human-friendly explanation of why bootstrap failed. */
 export function explainBootstrapFailure(result: BootstrapResult): string {
   const joined = result.errors.join(' | ');
+
   // Most common modern failure: migration 0049 not yet applied + caller
-  // is not an admin + no service role. The RPC will return "function
-  // ... does not exist" or similar.
+  // is not an admin + no service role.
   if (/does not exist|undefined function|404|relation.*does not exist|search_path/i.test(joined)) {
     return 'Default district auto-create requires migration 0049_ensure_default_district.sql — apply it in your Supabase project (SQL editor → run the file). Detail: ' + joined;
   }
+
+  // "Invalid schema: public" combined with "Invalid API key" means the
+  // SSR client and admin client are talking to DIFFERENT Supabase
+  // projects. Most often: Vercel env vars are stale and point at an
+  // older / different project than the one you applied migrations to.
+  if (/invalid schema/i.test(joined) && /invalid api key/i.test(joined)) {
+    return supabaseMismatchDiagnostic(joined);
+  }
+  if (/invalid schema/i.test(joined)) {
+    return supabaseSchemaDiagnostic(joined);
+  }
+
   if (/row.level security|new row violates|permission denied/i.test(joined)) {
     return process.env.SUPABASE_SERVICE_ROLE_KEY
       ? 'Default district auto-create blocked by RLS even with the service role key. Verify migration 0037_federation_rls.sql ran. Detail: ' + joined
       : 'Default district auto-create blocked by RLS. Apply migration 0049_ensure_default_district.sql for a one-shot fix, or set SUPABASE_SERVICE_ROLE_KEY. Detail: ' + joined;
   }
   if (/invalid api key|jwt/i.test(joined)) {
-    return 'Default district auto-create failed because the Supabase keys are misconfigured. NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must all belong to the same project. Detail: ' + joined;
+    return supabaseMismatchDiagnostic(joined);
   }
   if (joined.includes('SUPABASE_SERVICE_ROLE_KEY is not configured')) {
     return 'Default district auto-create needs either migration 0049_ensure_default_district.sql applied, or a real Supabase Auth session signed in as an admin member, or SUPABASE_SERVICE_ROLE_KEY in your environment. Detail: ' + joined;
   }
   return joined || 'Default district auto-create failed for an unknown reason.';
+}
+
+function projectRefFromUrl(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  const m = url.match(/https?:\/\/([a-z0-9]+)\.supabase\.co/i);
+  return m?.[1] ?? '(unknown)';
+}
+
+function supabaseMismatchDiagnostic(detail: string): string {
+  const ref = projectRefFromUrl();
+  const hasSR = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return [
+    `Supabase keys are misconfigured — the request is reaching project ref "${ref}" but at least one key was rejected.`,
+    `Fix steps:`,
+    `(1) Open https://supabase.com/dashboard → pick the project at db.${ref}.supabase.co`,
+    `(2) Settings → API → copy Project URL, anon (public) key, and service_role (secret) key`,
+    `(3) Vercel project → Settings → Environment Variables — verify all THREE of NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY${hasSR ? ', and SUPABASE_SERVICE_ROLE_KEY' : ' (and add SUPABASE_SERVICE_ROLE_KEY)'} match the values from step 2.`,
+    `(4) Redeploy without build cache.`,
+    `Detail: ${detail}`,
+  ].join(' ');
+}
+
+function supabaseSchemaDiagnostic(detail: string): string {
+  const ref = projectRefFromUrl();
+  return [
+    `PostgREST rejected the "public" schema on project "${ref}". Two likely causes:`,
+    `(A) Supabase Dashboard → Project Settings → API → "Exposed schemas" doesn't include "public". Add it and save.`,
+    `(B) NEXT_PUBLIC_SUPABASE_URL on Vercel points at a different/stale project than where you applied the migrations. Confirm the URL hostname matches the project you've been editing.`,
+    `Detail: ${detail}`,
+  ].join(' ');
 }

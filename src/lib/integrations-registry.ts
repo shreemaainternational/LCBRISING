@@ -8,6 +8,7 @@ import { isLionsApiConfigured } from '@/lib/oidc/lions';
 import { isOidcConfigured as isOidcConfiguredAtAll } from '@/lib/oidc';
 import { isCronAuthConfigured } from '@/lib/cron-auth';
 import { isPushAutoConfigured } from '@/lib/push-config';
+import { isOpenAiAutoConfigured } from '@/lib/ai/openai-config';
 
 export type IntegrationCategory =
   | 'identity'
@@ -210,14 +211,14 @@ export function getIntegrationRegistry(): IntegrationDescriptor[] {
       key: 'openai',
       name: 'OpenAI (Chat + Vision)',
       category: 'ai',
-      description: 'AI narrative writer (EN+GU+bilingual), club insights, UPI proof OCR, expense bill OCR.',
-      configured: integrations.openai,
+      description: 'AI narrative writer (EN+GU+bilingual), AI greeting generator, creative builder, club insights, member dedupe, UPI proof OCR, expense bill OCR. Configure in-app at /admin/integrations/openai or via env.',
+      configured: integrations.openai || isOpenAiAutoConfigured(),
       envVars: [
-        v('OPENAI_API_KEY', true),
+        v('OPENAI_API_KEY', false, { hint: 'Optional — env value overrides the DB-stored key' }),
         v('OPENAI_MODEL', false, { hint: 'Defaults to gpt-4o-mini' }),
       ],
-      whenMissing: 'AI narrative, club insights, UPI proof OCR, and bill OCR all return 503.',
-      adminHref: '/admin/reports/new',
+      whenMissing: 'AI features fall back to hand-written templates (still usable). Paste a key for AI generation.',
+      adminHref: '/admin/integrations/openai',
     },
 
     // ---------------- SOCIAL ----------------

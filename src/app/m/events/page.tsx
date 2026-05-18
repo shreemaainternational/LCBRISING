@@ -13,11 +13,11 @@ export default async function MobileEventsPage() {
 
   const today = new Date().toISOString().slice(0, 10);
   const { data: upcoming } = await db.from('events')
-    .select('id, title, description, starts_at, location, category')
-    .gte('starts_at', today).order('starts_at').limit(50);
+    .select('id, title, description, date, location, category')
+    .gte('date', today).order('date').limit(50);
   const { data: past } = await db.from('events')
-    .select('id, title, starts_at, location')
-    .lt('starts_at', today).order('starts_at', { ascending: false }).limit(10);
+    .select('id, title, date, location')
+    .lt('date', today).order('date', { ascending: false }).limit(10);
 
   const upRows = upcoming ?? [];
   const pastRows = past ?? [];
@@ -59,7 +59,7 @@ export default async function MobileEventsPage() {
                 <div key={e.id} className="bg-white rounded-xl p-3 text-sm opacity-70">
                   <div className="font-semibold text-navy-800">{e.title}</div>
                   <div className="text-xs text-gray-500 inline-flex items-center gap-1 mt-0.5">
-                    <Calendar size={11} /> {new Date(e.starts_at).toLocaleDateString('en-IN')}
+                    <Calendar size={11} /> {new Date(e.date).toLocaleDateString('en-IN')}
                     {e.location && <> · <MapPin size={11} /> {e.location}</>}
                   </div>
                 </div>
@@ -76,13 +76,13 @@ interface EventRow {
   id: string;
   title: string;
   description?: string | null;
-  starts_at: string;
+  date: string;
   location?: string | null;
   category?: string | null;
 }
 
 function EventCard({ e }: { e: EventRow }) {
-  const d = new Date(e.starts_at);
+  const d = new Date(e.date);
   return (
     <article className="bg-white rounded-xl p-3 shadow-sm">
       <div className="flex gap-3">
