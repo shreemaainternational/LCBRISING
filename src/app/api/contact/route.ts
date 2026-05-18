@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
   try {
     await sendEmail({
-      to: process.env.ADMIN_BOOTSTRAP_EMAIL ?? 'contact@lcbrising.org',
+      to: process.env.ADMIN_BOOTSTRAP_EMAIL ?? 'contact@barodarisingstar.com',
       subject: `Contact form: ${parsed.data.name}`,
       html: `<p>From: ${parsed.data.name} (${parsed.data.email}, ${parsed.data.phone ?? '-'})</p>
              <p>${parsed.data.message.replace(/\n/g, '<br/>')}</p>`,
