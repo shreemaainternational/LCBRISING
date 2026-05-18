@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, FileText, Sparkles } from 'lucide-react';
+import { Plus, FileText, Sparkles, Coins } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, integrations } from '@/lib/env';
 import { formatDate } from '@/lib/utils';
@@ -24,18 +24,34 @@ type Row = {
 export default async function AdminBlogIndex() {
   let posts: Row[] = [];
   let tableMissing = false;
+  let aiSpend = { calls: 0, cost_usd: 0 };
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select(
-          'id, title, slug, category, language, is_published, is_featured, story_type, published_at, view_count, updated_at, author_name',
-        )
-        .order('updated_at', { ascending: false })
-        .limit(100);
-      if (error) tableMissing = error.message.includes('does not exist');
-      posts = (data ?? []) as Row[];
+      const startOfMonth = new Date(
+        Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1),
+      ).toISOString();
+      const [postsRes, usageRes] = await Promise.all([
+        supabase
+          .from('blog_posts')
+          .select(
+            'id, title, slug, category, language, is_published, is_featured, story_type, published_at, view_count, updated_at, author_name',
+          )
+          .order('updated_at', { ascending: false })
+          .limit(100),
+        supabase
+          .from('ai_generations')
+          .select('cost_usd')
+          .gte('created_at', startOfMonth),
+      ]);
+      if (postsRes.error)
+        tableMissing = postsRes.error.message.includes('does not exist');
+      posts = (postsRes.data ?? []) as Row[];
+      const usageRows = (usageRes.data ?? []) as Array<{ cost_usd: number | null }>;
+      aiSpend = {
+        calls: usageRows.length,
+        cost_usd: usageRows.reduce((s, r) => s + (Number(r.cost_usd) || 0), 0),
+      };
     } catch {
       tableMissing = true;
     }
@@ -46,19 +62,34 @@ export default async function AdminBlogIndex() {
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-navy-800 mb-1">Newsroom</h1>
           <p className="text-gray-600">
             Manage blog posts, news, and stories. {published} published · {drafts} drafts.
           </p>
         </div>
-        <Link
-          href="/admin/blog/new"
-          className="btn-gold inline-flex h-11 px-5 rounded-md items-center gap-2"
-        >
-          <Plus size={16} aria-hidden /> New post
-        </Link>
+        <div className="flex items-center gap-3">
+          {integrations.openai && (
+            <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs">
+              <Coins size={14} className="text-brand-600" aria-hidden />
+              <div className="leading-tight">
+                <div className="font-semibold text-navy-800">
+                  ${aiSpend.cost_usd.toFixed(4)}
+                </div>
+                <div className="text-gray-500">
+                  AI spend this month · {aiSpend.calls} call{aiSpend.calls === 1 ? '' : 's'}
+                </div>
+              </div>
+            </div>
+          )}
+          <Link
+            href="/admin/blog/new"
+            className="btn-gold inline-flex h-11 px-5 rounded-md items-center gap-2"
+          >
+            <Plus size={16} aria-hidden /> New post
+          </Link>
+        </div>
       </div>
 
       {!integrations.openai && (

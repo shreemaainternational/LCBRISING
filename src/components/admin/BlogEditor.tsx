@@ -40,9 +40,11 @@ const CATEGORIES = [
 export function BlogEditor({
   initial,
   aiAvailable,
+  aiUsage,
 }: {
   initial: BlogPostForm;
   aiAvailable: boolean;
+  aiUsage?: { cost_usd: number; calls: number };
 }) {
   const router = useRouter();
   const [form, setForm] = useState<BlogPostForm>(initial);
@@ -69,6 +71,7 @@ export function BlogEditor({
           body: form.body,
           category: form.category,
           language: form.language,
+          postId: form.id,
           ...extra,
         }),
       });
@@ -419,6 +422,13 @@ export function BlogEditor({
               <Languages size={12} /> Hindi
             </button>
           </div>
+
+          {aiUsage && aiUsage.calls > 0 && (
+            <p className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500">
+              AI on this post: <span className="font-semibold text-navy-700">${aiUsage.cost_usd.toFixed(4)}</span>{' '}
+              over {aiUsage.calls} call{aiUsage.calls === 1 ? '' : 's'}
+            </p>
+          )}
         </div>
       </aside>
     </div>

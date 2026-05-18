@@ -33,15 +33,26 @@ export default async function EditBlogPostPage({
   const { id } = await params;
   if (!isSupabaseConfigured()) notFound();
   const supabase = await createClient();
-  const { data } = await supabase
-    .from('blog_posts')
-    .select(
-      'id, title, slug, excerpt, body, category, language, story_type, tags, cover_url, hero_quote, author_name, is_published, is_featured, seo_title, seo_description, reading_time',
-    )
-    .eq('id', id)
-    .maybeSingle();
+  const [{ data }, usageRes] = await Promise.all([
+    supabase
+      .from('blog_posts')
+      .select(
+        'id, title, slug, excerpt, body, category, language, story_type, tags, cover_url, hero_quote, author_name, is_published, is_featured, seo_title, seo_description, reading_time',
+      )
+      .eq('id', id)
+      .maybeSingle(),
+    supabase
+      .from('ai_generations')
+      .select('cost_usd')
+      .eq('blog_post_id', id),
+  ]);
   if (!data) notFound();
   const row = data as Row;
+  const usageRows = (usageRes.data ?? []) as Array<{ cost_usd: number | null }>;
+  const aiUsage = {
+    calls: usageRows.length,
+    cost_usd: usageRows.reduce((s, r) => s + (Number(r.cost_usd) || 0), 0),
+  };
 
   const initial: BlogPostForm = {
     id: row.id,
@@ -67,7 +78,7 @@ export default async function EditBlogPostPage({
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Edit post</h1>
       <p className="text-gray-600 mb-6">Editing “{row.title}”.</p>
-      <BlogEditor initial={initial} aiAvailable={integrations.openai} />
+      <BlogEditor initial={initial} aiAvailable={integrations.openai} aiUsage={aiUsage} />
     </div>
   );
 }

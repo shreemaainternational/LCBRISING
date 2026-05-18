@@ -23,6 +23,7 @@ const schema = z.object({
   language: z.enum(['en', 'gu', 'hi']).default('en'),
   topic: z.string().optional(),
   targetLanguage: z.enum(['gu', 'hi']).optional(),
+  postId: z.string().uuid().optional(),
 });
 
 export async function POST(req: Request) {
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
         category: input.category,
         language: input.language,
       });
-      await logUsage(me?.id, 'blog_article', input.language, usage, draft);
+      await logUsage(me?.id, input.postId, 'blog_article', input.language, usage, draft);
       return NextResponse.json({ ...draft });
     }
 
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
         language: input.language,
       });
       const { usage, ...payload } = out;
-      await logUsage(me?.id, 'seo', input.language, usage, payload);
+      await logUsage(me?.id, input.postId, 'seo', input.language, usage, payload);
       return NextResponse.json(payload);
     }
 
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
       const topic = input.topic || input.title || input.excerpt;
       if (!topic) return NextResponse.json({ error: 'topic required' }, { status: 400 });
       const { titles, usage } = await suggestTitles({ topic, language: input.language });
-      await logUsage(me?.id, 'title', input.language, usage, { titles });
+      await logUsage(me?.id, input.postId, 'title', input.language, usage, { titles });
       return NextResponse.json({ titles });
     }
 
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
         body: input.body,
         language: lang,
       });
-      await logUsage(me?.id, 'translate', lang, usage, { title, body });
+      await logUsage(me?.id, input.postId, 'translate', lang, usage, { title, body });
       return NextResponse.json({ title, body });
     }
 
@@ -108,6 +109,7 @@ export async function POST(req: Request) {
 
 async function logUsage(
   memberId: string | undefined,
+  postId: string | undefined,
   kind: string,
   language: string,
   usage: { prompt_tokens: number; completion_tokens: number; cost_usd: number },
@@ -124,6 +126,7 @@ async function logUsage(
       cost_usd: usage.cost_usd,
       output: output as object,
       member_id: memberId ?? null,
+      blog_post_id: postId ?? null,
     });
   } catch {
     // Audit logging is best-effort.
