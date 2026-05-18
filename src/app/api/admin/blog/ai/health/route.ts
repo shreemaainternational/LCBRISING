@@ -1,18 +1,13 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth';
 import { integrations, env } from '@/lib/env';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Intentionally public: returns booleans only, never values. Lets an
+// admin verify "is the OpenAI key bound to the running process?"
+// without logging in to /admin.
 export async function GET() {
-  try {
-    await requireAdmin();
-  } catch (err) {
-    if (err instanceof Response) return err;
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
-
   return NextResponse.json({
     ok: integrations.openai,
     openai_key_set: integrations.openai,
