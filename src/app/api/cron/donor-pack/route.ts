@@ -9,11 +9,14 @@ export const maxDuration = 300;
 /**
  * GET /api/cron/donor-pack?force=0
  *
- * Fires on the first Sunday of April (see vercel.json). Generates one
+ * Fires daily Apr 1-7 at 09:00 (see vercel.json). Generates one
  * consolidated 80G statement per donor for the fiscal year that just
  * ended, persists it to `donor_tax_packs`, and emails it as a PDF
- * attachment. Idempotent — skips donors whose pack was already sent
- * unless `?force=1` is supplied.
+ * attachment. Idempotent — the first day of the window sends the
+ * packs, subsequent days skip donors whose pack was already sent
+ * (unless `?force=1` is supplied). The 7-day window is a workaround
+ * for Vercel cron rejecting expressions that combine day-of-month
+ * and day-of-week ("first Sunday of April" cannot be expressed).
  */
 export async function GET(req: Request) {
   if (!(await verifyCronAuth(req))) {

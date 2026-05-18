@@ -28,7 +28,7 @@
     },
     {
       "path": "/api/cron/donor-pack",
-      "schedule": "0 9 1-7 4 0"
+      "schedule": "0 9 1-7 4 *"
     },
     {
       "path": "/api/cron/sync-worker",
