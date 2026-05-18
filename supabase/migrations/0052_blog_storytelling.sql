@@ -92,45 +92,6 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 -- ---------------------------------------------------------------------
--- beneficiaries: people we serve. Referenced by activities + stories.
--- ---------------------------------------------------------------------
-create table if not exists public.beneficiaries (
-  id uuid primary key default uuid_generate_v4(),
-  name text not null,
-  age int,
-  gender text,
-  location text,
-  image_url text,
-  cause text,
-  short_story text,
-  is_published boolean not null default false,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists idx_beneficiaries_published
-  on public.beneficiaries(is_published);
-
-do $$ begin
-  drop trigger if exists set_updated_beneficiaries on public.beneficiaries;
-  create trigger set_updated_beneficiaries before update on public.beneficiaries
-    for each row execute function public.tg_set_updated_at();
-end $$;
-
-alter table public.beneficiaries enable row level security;
-do $$ begin
-  create policy beneficiaries_public_read on public.beneficiaries
-    for select using (is_published = true);
-exception when duplicate_object then null; end $$;
-do $$ begin
-  create policy beneficiaries_admin on public.beneficiaries for all using (
-    exists (select 1 from public.members m
-            where m.user_id = auth.uid()
-              and m.role in ('admin','president','secretary','officer'))
-  ) with check (true);
-exception when duplicate_object then null; end $$;
-
--- ---------------------------------------------------------------------
 -- campaigns: hero asset + urgency / impact framing for the CRY-style
 -- campaigns page.
 -- ---------------------------------------------------------------------
@@ -146,31 +107,15 @@ create index if not exists idx_campaigns_featured
   on public.campaigns(is_featured, is_active);
 
 -- ---------------------------------------------------------------------
--- ai_generations: audit trail for blog/story AI runs (cost + tokens).
+-- ai_generations: audit trail for blog/story AI runs. Extends the
+-- existing table (created earlier for /api/ai/generate-content) with
+-- the columns the blog editor needs — keeps the old columns intact.
 -- ---------------------------------------------------------------------
-create table if not exists public.ai_generations (
-  id uuid primary key default uuid_generate_v4(),
-  kind text not null,                   -- 'blog_article' | 'seo' | 'title' | 'translate' | ...
-  prompt text,
-  model text,
-  language text default 'en',
-  prompt_tokens int default 0,
-  completion_tokens int default 0,
-  cost_usd numeric(10,4) default 0,
-  output jsonb,
-  member_id uuid references public.members(id) on delete set null,
-  blog_post_id uuid references public.blog_posts(id) on delete set null,
-  created_at timestamptz not null default now()
-);
+alter table public.ai_generations
+  add column if not exists kind text,
+  add column if not exists prompt text,
+  add column if not exists member_id uuid references public.members(id) on delete set null,
+  add column if not exists blog_post_id uuid references public.blog_posts(id) on delete set null;
 
 create index if not exists idx_ai_generations_member
   on public.ai_generations(member_id, created_at desc);
-
-alter table public.ai_generations enable row level security;
-do $$ begin
-  create policy ai_gen_admin on public.ai_generations for all using (
-    exists (select 1 from public.members m
-            where m.user_id = auth.uid()
-              and m.role in ('admin','president','secretary','officer'))
-  ) with check (true);
-exception when duplicate_object then null; end $$;
