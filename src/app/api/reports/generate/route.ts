@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/auth';
+import { requirePermission, isGuardFailure } from '@/lib/rbac/guard';
 import {
   buildReportDoc, renderReport, parsePeriod, enrichWithAINarrative, type ReportRequest,
 } from '@/lib/reports';
@@ -46,9 +46,9 @@ const schema = z.object({
 
 /** POST /api/reports/generate — build + render + persist. */
 export async function POST(req: Request) {
-  let actor: { id: string } | null = null;
-  try { actor = (await requireAdmin()) as { id: string }; }
-  catch (err) { if (err instanceof Response) return err; }
+  const guard = await requirePermission('report.export');
+  if (isGuardFailure(guard)) return guard;
+  const actor = { id: guard.user_id };
 
   const json = await req.json().catch(() => null);
   const parsed = schema.safeParse(json);
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
       download_url: downloadUrl,
       size_bytes: r.buffer.length,
       page_count: r.pageCount ?? null,
-      generated_by: actor?.id ?? null,
+      generated_by: actor.id,
     }).select('id').single();
 
     if (!error && data?.id) ids.push(data.id as string);

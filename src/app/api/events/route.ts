@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { eventSchema } from '@/lib/validation/schemas';
 import { createClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/auth';
+import { requirePermission, isGuardFailure } from '@/lib/rbac/guard';
 
 export const runtime = 'nodejs';
 
 export async function GET() {
+  const actor = await requirePermission('event.read');
+  if (isGuardFailure(actor)) return actor;
   const supabase = await createClient();
   const { data, error } = await supabase.from('events').select('*').order('date');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -13,7 +15,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  const actor = await requirePermission('event.create');
+  if (isGuardFailure(actor)) return actor;
   const body = await req.json().catch(() => null);
   const parsed = eventSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'invalid' }, { status: 400 });

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/auth';
+import { requirePermission, isGuardFailure } from '@/lib/rbac/guard';
 import { REPORT_CATALOG } from '@/lib/reports';
 
 export const runtime = 'nodejs';
@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 
 /** GET /api/reports — list generated reports + catalog. */
 export async function GET(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  const actor = await requirePermission('report.read');
+  if (isGuardFailure(actor)) return actor;
   const url = new URL(req.url);
   const limit = Math.min(Number(url.searchParams.get('limit') ?? 100), 200);
   const type = url.searchParams.get('type');

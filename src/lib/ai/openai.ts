@@ -36,35 +36,54 @@ export async function generateContent(args: {
     throw new Error('OpenAI is not configured (OPENAI_API_KEY missing)');
   }
 
-  const model = env.OPENAI_MODEL ?? 'gpt-4o-mini';
+  const primary = env.OPENAI_MODEL ?? 'gpt-4o-mini';
+  const fallback = process.env.OPENAI_FALLBACK_MODEL?.trim();
+  // Try primary first, then fallback on 429 / 5xx / model-not-available
+  // and on network errors. Identical/empty fallbacks are skipped.
+  const candidates = fallback && fallback !== primary ? [primary, fallback] : [primary];
   const sys = systemPromptFor(args);
   const user = userPromptFor(args);
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'authorization': `Bearer ${env.OPENAI_API_KEY}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: sys },
-        { role: 'user',   content: user },
-      ],
-      temperature: 0.7,
-    }),
-  });
-
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`OpenAI ${res.status}: ${txt.slice(0, 400)}`);
-  }
-  const json = await res.json() as {
+  let lastErr: Error | null = null;
+  let json: {
     choices: { message: { content: string } }[];
     usage: { prompt_tokens: number; completion_tokens: number };
-  };
+  } | null = null;
+  let modelUsed = primary;
+
+  for (const candidate of candidates) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'authorization': `Bearer ${env.OPENAI_API_KEY}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: candidate,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: sys },
+            { role: 'user',   content: user },
+          ],
+          temperature: 0.7,
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        const retriable = res.status === 429 || res.status >= 500 || /model/i.test(txt);
+        lastErr = new Error(`OpenAI ${res.status} (${candidate}): ${txt.slice(0, 400)}`);
+        if (!retriable) throw lastErr;
+        continue;
+      }
+      json = await res.json();
+      modelUsed = candidate;
+      break;
+    } catch (e) {
+      lastErr = e instanceof Error ? e : new Error(String(e));
+    }
+  }
+  if (!json) throw lastErr ?? new Error('OpenAI request failed');
 
   let content: AiContent;
   try {
@@ -78,7 +97,7 @@ export async function generateContent(args: {
     usage: {
       prompt_tokens: json.usage.prompt_tokens,
       completion_tokens: json.usage.completion_tokens,
-      cost_usd: estimateCost(model, json.usage.prompt_tokens, json.usage.completion_tokens),
+      cost_usd: estimateCost(modelUsed, json.usage.prompt_tokens, json.usage.completion_tokens),
     },
   };
 }

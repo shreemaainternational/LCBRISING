@@ -22,6 +22,7 @@ const schema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_WHATSAPP_FROM: z.string().optional(),
+  TWILIO_SMS_FROM: z.string().optional(),
 
   CRON_SECRET: z.string().optional(),
   ADMIN_BOOTSTRAP_EMAIL: z.string().email().optional(),
@@ -32,6 +33,7 @@ const schema = z.object({
   // --- AI ---
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+  OPENAI_FALLBACK_MODEL: z.string().optional(),
 
   // --- Canva ---
   CANVA_CLIENT_ID: z.string().optional(),
@@ -129,11 +131,13 @@ const parsed = schema.parse({
   TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
   TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
   TWILIO_WHATSAPP_FROM: process.env.TWILIO_WHATSAPP_FROM,
+  TWILIO_SMS_FROM: process.env.TWILIO_SMS_FROM,
   CRON_SECRET: process.env.CRON_SECRET,
   ADMIN_BOOTSTRAP_EMAIL: process.env.ADMIN_BOOTSTRAP_EMAIL,
   ADMIN_AUTH_BYPASS: process.env.ADMIN_AUTH_BYPASS,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_MODEL: process.env.OPENAI_MODEL,
+  OPENAI_FALLBACK_MODEL: process.env.OPENAI_FALLBACK_MODEL,
   CANVA_CLIENT_ID: process.env.CANVA_CLIENT_ID,
   CANVA_CLIENT_SECRET: process.env.CANVA_CLIENT_SECRET,
   CANVA_API_KEY: process.env.CANVA_API_KEY,

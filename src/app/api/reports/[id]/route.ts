@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/auth';
+import { requirePermission, isGuardFailure } from '@/lib/rbac/guard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  const actor = await requirePermission('report.read');
+  if (isGuardFailure(actor)) return actor;
   const { id } = await ctx.params;
   const { data, error } = await createAdminClient().from('reports').select('*').eq('id', id).single();
   if (error) return NextResponse.json({ error: 'not_found' }, { status: 404 });
@@ -14,7 +15,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  const actor = await requirePermission('report.export');
+  if (isGuardFailure(actor)) return actor;
   const { id } = await ctx.params;
   const db = createAdminClient();
   const { data: row } = await db.from('reports').select('storage_path').eq('id', id).single();

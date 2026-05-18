@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/auth';
+import { requirePermission, isGuardFailure } from '@/lib/rbac/guard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,7 +17,6 @@ const patchSchema = z.object({
   location: z.string().optional(),
   photos: z.array(z.string().url()).optional(),
   photo_captions: z.record(z.string(), z.string()).optional(),
-  // Extended reporting columns
   service_category_id: z.string().uuid().nullable().optional(),
   csr_partner_id: z.string().uuid().nullable().optional(),
   event_id: z.string().uuid().nullable().optional(),
@@ -43,7 +42,8 @@ const patchSchema = z.object({
 });
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  const actor = await requirePermission('event.read');
+  if (isGuardFailure(actor)) return actor;
   const { id } = await ctx.params;
   const { data, error } = await createAdminClient().from('activities').select('*').eq('id', id).single();
   if (error) return NextResponse.json({ error: 'not_found' }, { status: 404 });
@@ -51,7 +51,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  const actor = await requirePermission('event.update');
+  if (isGuardFailure(actor)) return actor;
   const { id } = await ctx.params;
   const body = await req.json().catch(() => null);
   const parsed = patchSchema.safeParse(body);
@@ -63,7 +64,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 }
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  const actor = await requirePermission('event.delete');
+  if (isGuardFailure(actor)) return actor;
   const { id } = await ctx.params;
   const { error } = await createAdminClient().from('activities').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
