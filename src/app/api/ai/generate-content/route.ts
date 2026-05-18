@@ -21,9 +21,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { content, usage } = await generateContent(parsed.data);
+    const { content, usage, source, ai_error } = await generateContent(parsed.data);
 
-    if (isSupabaseConfigured()) {
+    if (isSupabaseConfigured() && source === 'ai') {
       const supabase = createAdminClient();
       await supabase.from('ai_generations').insert({
         prompt_type: parsed.data.type,
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ content, usage });
+    return NextResponse.json({ content, usage, source, ai_error });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'AI error' },

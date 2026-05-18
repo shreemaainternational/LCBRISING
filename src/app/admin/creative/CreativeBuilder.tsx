@@ -43,12 +43,13 @@ export function CreativeBuilder() {
   const [creative, setCreative] = useState<{ id: string; status: string; output_url?: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [posted, setPosted] = useState<string[] | null>(null);
 
   const tpl = TYPES.find((t) => t.key === type)!;
 
   async function generate() {
-    setBusy('ai'); setError(null); setContent(null);
+    setBusy('ai'); setError(null); setNotice(null); setContent(null);
     try {
       const res = await fetch('/api/ai/generate-content', {
         method: 'POST',
@@ -58,6 +59,13 @@ export function CreativeBuilder() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'AI failed');
       setContent(json.content);
+      if (json.source === 'template') {
+        setNotice(
+          json.ai_error
+            ? `Used hand-written template (OpenAI error: ${String(json.ai_error).slice(0, 120)}). Edit the text below as needed.`
+            : 'Used hand-written template — set OPENAI_API_KEY in Vercel env to enable AI generation. The content below is editable.',
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally { setBusy(null); }
@@ -239,6 +247,11 @@ export function CreativeBuilder() {
           </CardContent>
         </Card>
 
+        {notice && !error && (
+          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            {notice}
+          </p>
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
 
