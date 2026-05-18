@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import type { LionsRole } from '@/lib/supabase/database.types';
+import { encrypt } from '@/lib/crypto/secret-box';
 import type { TokenResponse, UserInfo } from './client';
 
 const VALID_LIONS_ROLES: ReadonlySet<LionsRole> = new Set([
@@ -73,9 +74,9 @@ export async function upsertOAuthAccount(input: UpsertInput): Promise<{ id: stri
         email: input.profile.email ?? null,
         email_verified: input.profile.email_verified ?? null,
         raw_profile: input.profile as unknown as Record<string, unknown>,
-        access_token: input.tokens.access_token,
-        refresh_token: input.tokens.refresh_token ?? null,
-        id_token: input.tokens.id_token ?? null,
+        access_token: encrypt(input.tokens.access_token),
+        refresh_token: encrypt(input.tokens.refresh_token ?? null),
+        id_token: encrypt(input.tokens.id_token ?? null),
         token_type: input.tokens.token_type ?? null,
         scope: input.tokens.scope ?? null,
         access_token_expires_at: accessExp,

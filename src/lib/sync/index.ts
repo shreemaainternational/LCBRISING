@@ -7,6 +7,8 @@ import { csvDonationsAdapter } from './adapters/csv-donations';
 import { csvActivitiesAdapter } from './adapters/csv-activities';
 import { csvEventsAdapter } from './adapters/csv-events';
 import { restMembersAdapter } from './adapters/rest-members';
+import { restClubsAdapter } from './adapters/rest-clubs';
+import { restOfficersAdapter } from './adapters/rest-officers';
 
 registerAdapter(csvMembersAdapter);
 registerAdapter(csvClubsAdapter);
@@ -16,6 +18,8 @@ registerAdapter(csvDonationsAdapter);
 registerAdapter(csvActivitiesAdapter);
 registerAdapter(csvEventsAdapter);
 registerAdapter(restMembersAdapter);
+registerAdapter(restClubsAdapter);
+registerAdapter(restOfficersAdapter);
 
 export * from './types';
 export * from './runner';

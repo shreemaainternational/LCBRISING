@@ -80,7 +80,7 @@ export default async function IntegrationsPage() {
         </div>
       </div>
 
-      {lionsAllOff && (
+      {lionsAllOff ? (
         <div className="rounded-xl border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-amber-50 p-5">
           <h3 className="font-bold text-navy-800 mb-1 inline-flex items-center gap-2">
             <Plug className="text-purple-600" size={16} />
@@ -99,6 +99,20 @@ export default async function IntegrationsPage() {
             </a>
           </div>
         </div>
+      ) : (
+        <Link
+          href="/admin/integrations/lions"
+          className="block rounded-xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-amber-50 p-4 hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Lions International</div>
+              <div className="text-base font-bold text-navy-800">CRM Hub — auth, REST, webhooks, queue, coverage</div>
+              <div className="text-xs text-gray-600 mt-0.5">One pane for the full integration: SSO + REST + inbound webhook stream + sync health.</div>
+            </div>
+            <span className="text-amber-700 font-semibold text-sm">Open →</span>
+          </div>
+        </Link>
       )}
 
       {CATEGORY_ORDER.map((cat) => {

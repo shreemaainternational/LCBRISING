@@ -18,7 +18,7 @@ export interface SendEmailArgs {
 }
 
 export async function sendEmail({ to, subject, html, text, attachments }: SendEmailArgs) {
-  const from = env.RESEND_FROM_EMAIL || 'noreply@lcbrising.org';
+  const from = env.RESEND_FROM_EMAIL || 'noreply@barodarisingstar.com';
   const result = await client().emails.send({
     from,
     to: Array.isArray(to) ? to : [to],

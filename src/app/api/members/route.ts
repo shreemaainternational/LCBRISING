@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { memberSchema } from '@/lib/validation/schemas';
 import { createClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/auth';
+import { requirePermission, isGuardFailure } from '@/lib/rbac/guard';
 
 export const runtime = 'nodejs';
 
 export async function GET() {
+  const actor = await requirePermission('member.read');
+  if (isGuardFailure(actor)) return actor;
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('members')
@@ -16,12 +19,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  try {
-    await requireAdmin();
-  } catch (err) {
-    if (err instanceof Response) return err;
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-  }
+  const actor = await requirePermission('member.create');
+  if (isGuardFailure(actor)) return actor;
 
   const body = await req.json().catch(() => null);
   const parsed = memberSchema.safeParse(body);
