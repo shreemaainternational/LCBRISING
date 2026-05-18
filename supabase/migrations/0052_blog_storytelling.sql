@@ -119,3 +119,8 @@ alter table public.ai_generations
 
 create index if not exists idx_ai_generations_member
   on public.ai_generations(member_id, created_at desc);
+
+-- Audit-only table: hide from anon + authenticated PostgREST/GraphQL
+-- schema. Service role retains full access for the AI route.
+revoke select on public.ai_generations from anon;
+revoke select on public.ai_generations from authenticated;
