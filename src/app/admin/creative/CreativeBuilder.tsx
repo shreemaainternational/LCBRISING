@@ -63,8 +63,11 @@ export function CreativeBuilder() {
         setNotice(
           json.ai_error
             ? `Used hand-written template (OpenAI error: ${String(json.ai_error).slice(0, 120)}). Edit the text below as needed.`
-            : 'Used hand-written template — set OPENAI_API_KEY in Vercel env to enable AI generation. The content below is editable.',
+            : 'Used hand-written template — paste an OpenAI key at /admin/integrations/openai to enable AI generation. The content below is editable.',
         );
+      } else if (json.audit_warning) {
+        // AI worked, only the bookkeeping insert failed — surface as a soft notice.
+        setNotice(`Content generated. (Note: usage log skipped — ${String(json.audit_warning).slice(0, 120)})`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
