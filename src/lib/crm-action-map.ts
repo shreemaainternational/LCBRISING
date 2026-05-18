@@ -82,7 +82,7 @@ export const CATEGORY_META: Record<ActionCategory, { label: string; icon: Compon
 export const CRM_ACTIONS: CrmAction[] = [
   // ---------------- MEMBERS ----------------
   { key: 'members.list', label: 'All Members', description: 'Browse, search and filter every member', href: '/admin/members', category: 'members', icon: Users, modes: ['manual', 'bulk'], integrations: ['supabase_auth'], search: ['member', 'people', 'roster'] },
-  { key: 'members.new', label: 'Add Member', description: 'Manually add a new member or invite via email', href: '/admin/members?new=1', category: 'members', icon: Users, modes: ['manual'], integrations: ['supabase_auth', 'resend'] },
+  { key: 'members.new', label: 'Add Member', description: 'Manually add a new member or invite via email', href: '/admin/members?new=1', category: 'members', icon: Users, modes: ['manual', 'trigger'], integrations: ['supabase_auth', 'resend'] },
   { key: 'members.import', label: 'CSV Import', description: 'Bulk import members from a CSV export', href: '/admin/sync', category: 'members', icon: Upload, modes: ['manual', 'bulk'], integrations: ['supabase_auth'] },
   { key: 'members.export', label: 'CSV Export', description: 'Download all members as CSV', href: '/api/sync/members/export', category: 'members', icon: Download, modes: ['manual'], integrations: ['supabase_auth'] },
   { key: 'members.dedupe', label: 'AI Duplicate Detector', description: 'Find duplicate member records with rule + AI scoring', href: '/admin/sync/duplicates', category: 'members', icon: Bot, modes: ['manual', 'ai-assisted'], integrations: ['openai', 'supabase_auth'] },
@@ -100,7 +100,7 @@ export const CRM_ACTIONS: CrmAction[] = [
   { key: 'gov.approvals', label: 'Activity Approvals', description: 'Zone-chair queue for approving club activities', href: '/zone/approvals', category: 'governance', icon: CheckSquare, modes: ['trigger', 'manual'], integrations: ['supabase_auth'] },
   { key: 'gov.voting', label: 'Digital Voting', description: 'Cast votes on attached advisories', href: '/zone/advisories', category: 'governance', icon: Vote, modes: ['manual'], integrations: ['supabase_auth'] },
   { key: 'gov.zone-analytics', label: 'Zone Analytics & Forecast', description: 'Power-BI-style cross-club comparison with 3-month predictions', href: '/zone/analytics', category: 'governance', icon: Sparkles, modes: ['manual', 'ai-assisted'], integrations: ['supabase_auth'] },
-  { key: 'gov.zone-awards', label: 'Award Eligibility', description: 'Live scorecard for Club Excellence / 100% President / DG Honor', href: '/zone/awards', category: 'governance', icon: Award, modes: ['manual'], integrations: ['supabase_auth'] },
+  { key: 'gov.zone-awards', label: 'Award Eligibility', description: 'Live scorecard for Club Excellence / 100% President / DG Honor', href: '/zone/awards', category: 'governance', icon: Award, modes: ['manual', 'cron'], integrations: ['supabase_auth'] },
 
   // ---------------- FINANCE ----------------
   { key: 'fin.dues', label: 'Dues — All Tiers', description: 'Club / District / International dues + ageing', href: '/admin/dues', category: 'finance', icon: Banknote, modes: ['cron', 'manual'], integrations: ['supabase_auth'] },
@@ -110,23 +110,23 @@ export const CRM_ACTIONS: CrmAction[] = [
   { key: 'fin.commissions', label: 'Commissions', description: 'Track sponsorships and commission splits', href: '/admin/commissions', category: 'finance', icon: Briefcase, modes: ['manual'], integrations: ['supabase_auth'] },
 
   // ---------------- ACTIVITIES ----------------
-  { key: 'act.list', label: 'All Activities', description: 'Browse every filed activity / service project', href: '/admin/activities', category: 'activities', icon: Activity, modes: ['manual'], integrations: ['supabase_auth'] },
-  { key: 'act.events', label: 'Events Calendar', description: 'Year-long Lions calendar + DG visits + meetings', href: '/admin/events', category: 'activities', icon: CalendarDays, modes: ['manual'], integrations: ['supabase_auth'] },
-  { key: 'act.beneficiaries', label: 'Beneficiary CRM', description: 'Per-beneficiary records linked to activities', href: '/admin/beneficiaries', category: 'activities', icon: HeartHandshake, modes: ['manual'], integrations: ['supabase_auth'] },
+  { key: 'act.list', label: 'All Activities', description: 'Browse every filed activity / service project', href: '/admin/activities', category: 'activities', icon: Activity, modes: ['manual', 'cron', 'ai-assisted'], integrations: ['supabase_auth', 'openai'] },
+  { key: 'act.events', label: 'Events Calendar', description: 'Year-long Lions calendar + DG visits + meetings', href: '/admin/events', category: 'activities', icon: CalendarDays, modes: ['manual', 'cron'], integrations: ['supabase_auth', 'resend', 'web_push'] },
+  { key: 'act.beneficiaries', label: 'Beneficiary CRM', description: 'Per-beneficiary records linked to activities', href: '/admin/beneficiaries', category: 'activities', icon: HeartHandshake, modes: ['manual', 'ai-assisted'], integrations: ['supabase_auth', 'openai'] },
 
   // ---------------- COMMUNICATIONS ----------------
-  { key: 'comm.circulars', label: 'District Circulars', description: 'Broadcast to every club via portal/email/push/WhatsApp', href: '/district/circulars', category: 'communications', icon: Megaphone, modes: ['manual', 'webhook'], integrations: ['resend', 'web_push', 'whatsapp_business'] },
-  { key: 'comm.email', label: 'Email Campaigns', description: 'Send transactional and bulk emails via Resend', href: '/admin/communications', category: 'communications', icon: Mail, modes: ['manual', 'bulk'], integrations: ['resend'] },
-  { key: 'comm.push', label: 'Push Notifications', description: 'Web push to PWA installs (auto-VAPID)', href: '/admin/notifications', category: 'communications', icon: Bell, modes: ['manual', 'bulk'], integrations: ['web_push'] },
-  { key: 'comm.social', label: 'Social Posts', description: 'One-click to Facebook, Instagram, LinkedIn', href: '/admin/social', category: 'communications', icon: Send, modes: ['manual'], integrations: ['facebook', 'instagram', 'linkedin'] },
-  { key: 'comm.whatsapp', label: 'WhatsApp Broadcasts', description: 'Send templates via Cloud API or Twilio', href: '/admin/communications', category: 'communications', icon: Phone, modes: ['manual'], integrations: ['whatsapp_business', 'twilio'] },
+  { key: 'comm.circulars', label: 'District Circulars', description: 'Broadcast to every club via portal/email/push/WhatsApp', href: '/district/circulars', category: 'communications', icon: Megaphone, modes: ['manual', 'webhook', 'cron', 'ai-assisted'], integrations: ['resend', 'web_push', 'whatsapp_business', 'openai'] },
+  { key: 'comm.email', label: 'Email Campaigns', description: 'Send transactional and bulk emails via Resend', href: '/admin/communications', category: 'communications', icon: Mail, modes: ['manual', 'bulk', 'cron', 'ai-assisted'], integrations: ['resend', 'openai'] },
+  { key: 'comm.push', label: 'Push Notifications', description: 'Web push to PWA installs (auto-VAPID)', href: '/admin/notifications', category: 'communications', icon: Bell, modes: ['manual', 'bulk', 'trigger', 'ai-assisted'], integrations: ['web_push', 'openai'] },
+  { key: 'comm.social', label: 'Social Posts', description: 'One-click to Facebook, Instagram, LinkedIn', href: '/admin/social', category: 'communications', icon: Send, modes: ['manual', 'ai-assisted'], integrations: ['facebook', 'instagram', 'linkedin', 'openai'] },
+  { key: 'comm.whatsapp', label: 'WhatsApp Broadcasts', description: 'Send templates via Cloud API or Twilio', href: '/admin/communications', category: 'communications', icon: Phone, modes: ['manual', 'webhook', 'ai-assisted'], integrations: ['whatsapp_business', 'twilio', 'openai'] },
 
   // ---------------- MEDIA ----------------
-  { key: 'media.library', label: 'Media Library', description: 'Upload, tag and re-use activity photos', href: '/admin/media', category: 'media', icon: ImageIcon, modes: ['manual'], integrations: ['cloudinary', 'supabase_auth'] },
+  { key: 'media.library', label: 'Media Library', description: 'Upload, tag and re-use activity photos', href: '/admin/media', category: 'media', icon: ImageIcon, modes: ['manual', 'ai-assisted'], integrations: ['cloudinary', 'supabase_auth', 'openai'] },
   { key: 'media.creative', label: 'Creative (Canva)', description: 'Branded posters via Canva Connect API', href: '/admin/creative', category: 'media', icon: Sparkles, modes: ['manual', 'ai-assisted'], integrations: ['canva', 'openai'] },
 
   // ---------------- REPORTS ----------------
-  { key: 'rep.list', label: 'Reports Library', description: 'Every generated PDF / PPTX', href: '/admin/reports', category: 'reports', icon: BarChart3, modes: ['manual'], integrations: ['supabase_auth'] },
+  { key: 'rep.list', label: 'Reports Library', description: 'Every generated PDF / PPTX', href: '/admin/reports', category: 'reports', icon: BarChart3, modes: ['manual', 'cron'], integrations: ['supabase_auth'] },
   { key: 'rep.new', label: 'Generate Report', description: 'Build a PDF or PPTX with charts and AI narrative', href: '/admin/reports/new', category: 'reports', icon: FileText, modes: ['manual', 'ai-assisted', 'cron'], integrations: ['supabase_auth', 'openai'] },
   { key: 'rep.district-export', label: 'District CSV Export', description: 'KPIs and region roll-ups in one CSV', href: '/api/district/export', category: 'reports', icon: Download, modes: ['manual'], integrations: ['supabase_auth'] },
   { key: 'rep.md-export', label: 'MD Council CSV Export', description: 'Multi-District KPIs + district roll-ups', href: '/api/multi-district/export', category: 'reports', icon: Download, modes: ['manual'], integrations: ['supabase_auth'] },
@@ -140,16 +140,16 @@ export const CRM_ACTIONS: CrmAction[] = [
   { key: 'sync.dedupe', label: 'Duplicate Detector', description: 'Find duplicate member records (rule + AI)', href: '/admin/sync/duplicates', category: 'sync', icon: Bot, modes: ['manual', 'ai-assisted'], integrations: ['openai'] },
 
   // ---------------- INTEGRATIONS ----------------
-  { key: 'int.health', label: 'Integration Health', description: 'Status of every external system at a glance', href: '/admin/integrations', category: 'integrations', icon: Plug, modes: ['manual'], integrations: ['supabase_auth'] },
-  { key: 'int.oidc', label: 'Lions SSO (OIDC)', description: 'PKCE + JWKS configuration, role mapping', href: '/admin/integrations/oidc', category: 'integrations', icon: KeyRound, modes: ['manual'], integrations: ['lions_oidc'] },
+  { key: 'int.health', label: 'Integration Health', description: 'Status of every external system at a glance', href: '/admin/integrations', category: 'integrations', icon: Plug, modes: ['manual', 'cron'], integrations: ['supabase_auth'] },
+  { key: 'int.oidc', label: 'Lions SSO (OIDC)', description: 'PKCE + JWKS configuration, role mapping, auto token refresh', href: '/admin/integrations/oidc', category: 'integrations', icon: KeyRound, modes: ['manual', 'cron'], integrations: ['lions_oidc'] },
   { key: 'int.cron', label: 'Cron Secret', description: 'Auto-provisioned secret for scheduled jobs', href: '/admin/integrations/cron', category: 'integrations', icon: Server, modes: ['manual', 'cron'], integrations: ['vercel_cron'] },
-  { key: 'int.push', label: 'Web Push (VAPID)', description: 'Auto-provisioned VAPID keypair', href: '/admin/integrations/push', category: 'integrations', icon: Bell, modes: ['manual'], integrations: ['web_push'] },
+  { key: 'int.push', label: 'Web Push (VAPID)', description: 'Auto-provisioned VAPID keypair', href: '/admin/integrations/push', category: 'integrations', icon: Bell, modes: ['manual', 'webhook'], integrations: ['web_push'] },
 
   // ---------------- PLATFORM ----------------
   { key: 'plat.automation', label: 'Automation Engine', description: 'Daily rule-based actions (dues, alerts, reminders)', href: '/admin/automation', category: 'platform', icon: Workflow, modes: ['cron', 'trigger'], integrations: ['supabase_auth'] },
   { key: 'plat.awards', label: 'Awards Catalog', description: 'PMJF / MJF / Excellence / Leadership tracking', href: '/admin/governance', category: 'platform', icon: Award, modes: ['manual', 'cron'], integrations: ['supabase_auth'] },
-  { key: 'plat.learning', label: 'Learning Center', description: 'Member training & certification progress', href: '/admin/members', category: 'platform', icon: GraduationCap, modes: ['manual'], integrations: ['supabase_auth'] },
-  { key: 'plat.mobile', label: 'Mobile App (PWA)', description: 'Installable PWA at /m for members', href: '/m', category: 'platform', icon: Smartphone, modes: ['manual'], integrations: ['web_push'] },
+  { key: 'plat.learning', label: 'Learning Center', description: 'Member training & certification progress', href: '/admin/members', category: 'platform', icon: GraduationCap, modes: ['manual', 'cron'], integrations: ['supabase_auth'] },
+  { key: 'plat.mobile', label: 'Mobile App (PWA)', description: 'Installable PWA at /m for members', href: '/m', category: 'platform', icon: Smartphone, modes: ['manual', 'trigger'], integrations: ['web_push'] },
   { key: 'plat.profile', label: 'My Profile', description: 'Change password, manage your account', href: '/admin/profile', category: 'platform', icon: KeyRound, modes: ['manual'], integrations: ['supabase_auth'] },
 
   // ---------------- PORTALS ----------------
