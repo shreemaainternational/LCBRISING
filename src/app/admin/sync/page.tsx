@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/server';
@@ -118,7 +119,7 @@ export default async function SyncPage() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
-        <a href="/admin/sync/lions"
+        <Link href="/admin/sync/lions"
           className="p-4 rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-amber-50 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -130,8 +131,8 @@ export default async function SyncPage() {
             </div>
             <span className="text-amber-600 font-medium">Open →</span>
           </div>
-        </a>
-        <a href="/admin/sync/duplicates"
+        </Link>
+        <Link href="/admin/sync/duplicates"
           className="p-4 rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-white hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -143,7 +144,7 @@ export default async function SyncPage() {
             </div>
             <span className="text-purple-600 font-medium">Open →</span>
           </div>
-        </a>
+        </Link>
       </div>
 
       <Card className="mb-8">

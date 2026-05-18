@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { requireRegionChair } from '@/lib/region-portal';
 import { RegionTabs } from '../RegionTabs';
 import { isLionsApiConfigured, isOidcConfiguredFlag } from '@/app/zone/portal/client-flags';
@@ -44,9 +45,9 @@ export default async function RegionPortalPage() {
             REST Sync
           </h3>
           <p className="text-sm text-gray-600 mt-2">Pull MyLCI districts → zones → clubs → members.</p>
-          <a href="/admin/sync/lions" className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white border text-sm font-semibold text-gray-800 hover:bg-gray-50">
+          <Link href="/admin/sync/lions" className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white border text-sm font-semibold text-gray-800 hover:bg-gray-50">
             <RefreshCw size={13} /> Open Sync Console
-          </a>
+          </Link>
         </div>
       </div>
     </div>

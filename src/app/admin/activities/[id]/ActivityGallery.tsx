@@ -52,6 +52,13 @@ export function ActivityGallery({
     return () => window.removeEventListener('keydown', onKey);
   }, [lightbox, items.length]);
 
+  // Auto-clear the "captions saved" toast after 4 seconds
+  useEffect(() => {
+    if (savedAt == null) return;
+    const id = setTimeout(() => setSavedAt(null), 4000);
+    return () => clearTimeout(id);
+  }, [savedAt]);
+
   function saveCaptions() {
     start(async () => {
       const res = await fetch(`/api/activities/${activityId}`, {
@@ -100,7 +107,7 @@ export function ActivityGallery({
           ))}
         </div>
         <div className="flex items-center gap-2">
-          {savedAt && Date.now() - savedAt < 4000 && (
+          {savedAt != null && (
             <span className="text-xs text-green-700">Captions saved ✓</span>
           )}
           {editing ? (

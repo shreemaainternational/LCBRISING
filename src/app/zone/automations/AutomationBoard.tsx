@@ -1,5 +1,5 @@
 'use client';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { Loader2, Zap, CheckCircle2, Save } from 'lucide-react';
 import type { AutomationDef, ZoneAutomationChannel } from '@/lib/zone-automation-catalog';
 
@@ -23,7 +23,20 @@ export function AutomationBoard({ catalog, existing }: Props) {
   const [state, setState] = useState<Record<string, AutomationRow>>(initial);
   const [savingKind, setSavingKind] = useState<string | null>(null);
   const [, start] = useTransition();
-  const [savedAt, setSavedAt] = useState<Record<string, number>>({});
+  const [savedKinds, setSavedKinds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const activeKinds = Object.keys(savedKinds).filter((k) => savedKinds[k]);
+    if (activeKinds.length === 0) return;
+    const id = setTimeout(() => {
+      setSavedKinds((s) => {
+        const next: Record<string, boolean> = { ...s };
+        for (const k of activeKinds) delete next[k];
+        return next;
+      });
+    }, 4000);
+    return () => clearTimeout(id);
+  }, [savedKinds]);
 
   function current(def: AutomationDef): AutomationRow {
     return state[def.kind] ?? {
@@ -54,7 +67,7 @@ export function AutomationBoard({ catalog, existing }: Props) {
           cadence: cur.cadence,
         }),
       });
-      if (res.ok) setSavedAt((s) => ({ ...s, [def.kind]: Date.now() }));
+      if (res.ok) setSavedKinds((s) => ({ ...s, [def.kind]: true }));
       setSavingKind(null);
     });
   }
@@ -63,7 +76,7 @@ export function AutomationBoard({ catalog, existing }: Props) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {catalog.map((def) => {
         const cur = current(def);
-        const saved = savedAt[def.kind] && Date.now() - savedAt[def.kind] < 4000;
+        const saved = !!savedKinds[def.kind];
         return (
           <div key={def.kind} className={`bg-white rounded-xl border shadow-sm p-5 ${cur.is_active ? 'border-emerald-300' : ''}`}>
             <div className="flex items-start justify-between gap-3 mb-2">

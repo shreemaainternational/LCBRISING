@@ -9,7 +9,7 @@ export function MobileSyncBanner() {
   const [pending, start] = useTransition();
 
   useEffect(() => {
-    setNow(new Date());
+    queueMicrotask(() => setNow(new Date()));
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);

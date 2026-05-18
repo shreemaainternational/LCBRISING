@@ -6,7 +6,7 @@ export function SubscribeButtons({ year }: { year: string }) {
   const [host, setHost] = useState('');
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => { setHost(window.location.host); }, []);
+  useEffect(() => { queueMicrotask(() => setHost(window.location.host)); }, []);
 
   const httpsUrl = host ? `https://${host}/api/zone/lions-year.ics?year=${year}` : '';
   const webcalUrl = host ? `webcal://${host}/api/zone/lions-year.ics?year=${year}` : '';

@@ -35,7 +35,7 @@ export function DonateForm() {
   // while the webhook confirms the payment in the background.
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('phonepe') === 'done') {
-      setSuccess({ receiptNo: 'is being confirmed' });
+      queueMicrotask(() => setSuccess({ receiptNo: 'is being confirmed' }));
     }
   }, []);
 

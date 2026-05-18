@@ -31,7 +31,7 @@ export function AdvisoryVoteCard({ advisoryId, options, question, closesAt, anon
     setVoters(j.voters ?? null);
   }
 
-  useEffect(() => { refresh(); }, [advisoryId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { queueMicrotask(() => { refresh(); }); }, [advisoryId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const closed = closesAt ? new Date(closesAt) < new Date() : false;
 

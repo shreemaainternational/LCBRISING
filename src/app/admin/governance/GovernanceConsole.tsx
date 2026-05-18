@@ -149,7 +149,7 @@ export function GovernanceConsole({ clubs: initialClubs, zones, districts, histo
     setNotice(null);
     const fn = withAi ? startAi : start;
     fn(async () => {
-      let body: Record<string, unknown> = { scope: 'all', with_ai: withAi };
+      const body: Record<string, unknown> = { scope: 'all', with_ai: withAi };
       if (scope === 'selected') {
         if (!selected.size) { setNotice({ ok: false, msg: 'Select clubs first.' }); return; }
         // run one at a time for selected; cheap given small N

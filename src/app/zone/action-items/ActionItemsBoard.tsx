@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import {
   Plus, Save, X, Loader2, Trash2, Pin, PinOff, Send, BellRing,
   CircleDot, CheckCircle2, AlertCircle,
@@ -63,6 +63,13 @@ export function ActionItemsBoard({ initialItems, members, clubs }: Props) {
   const [filterOwner, setFilterOwner] = useState('');
   const [pending, start] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
+  const [now, setNow] = useState(0);
+
+  useEffect(() => {
+    queueMicrotask(() => setNow(Date.now()));
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const visible = useMemo(() => items.filter((it) =>
     (!filterStatus || it.status === filterStatus) &&
@@ -71,14 +78,14 @@ export function ActionItemsBoard({ initialItems, members, clubs }: Props) {
 
   const kpis = useMemo(() => {
     const open = items.filter((i) => i.status !== 'done' && i.status !== 'cancelled');
-    const overdue = open.filter((i) => i.due_date && new Date(i.due_date) < new Date());
+    const overdue = open.filter((i) => i.due_date && new Date(i.due_date).getTime() < now);
     const dueSoon = open.filter((i) => {
       if (!i.due_date) return false;
-      const d = new Date(i.due_date).getTime() - Date.now();
+      const d = new Date(i.due_date).getTime() - now;
       return d > 0 && d < 7 * 86400_000;
     });
     return { total: items.length, open: open.length, overdue: overdue.length, dueSoon: dueSoon.length };
-  }, [items]);
+  }, [items, now]);
 
   async function create(draft: Partial<ActionItemRow>) {
     start(async () => {

@@ -18,14 +18,14 @@ export function CheckinScanner() {
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    setError(null); setResult(null);
+    queueMicrotask(() => { setError(null); setResult(null); });
 
     type BarcodeDetectorCtor = new (opts: { formats: string[] }) => {
       detect(source: CanvasImageSource): Promise<{ rawValue?: string }[]>;
     };
     const BD = (globalThis as unknown as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
     if (!BD) {
-      setError("This browser doesn't support live QR scanning. Use the file picker below.");
+      queueMicrotask(() => setError("This browser doesn't support live QR scanning. Use the file picker below."));
       return;
     }
 

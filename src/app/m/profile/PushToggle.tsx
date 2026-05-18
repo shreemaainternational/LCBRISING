@@ -13,9 +13,9 @@ export function PushToggle() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-      setStatus('unsupported'); return;
+      queueMicrotask(() => setStatus('unsupported')); return;
     }
-    if (Notification.permission === 'denied') { setStatus('denied'); return; }
+    if (Notification.permission === 'denied') { queueMicrotask(() => setStatus('denied')); return; }
 
     (async () => {
       try {
@@ -124,7 +124,7 @@ export function PushToggle() {
       )}
       {status === 'enabled' && !error && (
         <p className="text-[11px] text-emerald-700 mt-2 inline-flex items-center gap-1">
-          <CheckCircle2 size={11} /> You'll receive activity, event and report notifications.
+          <CheckCircle2 size={11} /> You&apos;ll receive activity, event and report notifications.
         </p>
       )}
     </div>

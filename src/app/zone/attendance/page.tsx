@@ -4,6 +4,10 @@ import { createAdminClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
+function since60DaysAgoIso() {
+  return new Date(Date.now() - 60 * 86400_000).toISOString();
+}
+
 export default async function ZoneAttendancePage() {
   const ctx = await requireZoneChair();
   const db = createAdminClient();
@@ -14,7 +18,7 @@ export default async function ZoneAttendancePage() {
   const { data: members } = await db.from('members').select('id, name, club_id').in('club_id', clubIds.length ? clubIds : ['00000000-0000-0000-0000-000000000000']);
   const memberIds = (members ?? []).map((m) => m.id);
 
-  const since = new Date(Date.now() - 60 * 86400_000).toISOString();
+  const since = since60DaysAgoIso();
   const { data: attendance } = await db.from('attendance')
     .select('member_id, status, occurred_at')
     .gte('occurred_at', since)
