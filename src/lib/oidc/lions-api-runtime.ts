@@ -4,6 +4,7 @@
  * without redeploying.
  */
 import { createAdminClient } from '@/lib/supabase/server';
+import { decrypt } from '@/lib/crypto/secret-box';
 
 export interface LionsApiSettings {
   base_url: string | null;
@@ -25,7 +26,14 @@ export async function loadLionsApiSettings(force = false): Promise<LionsApiSetti
   try {
     const db = createAdminClient();
     const { data } = await db.from('lions_api_settings').select('*').eq('id', 'singleton').maybeSingle();
-    const value = (data && data.is_active ? data : null) as LionsApiSettings | null;
+    let value: LionsApiSettings | null = null;
+    if (data && data.is_active) {
+      value = {
+        ...data,
+        api_key: decrypt(data.api_key as string | null),
+        access_token: decrypt(data.access_token as string | null),
+      } as LionsApiSettings;
+    }
     cache = { value, expiresAt: now + TTL_MS };
     return value;
   } catch {

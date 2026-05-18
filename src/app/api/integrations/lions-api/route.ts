@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { invalidateLionsApiCache, loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
+import { encrypt, decrypt } from '@/lib/crypto/secret-box';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,8 +52,12 @@ export async function PUT(req: Request) {
   let accessToken: string | undefined = parsed.data.access_token;
   if (apiKey === '__REDACTED__' || accessToken === '__REDACTED__' || apiKey === undefined || accessToken === undefined) {
     const { data: existing } = await db.from('lions_api_settings').select('api_key, access_token').eq('id', 'singleton').maybeSingle();
-    if (apiKey === '__REDACTED__' || apiKey === undefined) apiKey = existing?.api_key ?? apiKey;
-    if (accessToken === '__REDACTED__' || accessToken === undefined) accessToken = existing?.access_token ?? accessToken;
+    if (apiKey === '__REDACTED__' || apiKey === undefined) {
+      apiKey = decrypt(existing?.api_key as string | null) ?? apiKey;
+    }
+    if (accessToken === '__REDACTED__' || accessToken === undefined) {
+      accessToken = decrypt(existing?.access_token as string | null) ?? accessToken;
+    }
   }
 
   let testOk: boolean | null = null;
@@ -72,8 +77,8 @@ export async function PUT(req: Request) {
   const payload = {
     id: 'singleton' as const,
     base_url: parsed.data.base_url || null,
-    api_key: apiKey ?? null,
-    access_token: accessToken ?? null,
+    api_key: encrypt(apiKey ?? null),
+    access_token: encrypt(accessToken ?? null),
     district_code: parsed.data.district_code ?? null,
     multi_district_code: parsed.data.multi_district_code ?? null,
     is_active: parsed.data.is_active,

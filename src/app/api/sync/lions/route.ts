@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth';
+import { requirePermission, isGuardFailure } from '@/lib/rbac/guard';
 import {
   isLionsApiConfigured, getLionsApiConfig,
   syncLionsDistricts, syncLionsClubs, syncLionsMembers, syncLionsAll,
@@ -11,7 +11,8 @@ export const maxDuration = 60;
 
 /** GET /api/sync/lions — return adapter status. */
 export async function GET() {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  const actor = await requirePermission('sync.configure');
+  if (isGuardFailure(actor)) return actor;
   return NextResponse.json({
     configured: isLionsApiConfigured(),
     config: isLionsApiConfigured()
@@ -26,7 +27,8 @@ export async function GET() {
 
 /** POST /api/sync/lions { entity: "all" | "district" | "club" | "member" } */
 export async function POST(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  const actor = await requirePermission('sync.trigger');
+  if (isGuardFailure(actor)) return actor;
   const body = await req.json().catch(() => ({})) as { entity?: string; districtCode?: string; clubId?: string };
   const entity = body.entity ?? 'all';
 
