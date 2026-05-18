@@ -1,4 +1,4 @@
-import { env, integrations } from '@/lib/env';
+import { loadOpenAiConfig } from './openai-config';
 
 export interface AiContent {
   caption?: string;
@@ -46,7 +46,8 @@ export async function generateContent(args: {
   tone?: string;
   extra?: Record<string, unknown>;
 }): Promise<GenerateResult> {
-  if (!integrations.openai) {
+  const cfg = await loadOpenAiConfig();
+  if (!cfg) {
     return {
       content: fallbackContent(args),
       usage: { prompt_tokens: 0, completion_tokens: 0, cost_usd: 0 },
@@ -54,15 +55,15 @@ export async function generateContent(args: {
     };
   }
 
-  const model = env.OPENAI_MODEL ?? 'gpt-4o-mini';
+  const model = cfg.model;
   const sys = systemPromptFor(args);
   const user = userPromptFor(args);
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await fetch(`${cfg.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
       headers: {
-        'authorization': `Bearer ${env.OPENAI_API_KEY}`,
+        'authorization': `Bearer ${cfg.apiKey}`,
         'content-type': 'application/json',
       },
       body: JSON.stringify({

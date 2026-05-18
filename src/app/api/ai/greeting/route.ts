@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { env, integrations } from '@/lib/env';
 import { getCurrentMember } from '@/lib/auth';
+import { loadOpenAiConfig } from '@/lib/ai/openai-config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -66,8 +66,9 @@ export async function POST(req: Request) {
 
   const { occasion, recipient_name, tone, language, context, sender_name, max_chars } = parsed.data;
 
-  // Template fallback when OpenAI isn't configured
-  if (!integrations.openai) {
+  // Template fallback when OpenAI isn't configured (env or DB)
+  const cfg = await loadOpenAiConfig();
+  if (!cfg) {
     return NextResponse.json({
       ok: true,
       source: 'template',
@@ -88,11 +89,11 @@ export async function POST(req: Request) {
   });
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await fetch(`${cfg.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
-      headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, 'content-type': 'application/json' },
+      headers: { authorization: `Bearer ${cfg.apiKey}`, 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: env.OPENAI_MODEL ?? 'gpt-4o-mini',
+        model: cfg.model,
         temperature: 0.8,
         max_tokens: 280,
         response_format: { type: 'json_object' },

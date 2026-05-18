@@ -5,13 +5,14 @@ import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
 import { loadCronSecret } from '@/lib/cron-auth';
 import { loadVapidConfig } from '@/lib/push-config';
+import { loadOpenAiConfig } from '@/lib/ai/openai-config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
-  await Promise.all([loadOidcSettings(true), loadLionsApiSettings(true), loadCronSecret(true), loadVapidConfig(true)]);
+  await Promise.all([loadOidcSettings(true), loadLionsApiSettings(true), loadCronSecret(true), loadVapidConfig(true), loadOpenAiConfig(true)]);
   const registry = getIntegrationRegistry();
   const safeRegistry = registry.map((r) => ({
     key: r.key,
