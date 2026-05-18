@@ -23,7 +23,7 @@ function friendlyError(message: string): string {
     return 'A club with that LCI number already exists.';
   }
   if (/null value in column "district"/i.test(message)) {
-    return 'District is required — pick one from the dropdown, or leave it blank to auto-create District 3232 FI.';
+    return 'District is required — pick one from the dropdown, or leave it blank to auto-create District 3232 F1.';
   }
   return message;
 }
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
   for (const k of Object.keys(payload)) if (payload[k] === '' || payload[k] == null) delete payload[k];
 
   // Self-bootstrap: when the form didn't supply a district_id (empty
-  // dropdown on a fresh install), find or auto-create District 3232 FI
+  // dropdown on a fresh install), find or auto-create District 3232 F1
   // so the Quick Add stays one-click. Surface the precise reason if
   // the bootstrap actually fails.
   if (!payload.district_id) {

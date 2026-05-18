@@ -62,7 +62,7 @@ export default async function MobileHome() {
             <span className="text-amber-300">Better Tomorrow</span>
           </h1>
           <p className="text-xs text-blue-100/85 mt-2">
-            Welcome back, {member?.name?.split(' ')[0] ?? 'Lion'}. District 3232 FI · Lions Year 2025-26.
+            Welcome back, {member?.name?.split(' ')[0] ?? 'Lion'}. District 3232 F1 · Lions Year 2025-26.
           </p>
           <div className="grid grid-cols-3 gap-2 mt-4 -mx-1">
             <HeroStat label="Members" value={String(totalMembers ?? 0)} />
@@ -188,7 +188,7 @@ export default async function MobileHome() {
       </section>
 
       <div className="text-center text-[10px] text-gray-400 pt-4">
-        🦁 District 3232 FI · Lions Clubs International
+        🦁 District 3232 F1 · Lions Clubs International
       </div>
     </div>
   );

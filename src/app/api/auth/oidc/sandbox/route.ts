@@ -27,9 +27,9 @@ interface SandboxIdentity {
 }
 
 const SANDBOX_PROFILES: SandboxIdentity[] = [
-  { email: 'sandbox.president@lcbarodarisingstar.in',  name: 'Lion Sandbox President',  lions_member_id: 'LCI-SBX-0001', lions_role: 'club_president',           club_external_id: 'SBX-CLUB-1', district_code: '3232 FI' },
-  { email: 'sandbox.governor@lcbarodarisingstar.in',   name: 'Lion Sandbox Governor',   lions_member_id: 'LCI-SBX-0002', lions_role: 'district_governor',        club_external_id: 'SBX-CLUB-1', district_code: '3232 FI' },
-  { email: 'sandbox.zonechair@lcbarodarisingstar.in',  name: 'Lion Sandbox Zone Chair', lions_member_id: 'LCI-SBX-0003', lions_role: 'zone_chairperson',         club_external_id: 'SBX-CLUB-1', district_code: '3232 FI' },
+  { email: 'sandbox.president@lcbarodarisingstar.in',  name: 'Lion Sandbox President',  lions_member_id: 'LCI-SBX-0001', lions_role: 'club_president',           club_external_id: 'SBX-CLUB-1', district_code: '3232 F1' },
+  { email: 'sandbox.governor@lcbarodarisingstar.in',   name: 'Lion Sandbox Governor',   lions_member_id: 'LCI-SBX-0002', lions_role: 'district_governor',        club_external_id: 'SBX-CLUB-1', district_code: '3232 F1' },
+  { email: 'sandbox.zonechair@lcbarodarisingstar.in',  name: 'Lion Sandbox Zone Chair', lions_member_id: 'LCI-SBX-0003', lions_role: 'zone_chairperson',         club_external_id: 'SBX-CLUB-1', district_code: '3232 F1' },
 ];
 
 function pickProfile(req: NextRequest): SandboxIdentity {

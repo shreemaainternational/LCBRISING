@@ -145,7 +145,7 @@ export function GreetingComposer({ members, initialRecipientId, initialOccasion 
 
     ctx.fillStyle = hexToRgba(theme.accent, 0.85);
     ctx.font = '600 22px system-ui, -apple-system, sans-serif';
-    ctx.fillText('District 3232 FI · Lions Year 2025-26', W / 2, 170);
+    ctx.fillText('District 3232 F1 · Lions Year 2025-26', W / 2, 170);
 
     // Occasion banner
     const occMeta = OCCASIONS.find((o) => o.key === occasion);
@@ -384,7 +384,7 @@ export function GreetingComposer({ members, initialRecipientId, initialOccasion 
       )}
 
       <p className="text-[10px] text-gray-400 text-center pt-2">
-        AI greetings · gpt-4o-mini · powered by the Lions District 3232 FI super-app
+        AI greetings · gpt-4o-mini · powered by the Lions District 3232 F1 super-app
       </p>
     </div>
   );

@@ -76,7 +76,7 @@ export async function renderDonorPackPdf(group: DonorGroup, fy: FiscalYear): Pro
 
     doc.fontSize(20).fillColor('#1e3a8a').text('Lions Club of Baroda Rising Star', { align: 'center' })
       .moveDown(0.2).fontSize(10).fillColor('#444')
-      .text('District 3232 FI · Vadodara, Gujarat, India', { align: 'center' })
+      .text('District 3232 F1 · Vadodara, Gujarat, India', { align: 'center' })
       .moveDown(0.4).strokeColor('#fbbf24').lineWidth(2)
       .moveTo(50, doc.y).lineTo(545, doc.y).stroke().moveDown(1);
 
@@ -251,7 +251,7 @@ function donorPackEmail(g: DonorGroup, fy: FiscalYear): string {
   return `<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1f2937">
     <div style="background:#1e3a8a;padding:20px;color:#fff;border-radius:8px 8px 0 0;text-align:center">
       <h1 style="margin:0;font-size:20px">Lions Club of Baroda Rising Star</h1>
-      <p style="margin:4px 0 0;font-size:12px;opacity:0.9">District 3232 FI</p>
+      <p style="margin:4px 0 0;font-size:12px;opacity:0.9">District 3232 F1</p>
     </div>
     <div style="border:1px solid #e5e7eb;border-top:0;padding:20px;border-radius:0 0 8px 8px">
       <p>Dear ${esc(g.name)},</p>

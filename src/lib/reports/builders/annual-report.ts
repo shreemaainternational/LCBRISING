@@ -221,7 +221,7 @@ export async function buildAnnualReport(p: ReportPeriod, f: ReportFilters): Prom
     {
       heading: 'Acknowledgements',
       body:
-        `The Club gratefully acknowledges the support of Lions International, District 3232 FI, ` +
+        `The Club gratefully acknowledges the support of Lions International, District 3232 F1, ` +
         `Multiple District 323, the District Governor and Cabinet Officers, all CSR partners, ` +
         `medical institutions, schools, district administration and citizens of Vadodara whose ` +
         `partnership made this year of service possible. To every Lion who said "yes" when service ` +

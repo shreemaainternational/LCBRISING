@@ -63,7 +63,7 @@ export async function Footer() {
             href="/about"
             className="text-sm text-brand-300 hover:text-brand-200 transition-colors"
           >
-            District 3232 FI · Region V · Zone I
+            District 3232 F1 · Region V · Zone I
           </Link>
           <div className="flex gap-2 mt-5">
             <SocialIcon href="https://facebook.com/lcbrisingstar" label="Facebook">
