@@ -14,8 +14,8 @@ export const metadata: Metadata = {
     template: '%s · Lions Club Baroda Rising Star',
   },
   description:
-    'Lions Club of Baroda Rising Star (District 3232 FI) — a service organisation in Vadodara dedicated to community service, healthcare, education, and disaster relief.',
-  keywords: ['Lions Club', 'Baroda', 'Vadodara', 'NGO', 'Service', 'District 3232 FI', 'Donate', 'Charity'],
+    'Lions Club of Baroda Rising Star (District 3232 F1) — a service organisation in Vadodara dedicated to community service, healthcare, education, and disaster relief.',
+  keywords: ['Lions Club', 'Baroda', 'Vadodara', 'NGO', 'Service', 'District 3232 F1', 'Donate', 'Charity'],
   openGraph: {
     title: 'Lions Club of Baroda Rising Star',
     description: 'We Serve. Join us in our mission to uplift communities across Vadodara.',

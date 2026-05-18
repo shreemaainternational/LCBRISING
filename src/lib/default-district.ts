@@ -1,12 +1,12 @@
 /**
- * Self-bootstrap District 3232 FI when no districts exist yet.
+ * Self-bootstrap District 3232 F1 when no districts exist yet.
  * Used by /api/zones and /api/crm/clubs POST so Quick Add stays
  * one-click on a fresh install where migration 0038 hasn't run.
  */
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 
-const DEFAULT_CODE = '3232 FI';
-const DEFAULT_NAME = 'District 3232 FI';
+const DEFAULT_CODE = '3232 F1';
+const DEFAULT_NAME = 'District 3232 F1';
 
 function currentLionsYear(): string {
   const now = new Date();

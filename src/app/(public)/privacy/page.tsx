@@ -30,7 +30,7 @@ export default function PrivacyPage() {
         <h2 className="text-2xl font-semibold text-navy-800 mt-10 mb-3">2. How we use it</h2>
         <ul className="list-disc pl-6 space-y-2 text-gray-700">
           <li>To deliver club services, dues reminders, event invites, and donation receipts.</li>
-          <li>To report aggregate activity to District 3232 FI and Lions Clubs International.</li>
+          <li>To report aggregate activity to District 3232 F1 and Lions Clubs International.</li>
           <li>To improve our website and member experience.</li>
         </ul>
 
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
           We do not sell or rent personal data. We share data only with:
         </p>
         <ul className="list-disc pl-6 space-y-2 text-gray-700">
-          <li>Lions Clubs International / District 3232 FI — as required for federation reporting.</li>
+          <li>Lions Clubs International / District 3232 F1 — as required for federation reporting.</li>
           <li>Payment processors (Razorpay, PhonePe) — strictly to process donations and dues.</li>
           <li>Communication providers (Resend, Twilio) — to send transactional emails and WhatsApp messages.</li>
         </ul>

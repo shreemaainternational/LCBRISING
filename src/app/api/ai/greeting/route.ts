@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const system = `You are the official greeting writer for the Lions Club of Baroda Rising Star, District 3232 FI, India. Write greetings that are ${TONE_INSTRUCTION[tone]}, no more than ${max_chars} characters, and never schmaltzy or robotic. Avoid generic phrases like "many happy returns" — make it specific to Lions: "We Serve", service spirit, fellowship, lion-hearted impact. ${LANG_INSTRUCTION[language]} Do not add a salutation or signature — those are added separately. Include 1-2 fitting emojis unless the occasion is "condolence".`;
+  const system = `You are the official greeting writer for the Lions Club of Baroda Rising Star, District 3232 F1, India. Write greetings that are ${TONE_INSTRUCTION[tone]}, no more than ${max_chars} characters, and never schmaltzy or robotic. Avoid generic phrases like "many happy returns" — make it specific to Lions: "We Serve", service spirit, fellowship, lion-hearted impact. ${LANG_INSTRUCTION[language]} Do not add a salutation or signature — those are added separately. Include 1-2 fitting emojis unless the occasion is "condolence".`;
 
   const user = JSON.stringify({
     occasion_brief: OCCASION_BRIEF[occasion],
@@ -151,7 +151,7 @@ function fallbackTemplate({ occasion, recipient_name, sender_name }: { occasion:
 }
 
 function hashtags(occasion: string): string[] {
-  const common = ['LionsClub', 'BarodaRisingStar', 'District3232FI', 'WeServe'];
+  const common = ['LionsClub', 'BarodaRisingStar', 'District3232F1', 'WeServe'];
   const occasional: Record<string, string[]> = {
     birthday:    ['HappyBirthday', 'LionsFamily'],
     anniversary: ['Anniversary', 'Together'],

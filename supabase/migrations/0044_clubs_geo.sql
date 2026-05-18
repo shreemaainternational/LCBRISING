@@ -11,7 +11,7 @@ alter table public.clubs
   add column if not exists address_full text,
   add column if not exists pin_color text;
 
--- Seed District 3232 FI clubs to sensible coords if any clubs already
+-- Seed District 3232 F1 clubs to sensible coords if any clubs already
 -- exist without lat/lng — we put them in Vadodara so the map renders
 -- something on a fresh install. Real coordinates can be entered via
 -- the club edit screen or batch-imported.

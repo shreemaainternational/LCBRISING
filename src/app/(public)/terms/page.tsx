@@ -26,7 +26,7 @@ export default function TermsPage() {
 
         <h2 className="text-2xl font-semibold text-navy-800 mt-10 mb-3">2. About</h2>
         <p className="text-gray-700">
-          The Site is operated by the Lions Club of Baroda Rising Star, chartered under District 3232 FI of Lions Clubs International. Vadodara, Gujarat, India.
+          The Site is operated by the Lions Club of Baroda Rising Star, chartered under District 3232 F1 of Lions Clubs International. Vadodara, Gujarat, India.
         </p>
 
         <h2 className="text-2xl font-semibold text-navy-800 mt-10 mb-3">3. Donations</h2>

@@ -146,7 +146,7 @@ declare
 begin
   select id into v_club_id from public.clubs
    where name = 'Lions Club of Baroda Rising Star' limit 1;
-  select id into v_district_id from public.districts where code = '3232 FI' limit 1;
+  select id into v_district_id from public.districts where code = '3232 F1' limit 1;
 
   -- -------------------------------------------------------------------
   -- 2. 92 members (active), deterministic emails for idempotency.

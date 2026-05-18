@@ -2,7 +2,7 @@
 -- Runtime helper: ensure_default_district()
 --
 -- Self-bootstrap for the Quick Add flows on /admin/zones and
--- /admin/clubs. Returns the id of District 3232 FI, creating it on
+-- /admin/clubs. Returns the id of District 3232 F1, creating it on
 -- first call. Runs as SECURITY DEFINER so an authenticated user with
 -- no admin members row can still trigger the bootstrap without us
 -- needing SUPABASE_SERVICE_ROLE_KEY.
@@ -14,8 +14,8 @@
 
 insert into public.districts (code, name, lions_year)
 values (
-  '3232 FI',
-  'District 3232 FI',
+  '3232 F1',
+  'District 3232 F1',
   case
     when extract(month from now()) >= 7
       then extract(year from now())::int || '-' || lpad(((extract(year from now())::int + 1) % 100)::text, 2, '0')
@@ -50,7 +50,7 @@ begin
   end;
 
   insert into public.districts (code, name, lions_year)
-  values ('3232 FI', 'District 3232 FI', ly)
+  values ('3232 F1', 'District 3232 F1', ly)
   on conflict (code) do update set name = excluded.name
   returning id into did;
 

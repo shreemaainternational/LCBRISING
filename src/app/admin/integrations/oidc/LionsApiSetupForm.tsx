@@ -108,7 +108,7 @@ export function LionsApiSetupForm({ initial }: Props) {
         </Field>
         <Field label="Default district code">
           <input value={districtCode} onChange={(e) => setDistrictCode(e.target.value)}
-            className={cls} placeholder="3232 FI" />
+            className={cls} placeholder="3232 F1" />
         </Field>
         <Field label="Default multi-district code">
           <input value={mdCode} onChange={(e) => setMdCode(e.target.value)}

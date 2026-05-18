@@ -122,7 +122,7 @@ export async function generateContent(args: {
 function systemPromptFor(args: { type: string; language?: string; platform?: string; tone?: string }) {
   const lang = ({ en: 'English', gu: 'Gujarati', hi: 'Hindi' } as Record<string, string>)[args.language ?? 'en'];
   return [
-    `You are a senior content writer for the Lions Club of Baroda Rising Star — a service NGO in Vadodara, India under Lions Clubs International District 3232 FI. Motto: "We Serve."`,
+    `You are a senior content writer for the Lions Club of Baroda Rising Star — a service NGO in Vadodara, India under Lions Clubs International District 3232 F1. Motto: "We Serve."`,
     `Write in ${lang}. Tone: ${args.tone ?? 'inspirational'}. Always factual; never invent statistics.`,
     `Output VALID JSON only — no preface, no markdown fences. Schema depends on the requested type below.`,
   ].join(' ');
@@ -181,7 +181,7 @@ function fallbackContent(args: { type: string; title: string; description?: stri
   const t = args.title || 'Lions service activity';
   const d = args.description ?? '';
   const where = args.location ? ` in ${args.location}` : '';
-  const TAGS = ['LionsClubs', 'BarodaRisingStar', 'District3232FI', 'WeServe', 'CommunityService'];
+  const TAGS = ['LionsClubs', 'BarodaRisingStar', 'District3232F1', 'WeServe', 'CommunityService'];
 
   switch (args.type) {
     case 'social_post':
@@ -199,8 +199,8 @@ function fallbackContent(args: { type: string; title: string; description?: stri
     case 'press_release':
       return {
         headline: t,
-        subheading: 'Lions Club of Baroda Rising Star · District 3232 FI',
-        body: `FOR IMMEDIATE RELEASE\n\nVadodara, Gujarat — The Lions Club of Baroda Rising Star announces ${t}${where}. ${d}\n\nThis initiative furthers the club's commitment to service in District 3232 FI of Lions Clubs International.\n\nAbout: The Lions Club of Baroda Rising Star is a chartered member of Lions Clubs International — the largest service-club organisation in the world.`,
+        subheading: 'Lions Club of Baroda Rising Star · District 3232 F1',
+        body: `FOR IMMEDIATE RELEASE\n\nVadodara, Gujarat — The Lions Club of Baroda Rising Star announces ${t}${where}. ${d}\n\nThis initiative furthers the club's commitment to service in District 3232 F1 of Lions Clubs International.\n\nAbout: The Lions Club of Baroda Rising Star is a chartered member of Lions Clubs International — the largest service-club organisation in the world.`,
         quote: '“Service to the community is service to humanity.”',
         cta: 'For media enquiries, write to barodarisingstar@gmail.com.',
       };
@@ -228,7 +228,7 @@ function fallbackContent(args: { type: string; title: string; description?: stri
           { text: t, duration_seconds: 3 },
           { text: 'Lions Club of Baroda Rising Star', duration_seconds: 3 },
           { text: d.slice(0, 60) || 'Serving our community', duration_seconds: 3 },
-          { text: 'District 3232 FI', duration_seconds: 2 },
+          { text: 'District 3232 F1', duration_seconds: 2 },
           { text: '#WeServe', duration_seconds: 2 },
         ],
         caption: `🦁 ${t} — Lions Club of Baroda Rising Star. #WeServe`,
@@ -236,13 +236,13 @@ function fallbackContent(args: { type: string; title: string; description?: stri
     case 'blog_article':
       return {
         headline: t,
-        subheading: 'A service story from District 3232 FI',
+        subheading: 'A service story from District 3232 F1',
         body: `## ${t}\n\n${d || `${t}${where} — led by the Lions Club of Baroda Rising Star.`}\n\n## Why this matters\n\nEvery service activity is a small step toward the Lions International vision: to be a global leader in community and humanitarian service.\n\n## Get involved\n\nVisit barodarisingstar.com to volunteer, donate, or join a meeting.`,
         cta: 'Join us · We Serve',
       };
     default:
       return {
-        body: `${t}${where} — Lions Club of Baroda Rising Star · District 3232 FI · We Serve.`,
+        body: `${t}${where} — Lions Club of Baroda Rising Star · District 3232 F1 · We Serve.`,
       };
   }
 }

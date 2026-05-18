@@ -33,10 +33,10 @@ export default async function MobileDirectory({ searchParams }: Props) {
             <BookUser size={11} /> Directory
           </div>
           <h1 className="text-xl font-extrabold mt-1">
-            District {district?.code ?? '3232 FI'}
+            District {district?.code ?? '3232 F1'}
           </h1>
           <p className="text-[11px] text-blue-100/85 mt-0.5">
-            {district?.name ?? 'District 3232 FI'}
+            {district?.name ?? 'District 3232 F1'}
           </p>
         </div>
       </header>
