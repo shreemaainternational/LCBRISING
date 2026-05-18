@@ -11,8 +11,12 @@ export const maxDuration = 60;
  * GET /api/cron/sync-worker?limit=25
  *
  * Drains the sync_queue. Each invocation claims up to `limit` ready
- * jobs and runs them sequentially. Vercel cron hits this every 5
- * minutes; humans can hit it via /admin/sync.
+ * jobs and runs them sequentially. Humans can hit it via /admin/sync.
+ *
+ * No Vercel cron entry — Vercel Hobby allows daily crons only. Wire
+ * an external scheduler (cron-job.org, GitHub Actions, an upstream
+ * queue trigger, etc.) to GET this URL with the CRON_SECRET, or
+ * re-add to vercel.json after upgrading to Vercel Pro.
  */
 export async function GET(req: Request) {
   if (!(await verifyCronAuth(req))) {
