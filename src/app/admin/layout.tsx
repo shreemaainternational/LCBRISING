@@ -7,7 +7,7 @@ import {
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell, Plug, Building2, ShieldCheck,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
-  KeyRound, Command, Stethoscope, BookOpen,
+  KeyRound, Command, Stethoscope, BookOpen, CalendarDays,
 } from 'lucide-react';
 
 const navItems = [
@@ -25,6 +25,7 @@ const navItems = [
   { href: '/admin/payments',    label: 'Payments / QR', icon: QrCode },
   { href: '/admin/activities',  label: 'Activities',    icon: ActivityIcon },
   { href: '/admin/events',      label: 'Events',        icon: Calendar },
+  { href: '/admin/meeting-agenda', label: 'Agenda Studio', icon: CalendarDays },
   { href: '/admin/blog',        label: 'Newsroom',      icon: BookOpen },
   { href: '/admin/media',       label: 'Media library', icon: ImageIcon },
   { href: '/admin/creative',    label: 'Creative',      icon: Sparkles },
