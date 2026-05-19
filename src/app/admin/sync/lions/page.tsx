@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Globe, CheckCircle2, XCircle } from 'lucide-react';
-import { isLionsApiConfigured, getLionsApiConfig } from '@/lib/oidc/lions';
+import { ArrowLeft, Globe, CheckCircle2, AlertCircle, Settings } from 'lucide-react';
+import { isLionsApiConfigured, getLionsApiConfig, isLionsApiSandboxActive } from '@/lib/oidc/lions';
 import { isOidcConfigured } from '@/lib/oidc';
 import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
@@ -13,6 +13,7 @@ export default async function LionsSyncPage() {
   await Promise.all([loadOidcSettings(true), loadLionsApiSettings(true)]);
   const apiConfigured = isLionsApiConfigured();
   const apiConfig = apiConfigured ? getLionsApiConfig() : null;
+  const sandbox = isLionsApiSandboxActive();
   const oidcConfigured = isOidcConfigured();
 
   return (
@@ -34,60 +35,81 @@ export default async function LionsSyncPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center justify-between gap-2">
               <span className="text-sm">OIDC Single Sign-On</span>
-              {oidcConfigured
-                ? <CheckCircle2 size={14} className="text-green-600" />
-                : <XCircle size={14} className="text-gray-400" />}
+              <StatusBadge ok={oidcConfigured} okLabel="Live" offLabel="Not configured" />
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="Status">
-              {oidcConfigured
-                ? <span className="text-green-700 font-medium">Configured</span>
-                : <span className="text-gray-500">Not configured</span>}
-            </Row>
             <p className="text-xs text-gray-500">
               Required env: <code>LIONS_OIDC_ISSUER</code>, <code>LIONS_OIDC_CLIENT_ID</code>,
-              <code>LIONS_OIDC_REDIRECT_URI</code>. PKCE-based authorization code flow with
-              discovery, JWKS verification and Lions role claim mapping (MJF / PMJF / club
-              officer / district governor / multiple district admin).
+              {' '}<code>LIONS_OIDC_REDIRECT_URI</code>. PKCE authorization-code flow with
+              discovery, JWKS verification and Lions role-claim mapping (MJF / PMJF / club
+              officer / district governor / multiple-district admin).
             </p>
-            <a
-              href="/api/auth/oidc/login?return_to=/admin"
-              className={`inline-block px-4 py-2 rounded-md text-sm font-medium ${oidcConfigured ? 'bg-navy-900 text-white hover:bg-navy-800' : 'bg-gray-100 text-gray-400 pointer-events-none'}`}
-            >
-              Sign in with Lions International
-            </a>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {oidcConfigured ? (
+                <a
+                  href="/api/auth/oidc/login?return_to=/admin"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-navy-900 text-white hover:bg-navy-800"
+                >
+                  Sign in with Lions International
+                </a>
+              ) : (
+                <Link
+                  href="/admin/integrations/oidc"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-amber-500 text-white hover:bg-amber-600"
+                >
+                  <Settings size={14} /> Configure OIDC
+                </Link>
+              )}
+              <Link
+                href="/admin/integrations/oidc"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-gray-700 border border-gray-300 bg-white hover:bg-gray-50"
+              >
+                <Settings size={14} /> Settings
+              </Link>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center justify-between gap-2">
               <span className="text-sm">REST Sync Adapter</span>
-              {apiConfigured
-                ? <CheckCircle2 size={14} className="text-green-600" />
-                : <XCircle size={14} className="text-gray-400" />}
+              <StatusBadge
+                ok={apiConfigured}
+                okLabel={sandbox ? 'Sandbox' : 'Live'}
+                offLabel="Dry-run"
+              />
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="Status">
-              {apiConfigured
-                ? <span className="text-green-700 font-medium">Configured</span>
-                : <span className="text-gray-500">Dry-run mode</span>}
-            </Row>
-            {apiConfig && <>
-              <Row label="Base URL">{apiConfig.baseUrl}</Row>
-              {apiConfig.districtCode && <Row label="District">{apiConfig.districtCode}</Row>}
-              {apiConfig.multipleDistrictCode && <Row label="Multi-District">{apiConfig.multipleDistrictCode}</Row>}
-            </>}
+            {apiConfig && (
+              <div className="space-y-1.5 pb-1 border-b border-gray-100">
+                <Row label="Base URL"><code className="text-xs">{apiConfig.baseUrl}</code></Row>
+                {apiConfig.districtCode && <Row label="District">{apiConfig.districtCode}</Row>}
+                {apiConfig.multipleDistrictCode && <Row label="Multi-District">{apiConfig.multipleDistrictCode}</Row>}
+              </div>
+            )}
             <p className="text-xs text-gray-500">
               Required env: <code>LIONS_API_BASE_URL</code>. Optional:
-              <code>LIONS_API_KEY</code> / <code>LIONS_API_ACCESS_TOKEN</code>,
-              <code>LIONS_API_DISTRICT_CODE</code>, <code>LIONS_API_MULTI_DISTRICT_CODE</code>.
+              {' '}<code>LIONS_API_KEY</code> / <code>LIONS_API_ACCESS_TOKEN</code>,
+              {' '}<code>LIONS_API_DISTRICT_CODE</code>, <code>LIONS_API_MULTI_DISTRICT_CODE</code>.
               The adapter is shape-compatible with MyLCI-style payloads.
             </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Link
+                href="/admin/integrations/oidc"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium ${
+                  apiConfigured
+                    ? 'text-gray-700 border border-gray-300 bg-white hover:bg-gray-50'
+                    : 'bg-amber-500 text-white hover:bg-amber-600'
+                }`}
+              >
+                <Settings size={14} /> {apiConfigured ? 'Settings' : 'Configure REST'}
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -95,7 +117,7 @@ export default async function LionsSyncPage() {
       <Card>
         <CardHeader><CardTitle>Run Sync</CardTitle></CardHeader>
         <CardContent>
-          <LionsSyncPanel apiConfigured={apiConfigured} />
+          <LionsSyncPanel apiConfigured={apiConfigured} sandbox={sandbox} />
         </CardContent>
       </Card>
 
@@ -127,6 +149,21 @@ export default async function LionsSyncPage() {
         </div>
       </details>
     </div>
+  );
+}
+
+function StatusBadge({ ok, okLabel, offLabel }: { ok: boolean; okLabel: string; offLabel: string }) {
+  if (ok) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-200">
+        <CheckCircle2 size={11} /> {okLabel}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200">
+      <AlertCircle size={11} /> {offLabel}
+    </span>
   );
 }
 

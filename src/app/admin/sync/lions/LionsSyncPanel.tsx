@@ -1,6 +1,7 @@
 'use client';
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
-import { Loader2, Play, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Play, CheckCircle2, AlertCircle, Settings } from 'lucide-react';
 
 interface SyncReport {
   entity: string;
@@ -13,7 +14,7 @@ interface SyncReport {
   dryRun: boolean;
 }
 
-export function LionsSyncPanel({ apiConfigured }: { apiConfigured: boolean }) {
+export function LionsSyncPanel({ apiConfigured, sandbox = false }: { apiConfigured: boolean; sandbox?: boolean }) {
   const [pending, start] = useTransition();
   const [reports, setReports] = useState<SyncReport[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -21,14 +22,18 @@ export function LionsSyncPanel({ apiConfigured }: { apiConfigured: boolean }) {
   function run(entity: 'all' | 'district' | 'club' | 'member') {
     setError(null); setReports([]);
     start(async () => {
-      const res = await fetch('/api/sync/lions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entity }),
-      });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) { setError(j.error ?? 'Sync failed'); return; }
-      setReports(j.reports ?? []);
+      try {
+        const res = await fetch('/api/sync/lions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entity }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) { setError(j.error ?? `Sync failed (HTTP ${res.status})`); return; }
+        setReports(j.reports ?? []);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Network error');
+      }
     });
   }
 
@@ -43,12 +48,29 @@ export function LionsSyncPanel({ apiConfigured }: { apiConfigured: boolean }) {
         <Btn onClick={() => run('club')} disabled={pending}>Clubs only</Btn>
         <Btn onClick={() => run('member')} disabled={pending}>Members only</Btn>
       </div>
-      {!apiConfigured && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-          <strong>Dry-run mode:</strong> <code>LIONS_API_BASE_URL</code> is not set, so the
-          adapter returns zeroed counts. Configure the env vars to enable live sync.
-        </p>
+
+      {!apiConfigured && !sandbox && (
+        <div className="flex items-start justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+          <div className="text-xs text-amber-800">
+            <strong>Dry-run mode:</strong> <code>LIONS_API_BASE_URL</code> is not set, so the
+            adapter returns zeroed counts. Configure to enable live sync.
+          </div>
+          <Link
+            href="/admin/integrations/oidc"
+            className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-700"
+          >
+            <Settings size={11} /> Configure
+          </Link>
+        </div>
       )}
+
+      {sandbox && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+          <strong>Sandbox mode active.</strong> Sync runs against the local sandbox dataset
+          (seeded in migrations 0032/0033), not the live Lions Member Portal.
+        </div>
+      )}
+
       {error && (
         <div className="inline-flex items-center gap-1.5 text-sm text-red-700">
           <AlertCircle size={14} /> {error}
