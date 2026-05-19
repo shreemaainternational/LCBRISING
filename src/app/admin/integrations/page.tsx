@@ -6,6 +6,7 @@ import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
 import { loadCronSecret } from '@/lib/cron-auth';
 import { loadVapidConfig } from '@/lib/push-config';
 import { QuickEnableSandbox } from './QuickEnableSandbox';
+import { TestSupabaseConnection } from './TestSupabaseConnection';
 import {
   Plug, CheckCircle2, XCircle, Lock, Database, CreditCard, MessageSquare,
   Brain, Share2, Image as ImageIcon, Server, ExternalLink,
@@ -78,6 +79,8 @@ export default async function IntegrationsPage() {
           />
         </div>
       </div>
+
+      <TestSupabaseConnection />
 
       {lionsAllOff && (
         <div className="rounded-xl border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-amber-50 p-5">

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { cookies } from 'next/headers';
-import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient, getServiceRoleHealth, markServiceRoleBad } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { resolveOrBootstrapDefaultDistrict, explainBootstrapFailure } from '@/lib/default-district';
 
@@ -105,16 +105,22 @@ export async function POST(req: Request) {
   const firstMsg = first.error?.message ?? '';
   const isAuthFail = /invalid api key|jwt/i.test(firstMsg) || /row.level security|new row violates|permission denied/i.test(firstMsg);
 
-  // 2) Fall back to the admin client only when RLS/auth blocked us
-  //    and a service role is configured.
-  if (isAuthFail && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  // 2) Fall back to the admin client only when RLS/auth blocked us,
+  //    a service role is configured, AND the breaker hasn't tripped.
+  if (isAuthFail && getServiceRoleHealth().usable) {
     try {
       const admin = createAdminClient();
       const second = await admin.from('zones').insert(payload).select().single();
       if (!second.error && second.data) return NextResponse.json({ zone: second.data }, { status: 201 });
-      return NextResponse.json({ error: friendlyError(second.error?.message ?? 'unknown_error') }, { status: 500 });
+      const secondMsg = second.error?.message ?? 'unknown_error';
+      if (/invalid api key|invalid jwt|jwt expired/i.test(secondMsg)) {
+        markServiceRoleBad(secondMsg);
+      }
+      return NextResponse.json({ error: friendlyError(secondMsg) }, { status: 500 });
     } catch (e) {
-      return NextResponse.json({ error: friendlyError(String(e)) }, { status: 500 });
+      const msg = String(e);
+      if (/invalid api key|invalid jwt|jwt expired/i.test(msg)) markServiceRoleBad(msg);
+      return NextResponse.json({ error: friendlyError(msg) }, { status: 500 });
     }
   }
 

@@ -8,7 +8,7 @@
  *
  * Cached for 30s per request lane to keep the cost negligible.
  */
-import { createClient, createAdminClient } from './server';
+import { createClient, createAdminClient, markServiceRoleBad, markServiceRoleGood } from './server';
 
 export type ClientHealth = {
   ok: boolean;
@@ -56,6 +56,12 @@ export async function checkSupabaseHealth(force = false): Promise<SupabaseHealth
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? null;
   const anon = await probe('anon');
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY ? await probe('admin') : null;
+  // Keep the runtime circuit breaker in sync with the probe result so
+  // tryAdminClient() in other code paths sees the latest verdict.
+  if (serviceRole) {
+    if (serviceRole.ok) markServiceRoleGood();
+    else if (serviceRole.code === 'invalid_key') markServiceRoleBad(serviceRole.error ?? 'invalid_key');
+  }
 
   // "Consistent" means: every configured client can read. If service role
   // is missing it's allowed to be null without breaking consistency.
