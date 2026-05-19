@@ -18,8 +18,11 @@ const schema = z.object({
 });
 
 function friendlyError(message: string): string {
-  if (/invalid api key/i.test(message)) {
-    return 'Database auth failed. Set SUPABASE_SERVICE_ROLE_KEY for your project — or apply migration 0037_federation_rls.sql so admin members can write via their own session.';
+  if (/invalid api key|invalid jwt|jwt expired/i.test(message) || /invalid schema|schema "public"/i.test(message)) {
+    return 'Database connection is broken — NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must all belong to the same active Supabase project. Verify at Settings → API in the Supabase dashboard, or visit /admin/integrations.';
+  }
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT/i.test(message)) {
+    return 'Cannot reach the Supabase project — the URL does not resolve or the project is paused. Restore the project in the Supabase dashboard.';
   }
   if (/row.level security|new row violates|permission denied/i.test(message)) {
     return 'Row-level security blocked the insert. Apply migration 0037_federation_rls.sql, or sign in as a member whose role is "admin", or set SUPABASE_SERVICE_ROLE_KEY.';

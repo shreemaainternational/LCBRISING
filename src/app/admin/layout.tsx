@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentMember } from '@/lib/auth';
 import { LogoutButton } from '@/components/admin/LogoutButton';
+import { SupabaseHealthBanner } from '@/components/admin/SupabaseHealthBanner';
 import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
   Activity as ActivityIcon, Calendar, Mail, Settings,
@@ -86,6 +87,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           }}
         />
         <div className="relative p-6 md:p-10">
+          <SupabaseHealthBanner />
           {children}
         </div>
       </main>

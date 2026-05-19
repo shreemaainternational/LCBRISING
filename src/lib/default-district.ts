@@ -101,9 +101,26 @@ export async function resolveDefaultDistrictCode(districtId: string | null | und
 /** Human-friendly explanation of why bootstrap failed. */
 export function explainBootstrapFailure(result: BootstrapResult): string {
   const joined = result.errors.join(' | ');
-  // Most common modern failure: migration 0049 not yet applied + caller
-  // is not an admin + no service role. The RPC will return "function
-  // ... does not exist" or similar.
+
+  // "Invalid schema: public" + "Invalid API key" together is the classic
+  // signature of a Supabase URL ↔ key mismatch: the project URL points
+  // to project A, but one or more of the anon/service-role keys belong
+  // to a different project (or the project is paused/deleted). Catch
+  // this first because the symptom looks like several different errors.
+  const schemaProblem = /invalid schema|schema "public"|relation .* schema/i.test(joined);
+  const keyProblem = /invalid api key|invalid jwt|jwsverification|jwt expired/i.test(joined);
+  if (schemaProblem || keyProblem) {
+    return [
+      'Supabase project is unreachable or the keys are mismatched.',
+      'Check that NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,',
+      'and SUPABASE_SERVICE_ROLE_KEY all belong to the same active project',
+      '— Settings → API in the Supabase dashboard. If the project was paused,',
+      'restore it. Run /admin/integrations to see live status per key.',
+      'Detail: ' + joined,
+    ].join(' ');
+  }
+
+  // Migration 0049 not yet applied — RPC missing.
   if (/does not exist|undefined function|404|relation.*does not exist|search_path/i.test(joined)) {
     return 'Default district auto-create requires migration 0049_ensure_default_district.sql — apply it in your Supabase project (SQL editor → run the file). Detail: ' + joined;
   }
@@ -112,8 +129,9 @@ export function explainBootstrapFailure(result: BootstrapResult): string {
       ? 'Default district auto-create blocked by RLS even with the service role key. Verify migration 0037_federation_rls.sql ran. Detail: ' + joined
       : 'Default district auto-create blocked by RLS. Apply migration 0049_ensure_default_district.sql for a one-shot fix, or set SUPABASE_SERVICE_ROLE_KEY. Detail: ' + joined;
   }
-  if (/invalid api key|jwt/i.test(joined)) {
-    return 'Default district auto-create failed because the Supabase keys are misconfigured. NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must all belong to the same project. Detail: ' + joined;
+  // Network / DNS — project URL doesn't resolve.
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|getaddrinfo/i.test(joined)) {
+    return 'Cannot reach the Supabase project — NEXT_PUBLIC_SUPABASE_URL does not resolve, the project is paused, or the network is blocked. Detail: ' + joined;
   }
   if (joined.includes('SUPABASE_SERVICE_ROLE_KEY is not configured')) {
     return 'Default district auto-create needs either migration 0049_ensure_default_district.sql applied, or a real Supabase Auth session signed in as an admin member, or SUPABASE_SERVICE_ROLE_KEY in your environment. Detail: ' + joined;
