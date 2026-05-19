@@ -32,8 +32,14 @@ export async function SupabaseHealthBanner() {
           )}
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
-              href="/admin/integrations"
+              href="/admin/integrations/supabase/setup"
               className="inline-flex items-center gap-1 rounded-md bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-rose-700"
+            >
+              Run setup wizard →
+            </Link>
+            <Link
+              href="/admin/integrations"
+              className="inline-flex items-center gap-1 rounded-md border border-rose-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-800 hover:bg-rose-100"
             >
               Integration health
             </Link>

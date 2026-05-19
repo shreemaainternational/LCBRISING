@@ -1,6 +1,7 @@
 'use client';
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
-import { Loader2, Database, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Loader2, Database, CheckCircle2, AlertTriangle, RefreshCw, Wrench } from 'lucide-react';
 
 type ClientResult = { ok: boolean; error?: string; code?: string };
 type Result = {
@@ -51,15 +52,23 @@ export function TestSupabaseConnection() {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={run}
-          disabled={pending}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-navy-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-800 disabled:opacity-60"
-        >
-          {pending ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-          {pending ? 'Testing…' : 'Test connection'}
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Link
+            href="/admin/integrations/supabase/setup"
+            className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            <Wrench size={11} /> Setup wizard
+          </Link>
+          <button
+            type="button"
+            onClick={run}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 rounded-md bg-navy-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-800 disabled:opacity-60"
+          >
+            {pending ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            {pending ? 'Testing…' : 'Test connection'}
+          </button>
+        </div>
       </div>
 
       {error && (
