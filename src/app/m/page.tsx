@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentMember } from '@/lib/auth';
 import { formatINRShort } from '@/lib/utils';
+import { lionsYearFor } from '@/lib/lions-calendar-meta';
 import {
   Activity, Users, Banknote, HeartHandshake,
   Calendar, QrCode, Plus, ChevronRight,
@@ -37,10 +38,14 @@ export default async function MobileHome() {
   return (
     <div className="space-y-5">
       <div className="bg-gradient-to-br from-navy-900 to-blue-700 rounded-2xl p-5 text-white shadow-lg">
-        <div className="text-xs opacity-80 uppercase tracking-wider">{greeting()}</div>
-        <div className="text-xl font-bold mt-1">{member?.name?.split(' ')[0] ?? 'Lion'} 👋</div>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/20 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-amber-200">
+          <span>✨</span>{greeting()}
+        </div>
+        <h1 className="text-2xl font-bold mt-3 leading-tight">
+          Service <span className="text-amber-400">First</span>
+        </h1>
         <div className="text-sm opacity-80 mt-2">
-          {recentActivities?.length ?? 0} recent activities · {monthStart.toLocaleString('en-IN', { month: 'long' })} in flight
+          Welcome back, {member?.name?.split(' ')[0] ?? 'Lion'}. District 3232 FI · Lions Year {lionsYearFor(new Date())}
         </div>
       </div>
 
