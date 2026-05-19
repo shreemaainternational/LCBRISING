@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import {
-  CRM_ACTIONS, CATEGORY_META, actionsByCategory, type ActionCategory,
+  CRM_ACTIONS, CATEGORY_META, INTERNAL_INTEGRATIONS, actionsByCategory, type ActionCategory,
   type CrmAction, type AutomationMode,
 } from '@/lib/crm-action-map';
 import { getIntegrationRegistry } from '@/lib/integrations-registry';
@@ -102,6 +102,7 @@ export default async function OperationsPage({ searchParams }: Props) {
 
 function isAvailable(a: CrmAction, configured: Set<string>): boolean {
   if (!a.requires) return true;
+  if (INTERNAL_INTEGRATIONS.has(a.requires)) return true;
   return configured.has(a.requires);
 }
 
@@ -129,7 +130,9 @@ function ResultsGrid({ actions, configured, compact }: { actions: CrmAction[]; c
 function ActionTile({ a, configured }: { a: CrmAction; configured: Set<string> }) {
   const Icon = a.icon;
   const requirementsMet = !a.requires || configured.has(a.requires);
-  const missing = a.integrations.filter((k) => !configured.has(k));
+  const missing = a.integrations.filter(
+    (k) => !INTERNAL_INTEGRATIONS.has(k) && !configured.has(k),
+  );
 
   return (
     <Link href={a.href}
