@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentMember } from '@/lib/auth';
+import { env } from '@/lib/env';
 import { MobileTabBar } from './MobileTabBar';
 import { MobileServiceWorker } from './MobileServiceWorker';
 
@@ -19,7 +20,12 @@ export default async function MobileLayout({ children }: { children: React.React
       <header className="sticky top-0 z-30 bg-navy-900 text-white shadow-sm">
         <div className="px-4 py-3 flex items-center justify-between">
           <Link href="/m" className="flex items-center gap-2">
-            <span className="text-2xl">🦁</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={env.NEXT_PUBLIC_BRAND_LOGO_URL || '/logo.png'}
+              alt="Lions International"
+              className="h-8 w-8 rounded-full object-cover ring-2 ring-white/20"
+            />
             <div className="leading-tight">
               <div className="text-sm font-semibold">LCBRS</div>
               <div className="text-[10px] text-amber-200/80 -mt-0.5">{member.name}</div>

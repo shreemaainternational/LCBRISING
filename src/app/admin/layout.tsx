@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentMember } from '@/lib/auth';
+import { env } from '@/lib/env';
 import { LogoutButton } from '@/components/admin/LogoutButton';
 import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
@@ -48,7 +49,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen flex bg-gray-50">
       <aside className="w-64 bg-navy-900 text-white flex-shrink-0 hidden md:flex flex-col">
         <div className="p-6 border-b border-white/10 font-bold flex items-center gap-2">
-          <span className="text-2xl">🦁</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={env.NEXT_PUBLIC_BRAND_LOGO_URL || '/logo.png'}
+            alt="Lions International"
+            className="h-9 w-9 rounded-full object-cover ring-2 ring-white/20 shadow"
+          />
           <div className="leading-tight">
             <div>LCBRS</div>
             <div className="text-xs text-gray-400 font-normal">Admin Portal</div>
