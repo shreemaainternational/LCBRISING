@@ -47,10 +47,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen flex bg-gray-50">
       <aside className="w-64 bg-navy-900 text-white flex-shrink-0 hidden md:flex flex-col">
-        <div className="p-6 border-b border-white/10 font-bold flex items-center gap-2">
-          <span className="text-2xl">🦁</span>
+        <div className="p-6 border-b border-white/10 font-bold flex items-center gap-3">
+          <img src="/logo.png" alt="Lions Club of Baroda Rising Star" className="w-10 h-10 rounded-full flex-shrink-0" />
           <div className="leading-tight">
-            <div>LCBRS</div>
+            <div>Baroda Rising Star CRM</div>
             <div className="text-xs text-gray-400 font-normal">Admin Portal</div>
           </div>
         </div>
