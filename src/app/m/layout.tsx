@@ -19,9 +19,9 @@ export default async function MobileLayout({ children }: { children: React.React
       <header className="sticky top-0 z-30 bg-navy-900 text-white shadow-sm">
         <div className="px-4 py-3 flex items-center justify-between">
           <Link href="/m" className="flex items-center gap-2">
-            <span className="text-2xl">🦁</span>
+            <img src="/logo.png" alt="Lions Club of Baroda Rising Star" className="w-8 h-8 rounded-full flex-shrink-0" />
             <div className="leading-tight">
-              <div className="text-sm font-semibold">LCBRS</div>
+              <div className="text-sm font-semibold">Baroda Rising Star CRM</div>
               <div className="text-[10px] text-amber-200/80 -mt-0.5">{member.name}</div>
             </div>
           </Link>
