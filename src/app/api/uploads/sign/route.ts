@@ -6,15 +6,22 @@ import { requireAdmin } from '@/lib/auth';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Per-file ceiling. Direct-to-storage uploads bypass the platform's
-// serverless request-body limit, so this can comfortably fit phone photos.
-const MAX_BYTES = 25 * 1024 * 1024; // 25 MB per file
+// Per-file ceilings. Direct-to-storage uploads bypass the platform's
+// serverless request-body limit, so these only need to stay within the
+// `media` bucket's server-side cap (100 MB — see migration 0055). Videos
+// get more headroom than photos/documents.
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024;  // 25 MB
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100 MB
 const MAX_FILES_PER_REQUEST = 20;
 const ALLOWED_MIME = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif',
   'video/mp4', 'video/quicktime', 'video/webm',
   'application/pdf',
 ]);
+
+function maxBytesFor(mime: string): number {
+  return mime.startsWith('video/') ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+}
 
 interface SignRequest {
   folder?: string;
@@ -56,8 +63,8 @@ export async function POST(req: Request) {
     const filename = f.name;
     const type = String(f.type ?? '');
     const size = Number(f.size ?? 0);
-    if (!ALLOWED_MIME.has(type)) return { ok: false, filename, error: `unsupported_type:${type}` };
-    if (size > MAX_BYTES)        return { ok: false, filename, error: `too_large:${size}` };
+    if (!ALLOWED_MIME.has(type))    return { ok: false, filename, error: `unsupported_type:${type}` };
+    if (size > maxBytesFor(type))   return { ok: false, filename, error: `too_large:${size}` };
 
     const ext = (filename?.split('.').pop() ?? guessExt(type)).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6) || guessExt(type);
     const path = `${folder}/${Date.now()}-${randomUUID().slice(0, 12)}.${ext}`;
