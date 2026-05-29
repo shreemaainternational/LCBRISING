@@ -99,6 +99,7 @@ export const activitySchema = z.object({
   description: z.string().optional(),
   category: z.string().optional(),
   beneficiaries: z.number().int().nonnegative().default(0),
+  lion_members_count: z.number().int().nonnegative().default(0),
   service_hours: z.number().nonnegative().default(0),
   amount_raised: z.number().nonnegative().default(0),
   date: z.string(),

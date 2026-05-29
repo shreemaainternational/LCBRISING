@@ -202,6 +202,7 @@ export function activitiesPreset(): Omit<QuickAddCardProps, 'title'> {
         { value: 'other', label: 'Other' },
       ] },
       { name: 'beneficiaries', label: 'Beneficiaries', type: 'number', min: 0, defaultValue: 0, cast: 'int' },
+      { name: 'lion_members_count', label: 'Presence of Lion Member', type: 'number', min: 0, defaultValue: 0, cast: 'int', hint: 'How many Lion members attended this project' },
       { name: 'service_hours', label: 'Service Hours', type: 'number', min: 0, defaultValue: 0, cast: 'number', step: 0.5 },
       { name: 'amount_raised', label: 'Funds Raised (₹)', type: 'number', min: 0, defaultValue: 0, cast: 'number' },
       { name: 'location', label: 'Location', type: 'text', placeholder: 'Venue or city' },
