@@ -4,6 +4,7 @@ import {
   Upload, X, Loader2, AlertCircle, Image as ImageIcon, GripVertical,
   CheckCircle2, Camera,
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export interface PhotoItem {
   url: string;
@@ -104,32 +105,53 @@ export function PhotoMultiUpload({
     const startIndex = items.length;
     setItems((cur) => [...cur, ...previews]);
 
-    const fd = new FormData();
-    fd.append('folder', folder);
-    for (const f of fileArr) fd.append('file', f);
-
     try {
-      const res = await fetch('/api/uploads', { method: 'POST', body: fd });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(j.error ?? `HTTP ${res.status}`);
+      // 1. Ask the server for short-lived signed upload URLs. This request
+      //    carries only file metadata as JSON, so it stays well under the
+      //    platform's serverless request-body cap (the cause of HTTP 413).
+      const signRes = await fetch('/api/uploads/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          folder,
+          files: fileArr.map((f) => ({ name: f.name, type: f.type, size: f.size })),
+        }),
+      });
+      const signJson = await signRes.json().catch(() => ({}));
+      if (!signRes.ok) throw new Error(signJson.error ?? `HTTP ${signRes.status}`);
 
+      const signed = (signJson.files ?? []) as Array<{
+        ok: boolean; path?: string; token?: string; url?: string;
+        filename?: string; error?: string; type?: string; size?: number;
+      }>;
+
+      // 2. Upload each file straight to Supabase Storage with its token. The
+      //    binaries never pass through our serverless function.
+      const supabase = createClient();
       const newErrors: { filename: string; reason: string }[] = [];
+      const uploaded = await Promise.all(fileArr.map(async (file, i) => {
+        const s = signed[i];
+        if (!s?.ok || !s.path || !s.token) {
+          newErrors.push({ filename: file.name, reason: s?.error ?? 'sign_failed' });
+          return null;
+        }
+        const { error } = await supabase.storage.from('media')
+          .uploadToSignedUrl(s.path, s.token, file, { contentType: file.type });
+        if (error) {
+          newErrors.push({ filename: file.name, reason: error.message });
+          return null;
+        }
+        return { url: s.url!, path: s.path, type: s.type, size: s.size } as PhotoItem;
+      }));
+
       setItems((cur) => {
         const next = [...cur];
-        (j.files as Array<{ ok: boolean; url?: string; path?: string; filename?: string; error?: string; type?: string; size?: number }>).forEach((r, i) => {
-          if (r.ok && r.url) {
-            next[startIndex + i] = {
-              url: r.url, path: r.path, type: r.type, size: r.size,
-              caption: next[startIndex + i]?.caption,
-            };
-          } else {
-            newErrors.push({ filename: r.filename ?? `file-${i}`, reason: r.error ?? 'unknown' });
-          }
+        uploaded.forEach((u, i) => {
+          if (u) next[startIndex + i] = { ...u, caption: next[startIndex + i]?.caption };
         });
         return next.filter((_, idx) => {
           if (idx < startIndex) return true;
-          const r = (j.files as Array<{ ok: boolean }>)[idx - startIndex];
-          return r?.ok;
+          return uploaded[idx - startIndex] != null;
         });
       });
       setErrors(newErrors);
