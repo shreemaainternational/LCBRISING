@@ -1,0 +1,10 @@
+# Activity photos are local assets — ignore the images themselves but
+# keep the folder structure, index and per-cause subfolder tracked.
+*.jpg
+*.jpeg
+*.png
+*.JPG
+*.JPEG
+*.PNG
+!_INDEX.md
+!.gitkeep
