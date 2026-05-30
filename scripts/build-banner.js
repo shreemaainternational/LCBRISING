@@ -218,3 +218,22 @@ fs.writeFileSync(
 console.log('Wrote public/header-banner.svg');
 console.log('Wrote public/logo-lions.svg');
 console.log('Wrote public/logo-club.svg');
+
+/*
+ * The app shell (src/components/BrandHeader.tsx) serves the letterhead as a
+ * raster image at /letterhead.png. If the optional renderer @resvg/resvg-js
+ * is available, regenerate that PNG too (at 2x for crisp display/print).
+ * Otherwise skip with a hint — the SVGs above are still up to date.
+ */
+try {
+  const { Resvg } = require('@resvg/resvg-js');
+  const svg = fs.readFileSync(path.join(publicDir, 'header-banner.svg'), 'utf8');
+  const png = new Resvg(svg, { fitTo: { mode: 'width', value: 2400 } }).render().asPng();
+  fs.writeFileSync(path.join(publicDir, 'letterhead.png'), png);
+  console.log('Wrote public/letterhead.png (2x)');
+} catch (err) {
+  console.log(
+    'Skipped public/letterhead.png — install the optional renderer to regenerate it:\n' +
+      '  npm i -D @resvg/resvg-js && npm run build:banner'
+  );
+}
