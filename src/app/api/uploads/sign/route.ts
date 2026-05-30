@@ -33,6 +33,7 @@ interface SignedItem {
   filename?: string;
   path?: string;
   token?: string;
+  signedUrl?: string;
   url?: string;
   type?: string;
   size?: number;
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
     if (error || !data) return { ok: false, filename, error: error?.message ?? 'sign_failed' };
 
     const { data: pub } = db.storage.from('media').getPublicUrl(data.path);
-    return { ok: true, filename, path: data.path, token: data.token, url: pub.publicUrl, type, size };
+    return { ok: true, filename, path: data.path, token: data.token, signedUrl: data.signedUrl, url: pub.publicUrl, type, size };
   }));
 
   return NextResponse.json({ ok: results.every((r) => r.ok), files: results });

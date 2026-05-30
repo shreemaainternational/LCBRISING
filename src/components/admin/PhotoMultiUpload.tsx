@@ -4,7 +4,7 @@ import {
   Upload, X, Loader2, AlertCircle, Image as ImageIcon, GripVertical,
   CheckCircle2, Camera,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { requireSupabaseEnv } from '@/lib/env';
 
 export interface PhotoItem {
   url: string;
@@ -121,24 +121,43 @@ export function PhotoMultiUpload({
       if (!signRes.ok) throw new Error(signJson.error ?? `HTTP ${signRes.status}`);
 
       const signed = (signJson.files ?? []) as Array<{
-        ok: boolean; path?: string; token?: string; url?: string;
+        ok: boolean; path?: string; token?: string; signedUrl?: string; url?: string;
         filename?: string; error?: string; type?: string; size?: number;
       }>;
 
-      // 2. Upload each file straight to Supabase Storage with its token. The
-      //    binaries never pass through our serverless function.
-      const supabase = createClient();
+      // 2. Upload each file straight to Supabase Storage. We PUT to the signed
+      //    URL ourselves rather than via uploadToSignedUrl: the SDK sends the
+      //    browser anon key as the Bearer token, which Storage rejects with
+      //    "Invalid Compact JWS" when the project uses the new (non-JWT)
+      //    publishable key format. The signed upload token is itself a valid
+      //    JWT, so we send that as the Authorization Bearer; the anon key is
+      //    only needed as the gateway apikey.
+      const { anonKey } = requireSupabaseEnv();
       const newErrors: { filename: string; reason: string }[] = [];
       const uploaded = await Promise.all(fileArr.map(async (file, i) => {
         const s = signed[i];
-        if (!s?.ok || !s.path || !s.token) {
+        if (!s?.ok || !s.signedUrl || !s.token) {
           newErrors.push({ filename: file.name, reason: s?.error ?? 'sign_failed' });
           return null;
         }
-        const { error } = await supabase.storage.from('media')
-          .uploadToSignedUrl(s.path, s.token, file, { contentType: file.type });
-        if (error) {
-          newErrors.push({ filename: file.name, reason: error.message });
+        try {
+          const put = await fetch(s.signedUrl, {
+            method: 'PUT',
+            headers: {
+              authorization: `Bearer ${s.token}`,
+              apikey: anonKey,
+              'content-type': file.type || 'application/octet-stream',
+              'cache-control': 'max-age=3600',
+              'x-upsert': 'false',
+            },
+            body: file,
+          });
+          if (!put.ok) {
+            const msg = await put.text().catch(() => '');
+            throw new Error(msg ? `${put.status}: ${msg.slice(0, 120)}` : `HTTP ${put.status}`);
+          }
+        } catch (err) {
+          newErrors.push({ filename: file.name, reason: String(err instanceof Error ? err.message : err) });
           return null;
         }
         return { url: s.url!, path: s.path, type: s.type, size: s.size } as PhotoItem;
