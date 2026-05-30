@@ -4,7 +4,7 @@ import {
   Upload, X, Loader2, AlertCircle, Image as ImageIcon, GripVertical,
   CheckCircle2, Camera,
 } from 'lucide-react';
-import { requireSupabaseEnv } from '@/lib/env';
+import { createClient } from '@/lib/supabase/client';
 
 export interface PhotoItem {
   url: string;
@@ -106,61 +106,31 @@ export function PhotoMultiUpload({
     setItems((cur) => [...cur, ...previews]);
 
     try {
-      // 1. Ask the server for short-lived signed upload URLs. This request
-      //    carries only file metadata as JSON, so it stays well under the
-      //    platform's serverless request-body cap (the cause of HTTP 413).
-      const signRes = await fetch('/api/uploads/sign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          folder,
-          files: fileArr.map((f) => ({ name: f.name, type: f.type, size: f.size })),
-        }),
-      });
-      const signJson = await signRes.json().catch(() => ({}));
-      if (!signRes.ok) throw new Error(signJson.error ?? `HTTP ${signRes.status}`);
-
-      const signed = (signJson.files ?? []) as Array<{
-        ok: boolean; path?: string; token?: string; signedUrl?: string; url?: string;
-        filename?: string; error?: string; type?: string; size?: number;
-      }>;
-
-      // 2. Upload each file straight to Supabase Storage. We PUT to the signed
-      //    URL ourselves rather than via uploadToSignedUrl: the SDK sends the
-      //    browser anon key as the Bearer token, which Storage rejects with
-      //    "Invalid Compact JWS" when the project uses the new (non-JWT)
-      //    publishable key format. The signed upload token is itself a valid
-      //    JWT, so we send that as the Authorization Bearer; the anon key is
-      //    only needed as the gateway apikey.
-      const { anonKey } = requireSupabaseEnv();
+      // Upload each file straight from the browser to Supabase Storage using
+      // the signed-in admin's auth session. This avoids two problems at once:
+      //  - HTTP 413: the bytes never traverse our serverless function (which
+      //    is capped at ~4.5 MB request bodies on the host platform).
+      //  - "Invalid Compact JWS": the storage request is authorized by the
+      //    user's session JWT, not the project anon/service key — so it works
+      //    even when the project uses the new non-JWT key format
+      //    (sb_publishable_/sb_secret_). The media bucket's RLS policy already
+      //    grants write access to admin members.
+      const supabase = createClient();
       const newErrors: { filename: string; reason: string }[] = [];
-      const uploaded = await Promise.all(fileArr.map(async (file, i) => {
-        const s = signed[i];
-        if (!s?.ok || !s.signedUrl || !s.token) {
-          newErrors.push({ filename: file.name, reason: s?.error ?? 'sign_failed' });
+      const uploaded = await Promise.all(fileArr.map(async (file) => {
+        const ext = (file.name.split('.').pop() ?? 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6) || 'bin';
+        const path = `${folder}/${Date.now()}-${crypto.randomUUID().slice(0, 12)}.${ext}`;
+        const { error } = await supabase.storage.from('media').upload(path, file, {
+          contentType: file.type || 'application/octet-stream',
+          cacheControl: '3600',
+          upsert: false,
+        });
+        if (error) {
+          newErrors.push({ filename: file.name, reason: error.message });
           return null;
         }
-        try {
-          const put = await fetch(s.signedUrl, {
-            method: 'PUT',
-            headers: {
-              authorization: `Bearer ${s.token}`,
-              apikey: anonKey,
-              'content-type': file.type || 'application/octet-stream',
-              'cache-control': 'max-age=3600',
-              'x-upsert': 'false',
-            },
-            body: file,
-          });
-          if (!put.ok) {
-            const msg = await put.text().catch(() => '');
-            throw new Error(msg ? `${put.status}: ${msg.slice(0, 120)}` : `HTTP ${put.status}`);
-          }
-        } catch (err) {
-          newErrors.push({ filename: file.name, reason: String(err instanceof Error ? err.message : err) });
-          return null;
-        }
-        return { url: s.url!, path: s.path, type: s.type, size: s.size } as PhotoItem;
+        const { data: pub } = supabase.storage.from('media').getPublicUrl(path);
+        return { url: pub.publicUrl, path, type: file.type, size: file.size } as PhotoItem;
       }));
 
       setItems((cur) => {
