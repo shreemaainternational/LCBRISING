@@ -3,7 +3,7 @@ import { Mail, Phone, MapPin, Clock, ExternalLink } from 'lucide-react';
 import { ContactForm } from './ContactForm';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
-export const metadata: Metadata = { title: 'Contact' };
+export const metadata: Metadata = { title: 'Contact', alternates: { canonical: '/contact' } };
 
 const ADDRESS = '12-Kirtikunj Society, B/S Pragati Bank, Karelibaug, Vadodara - 390018';
 const MAP_QUERY = encodeURIComponent(ADDRESS);

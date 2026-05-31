@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Media',
   description:
     'News articles, TV features, and online coverage of Lions Club Baroda Rising Star service activities.',
+  alternates: { canonical: '/media' },
 };
 export const revalidate = 300;
 

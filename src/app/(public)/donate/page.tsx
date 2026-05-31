@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Donate',
   description:
     'Donate to support service projects of Lions Club Baroda Rising Star.',
+  alternates: { canonical: '/donate' },
 };
 
 const IMPACT = [

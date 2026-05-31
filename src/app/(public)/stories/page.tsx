@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: 'Human Stories',
   description:
     'Real lives, real change. Meet the children, families, and communities whose lives have been touched by the work of Lions Club Baroda Rising Star.',
+  alternates: { canonical: '/stories' },
 };
 export const revalidate = 300;
 

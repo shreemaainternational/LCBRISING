@@ -4,6 +4,7 @@ import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'How Lions Club of Baroda Rising Star collects, uses, and protects your information.',
+  alternates: { canonical: '/privacy' },
 };
 
 export default function PrivacyPage() {

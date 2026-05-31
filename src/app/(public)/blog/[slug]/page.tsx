@@ -139,7 +139,7 @@ export default async function BlogDetailPage({
       name: 'Lions Club Baroda Rising Star',
       logo: {
         '@type': 'ImageObject',
-        url: `${env.NEXT_PUBLIC_SITE_URL}/icon.svg`,
+        url: `${env.NEXT_PUBLIC_SITE_URL}/logo.png`,
       },
     },
     mainEntityOfPage: canonical,

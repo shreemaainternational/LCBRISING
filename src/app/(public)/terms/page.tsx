@@ -4,6 +4,7 @@ import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 export const metadata: Metadata = {
   title: 'Terms of Service',
   description: 'Terms and conditions for using the Lions Club of Baroda Rising Star website.',
+  alternates: { canonical: '/terms' },
 };
 
 export default function TermsPage() {
