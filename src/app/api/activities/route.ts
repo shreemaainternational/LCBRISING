@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { activitySchema } from '@/lib/validation/schemas';
 import { createClient } from '@/lib/supabase/server';
+import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requireAdmin } from '@/lib/auth';
 import { enqueueJob } from '@/lib/automation/engine';
 
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('activities').select('*').order('date', { ascending: false }).limit(limit);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
   return NextResponse.json({ activities: data });
 }
 
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
 
   const supabase = await createClient();
   const { data, error } = await supabase.from('activities').insert(parsed.data).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
   await enqueueJob('on_activity_created', { activity_id: data.id });
   return NextResponse.json({ activity: data }, { status: 201 });
 }
