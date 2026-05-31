@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'About',
   description:
     'Learn about the Lions Club of Baroda Rising Star, our mission, leadership, and history.',
+  alternates: { canonical: '/about' },
 };
 
 const STATS = [

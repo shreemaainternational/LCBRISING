@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
+import { env } from '@/lib/env';
 
 export const viewport: Viewport = {
   themeColor: '#5f259f',
@@ -8,7 +9,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
+  metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
   title: {
     default: 'Lions Club of Baroda Rising Star',
     template: '%s · Lions Club Baroda Rising Star',
@@ -22,8 +23,15 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_IN',
     siteName: 'Lions Club Baroda Rising Star',
+    url: '/',
+    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'Lions Club of Baroda Rising Star' }],
   },
-  twitter: { card: 'summary_large_image' },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Lions Club of Baroda Rising Star',
+    description: 'We Serve. Join us in our mission to uplift communities across Vadodara.',
+    images: ['/og-default.png'],
+  },
   robots: { index: true, follow: true },
 };
 

@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   title: 'Service Activities',
   description:
     'The eight global cause areas Lions Club of Baroda Rising Star serves, as identified by Lions Clubs International.',
+  alternates: { canonical: '/activities' },
 };
 
 type Cause = {

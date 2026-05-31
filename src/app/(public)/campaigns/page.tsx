@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: 'Campaigns',
   description:
     'Active fundraising and service campaigns from Lions Club Baroda Rising Star. Join us in eye care, hunger relief, education, disaster response, and more.',
+  // The sitemap lists per-campaign URLs as ?focus=<slug> query params; point
+  // them all back to the canonical /campaigns page to avoid duplicate content.
+  alternates: { canonical: '/campaigns' },
 };
 export const revalidate = 120;
 

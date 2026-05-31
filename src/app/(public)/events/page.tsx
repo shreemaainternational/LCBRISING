@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
-export const metadata: Metadata = { title: 'Events' };
+export const metadata: Metadata = { title: 'Events', alternates: { canonical: '/events' } };
 export const revalidate = 60;
 
 type EventRow = {

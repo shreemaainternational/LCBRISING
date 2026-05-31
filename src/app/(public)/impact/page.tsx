@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: 'Impact Dashboard',
   description:
     'Lions Club Baroda Rising Star impact at a glance — live counters of lives reached, members serving, activities completed, and funds raised. With downloadable annual reports.',
+  alternates: { canonical: '/impact' },
 };
 export const revalidate = 300;
 

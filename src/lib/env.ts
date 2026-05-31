@@ -1,7 +1,16 @@
 import { z } from 'zod';
 
 const schema = z.object({
-  NEXT_PUBLIC_SITE_URL: z.string().url().default('http://localhost:3000'),
+  NEXT_PUBLIC_SITE_URL: z
+    .string()
+    .url()
+    .default(
+      // Never fall back to localhost in production — that would poison every
+      // canonical/OG URL, the sitemap, and robots.txt with localhost links.
+      process.env.NODE_ENV === 'production'
+        ? 'https://barodarisingstar.com'
+        : 'http://localhost:3000',
+    ),
   NEXT_PUBLIC_SITE_NAME: z.string().default('Lions Club of Baroda Rising Star'),
 
   // Supabase is optional at module-load time so the app still builds

@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: 'Newsroom & Stories',
   description:
     'Stories of service, impact, and community from Lions Clubs International and Baroda Rising Star — including activity reports, campaigns, and human spotlights.',
+  alternates: { canonical: '/blog' },
 };
 export const revalidate = 300;
 
