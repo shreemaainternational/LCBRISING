@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
+      // Blog/story/campaign cover images can be admin-entered URLs from any
+      // host; allow optimisation of any HTTPS image so <Image> never 500s on
+      // an unconfigured host. Sources are author-controlled, not visitor input.
+      { protocol: 'https', hostname: '**' },
     ],
   },
   serverExternalPackages: ['pdfkit'],

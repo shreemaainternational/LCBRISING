@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Star } from 'lucide-react';
 
 /**
@@ -28,12 +29,14 @@ export function PageHero({
     <section className="relative bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 text-white overflow-hidden">
       {backgroundImage && (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={backgroundImage}
             alt=""
             aria-hidden
-            className="absolute inset-0 w-full h-full object-cover opacity-40"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover opacity-40"
           />
           <div
             aria-hidden
