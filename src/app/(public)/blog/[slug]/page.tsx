@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Calendar, Clock, User, Quote } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
@@ -159,12 +160,14 @@ export default async function BlogDetailPage({
       <header className="relative isolate text-white overflow-hidden">
         <div className="absolute inset-0 -z-10">
           {post.cover_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={post.cover_url}
               alt=""
               aria-hidden
-              className="w-full h-full object-cover"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-navy-900 to-navy-700" />

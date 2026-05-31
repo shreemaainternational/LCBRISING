@@ -4,6 +4,10 @@
  * one-click on a fresh install where migration 0038 hasn't run.
  */
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import {
+  supabaseMismatchDiagnostic,
+  supabaseSchemaDiagnostic,
+} from '@/lib/supabase/errors';
 
 const DEFAULT_CODE = '3232 F1';
 const DEFAULT_NAME = 'District 3232 F1';
@@ -133,32 +137,3 @@ export function explainBootstrapFailure(result: BootstrapResult): string {
   return joined || 'Default district auto-create failed for an unknown reason.';
 }
 
-function projectRefFromUrl(): string {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-  const m = url.match(/https?:\/\/([a-z0-9]+)\.supabase\.co/i);
-  return m?.[1] ?? '(unknown)';
-}
-
-function supabaseMismatchDiagnostic(detail: string): string {
-  const ref = projectRefFromUrl();
-  const hasSR = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-  return [
-    `Supabase keys are misconfigured — the request is reaching project ref "${ref}" but at least one key was rejected.`,
-    `Fix steps:`,
-    `(1) Open https://supabase.com/dashboard → pick the project at db.${ref}.supabase.co`,
-    `(2) Settings → API → copy Project URL, anon (public) key, and service_role (secret) key`,
-    `(3) Vercel project → Settings → Environment Variables — verify all THREE of NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY${hasSR ? ', and SUPABASE_SERVICE_ROLE_KEY' : ' (and add SUPABASE_SERVICE_ROLE_KEY)'} match the values from step 2.`,
-    `(4) Redeploy without build cache.`,
-    `Detail: ${detail}`,
-  ].join(' ');
-}
-
-function supabaseSchemaDiagnostic(detail: string): string {
-  const ref = projectRefFromUrl();
-  return [
-    `PostgREST rejected the "public" schema on project "${ref}". Two likely causes:`,
-    `(A) Supabase Dashboard → Project Settings → API → "Exposed schemas" doesn't include "public". Add it and save.`,
-    `(B) NEXT_PUBLIC_SUPABASE_URL on Vercel points at a different/stale project than where you applied the migrations. Confirm the URL hostname matches the project you've been editing.`,
-    `Detail: ${detail}`,
-  ].join(' ');
-}
