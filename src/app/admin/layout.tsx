@@ -8,7 +8,7 @@ import {
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell, Plug, Building2, ShieldCheck,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
-  KeyRound, Command, Stethoscope, BookOpen,
+  KeyRound, Command, Stethoscope, BookOpen, Workflow,
 } from 'lucide-react';
 
 const navItems = [
@@ -36,6 +36,7 @@ const navItems = [
   { href: '/admin/sync',        label: 'Sync',          icon: RefreshCw },
   { href: '/admin/governance',  label: 'Governance',   icon: ShieldCheck },
   { href: '/admin/integrations', label: 'Integrations', icon: Plug },
+  { href: '/admin/workflow',    label: 'Workflow',      icon: Workflow },
   { href: '/admin/audit',       label: 'Audit log',     icon: ScrollText },
   { href: '/admin/profile',     label: 'My Profile',    icon: KeyRound },
   { href: '/m',                 label: 'Mobile App',    icon: Smartphone },

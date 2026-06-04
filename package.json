@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:workflow": "node scripts/build-workflow-pdf.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.2",
