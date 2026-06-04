@@ -20,6 +20,12 @@ import {
 export const dynamic = 'force-dynamic';
 
 const PDF_HREF = '/lcbrs-workflow-blueprint.pdf';
+const CANVAS_PDF_HREF = '/lcbrs-workflow-canvas.pdf';
+const CANVAS_IMAGES = [
+  { src: '/lcbrs-workflow-canvas-1.jpg', label: 'New Member Onboarding' },
+  { src: '/lcbrs-workflow-canvas-2.jpg', label: 'Donation → Receipt & Thank-you' },
+  { src: '/lcbrs-workflow-canvas-3.jpg', label: 'Daily Automation (Vercel Cron)' },
+];
 
 const CATEGORY_META: Record<IntegrationCategory, { label: string; icon: React.ComponentType<{ size?: number }>; dot: string; chip: string }> = {
   identity:  { label: 'Identity & Access', icon: Lock,          dot: 'bg-blue-500',   chip: 'bg-blue-100 text-blue-700' },
@@ -257,6 +263,31 @@ export default async function WorkflowPage() {
           <strong className="text-amber-800">How to read this:</strong> solid arrows = synchronous request path
           (browser → API → database); dashed arrow = the database / automation layer reaching out to external
           providers (webhooks, cron jobs, AI). Every integration degrades gracefully — the feature it powers simply hides.
+        </p>
+      </section>
+
+      {/* ---- node-graph canvas (n8n style) ---- */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+            <WorkflowIcon size={14} /> Workflow canvas — automation flows
+          </h2>
+          <a href={CANVAS_PDF_HREF} download className="text-xs text-amber-600 hover:text-amber-800 font-semibold flex items-center gap-1">
+            <Download size={13} /> Canvas PDF
+          </a>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          {CANVAS_IMAGES.map((c) => (
+            <a key={c.src} href={c.src} target="_blank" rel="noreferrer" className="group block rounded-xl overflow-hidden border border-gray-800 bg-[#0b1020] shadow-sm hover:ring-2 hover:ring-amber-400">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={c.src} alt={c.label} className="w-full h-auto block" loading="lazy" />
+              <div className="px-3 py-2 text-xs font-semibold text-gray-200 bg-[#11182b]">{c.label}</div>
+            </a>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500">
+          Node-graph view of the live automation flows — trigger → AI agent (model · memory · tools) → routing →
+          multi-channel delivery. Click any canvas to open it full size.
         </p>
       </section>
 

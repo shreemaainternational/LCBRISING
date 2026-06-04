@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "build:workflow": "node scripts/build-workflow-pdf.js"
+    "build:workflow": "node scripts/build-workflow-pdf.js",
+    "build:canvas": "node scripts/build-workflow-canvas-pdf.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.2",
