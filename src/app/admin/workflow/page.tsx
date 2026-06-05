@@ -22,9 +22,15 @@ export const dynamic = 'force-dynamic';
 const PDF_HREF = '/lcbrs-workflow-blueprint.pdf';
 const CANVAS_PDF_HREF = '/lcbrs-workflow-canvas.pdf';
 const CANVAS_IMAGES = [
-  { src: '/lcbrs-workflow-canvas-1.jpg', label: 'New Member Onboarding' },
-  { src: '/lcbrs-workflow-canvas-2.jpg', label: 'Donation → Receipt & Thank-you' },
-  { src: '/lcbrs-workflow-canvas-3.jpg', label: 'Daily Automation (Vercel Cron)' },
+  { src: '/lcbrs-workflow-canvas-1.jpg', label: 'Index · all workflows' },
+  { src: '/lcbrs-workflow-canvas-2.jpg', label: 'New Member Onboarding' },
+  { src: '/lcbrs-workflow-canvas-3.jpg', label: 'Donation → Receipt & Thank-you' },
+  { src: '/lcbrs-workflow-canvas-4.jpg', label: 'Daily Automation (Vercel Cron)' },
+  { src: '/lcbrs-workflow-canvas-5.jpg', label: 'Lions SSO Sign-in (OIDC)' },
+  { src: '/lcbrs-workflow-canvas-6.jpg', label: 'Sync Engine (CSV · REST · Webhook)' },
+  { src: '/lcbrs-workflow-canvas-7.jpg', label: 'Event QR Check-in (Mobile)' },
+  { src: '/lcbrs-workflow-canvas-8.jpg', label: 'Invoice & Payment Collection' },
+  { src: '/lcbrs-workflow-canvas-9.jpg', label: 'Social & Creative Publishing' },
 ];
 
 const CATEGORY_META: Record<IntegrationCategory, { label: string; icon: React.ComponentType<{ size?: number }>; dot: string; chip: string }> = {
