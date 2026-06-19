@@ -35,6 +35,9 @@ export function DonateForm() {
   // while the webhook confirms the payment in the background.
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('phonepe') === 'done') {
+      // Reading the redirect param is only possible on the client, so the
+      // optimistic state has to be set from an effect, not during render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuccess({ receiptNo: 'is being confirmed' });
     }
   }, []);

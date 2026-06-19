@@ -55,8 +55,6 @@ export interface ZoneAnalyticsBundle {
   };
 }
 
-const MONTH_MS = 30 * 86400_000;
-
 function ymKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }

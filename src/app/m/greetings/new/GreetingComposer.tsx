@@ -108,9 +108,6 @@ export function GreetingComposer({ members, initialRecipientId, initialOccasion 
     });
   }
 
-  // Re-render preview canvas whenever inputs change
-  useEffect(() => { renderCard(); }, [text, recipientName, occasion, theme, hashtags]); // eslint-disable-line react-hooks/exhaustive-deps
-
   function renderCard() {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -182,6 +179,9 @@ export function GreetingComposer({ members, initialRecipientId, initialOccasion 
     ctx.font = '500 18px system-ui, -apple-system, sans-serif';
     ctx.fillText('barodarisingstar.com', W / 2, H - 70);
   }
+
+  // Re-render preview canvas whenever inputs change
+  useEffect(() => { renderCard(); }, [text, recipientName, occasion, theme, hashtags]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function downloadPng() {
     const canvas = canvasRef.current;

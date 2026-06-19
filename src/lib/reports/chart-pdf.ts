@@ -1,6 +1,6 @@
 import type PDFDocument from 'pdfkit';
 import type { ChartSpec } from './types';
-import { BRAND, PALETTE, colorAt } from './brand';
+import { BRAND, colorAt } from './brand';
 
 type Doc = InstanceType<typeof PDFDocument>;
 interface Rect { x: number; y: number; w: number; h: number; }

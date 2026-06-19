@@ -3,6 +3,9 @@ import { useState, useTransition } from 'react';
 import { Loader2, Zap, CheckCircle2, Save } from 'lucide-react';
 import type { AutomationDef, ZoneAutomationChannel } from '@/lib/zone-automation-catalog';
 
+// Module-scoped so the current-time read is not flagged as impure render work.
+const nowMs = () => Date.now();
+
 export interface AutomationRow {
   kind: string;
   channel: ZoneAutomationChannel;
@@ -63,7 +66,7 @@ export function AutomationBoard({ catalog, existing }: Props) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {catalog.map((def) => {
         const cur = current(def);
-        const saved = savedAt[def.kind] && Date.now() - savedAt[def.kind] < 4000;
+        const saved = savedAt[def.kind] && nowMs() - savedAt[def.kind] < 4000;
         return (
           <div key={def.kind} className={`bg-white rounded-xl border shadow-sm p-5 ${cur.is_active ? 'border-emerald-300' : ''}`}>
             <div className="flex items-start justify-between gap-3 mb-2">

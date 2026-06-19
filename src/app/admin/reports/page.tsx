@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createAdminClient } from '@/lib/supabase/server';
 import { REPORT_CATALOG } from '@/lib/reports';
-import { FileText, Download, Plus, BarChart3, Trash2, Presentation } from 'lucide-react';
+import { FileText, Download, Plus, BarChart3, Presentation } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 

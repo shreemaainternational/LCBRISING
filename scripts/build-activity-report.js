@@ -163,7 +163,7 @@ function grad(x, y, w, h, c1, c2) {
 }
 function safeImage(p, x, y, w, h, opts) {
   try { doc.image(p, x, y, Object.assign({ fit: [w, h], align: 'center', valign: 'center' }, opts || {})); return true; }
-  catch (e) { return false; }
+  catch { return false; }
 }
 function star(cx, cy, r, color) {
   const pts = [];

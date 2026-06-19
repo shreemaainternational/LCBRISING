@@ -2,7 +2,7 @@
 import type { ReportDoc, ReportFilters, ReportPeriod } from '../types';
 import {
   fetchActivities, fetchDonations, fetchClubs, fetchDistricts,
-  fetchMembersSnapshot, fetchVolunteerLogs, sumBy, groupBy,
+  fetchMembersSnapshot, fetchVolunteerLogs, sumBy,
 } from '../aggregations';
 import { PALETTE, SDG_COLORS } from '../brand';
 import { emptyDoc, fmtINR, fmtInt, fmtShort } from './common';

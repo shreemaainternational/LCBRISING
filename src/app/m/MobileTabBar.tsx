@@ -19,7 +19,7 @@ export function MobileTabBar() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="max-w-screen-sm mx-auto grid grid-cols-5 relative">
-        {TABS.map((t, i) => {
+        {TABS.map((t) => {
           if ('fab' in t) {
             return <RisingStarFab key="fab" />;
           }

@@ -36,7 +36,7 @@ export default async function BeneficiariesPage({ searchParams }: Props) {
             <Users className="text-emerald-500" /> Beneficiary CRM
           </h1>
           <p className="text-gray-600">
-            Track who you serve, what you've delivered, follow-up status and demographics.
+            Track who you serve, what you&apos;ve delivered, follow-up status and demographics.
           </p>
         </div>
         <Link

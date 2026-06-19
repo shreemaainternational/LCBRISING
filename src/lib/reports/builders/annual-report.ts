@@ -10,7 +10,7 @@ import {
   fetchAwards, fetchCSRPartners, fetchEvents, sumBy, topN,
 } from '../aggregations';
 import { buildPeriodReport } from './period-reports';
-import { fmtINR, fmtInt, fmtShort } from './common';
+import { fmtINR, fmtInt } from './common';
 
 interface AnnualOfficers {
   president?: { name: string; signoff?: string };

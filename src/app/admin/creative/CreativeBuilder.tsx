@@ -316,6 +316,9 @@ export function CreativeBuilder() {
             <CardContent>
               {creative.status === 'ready' && creative.output_url ? (
                 <a href={creative.output_url} target="_blank" rel="noreferrer">
+                  {/* Admin-only preview of an externally rendered Canva design of
+                      unknown dimensions; next/image optimisation adds no value here. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={creative.output_url} alt="design preview" className="rounded border" />
                 </a>
               ) : creative.status === 'failed' ? (

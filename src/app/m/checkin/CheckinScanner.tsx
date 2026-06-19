@@ -18,6 +18,8 @@ export function CheckinScanner() {
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    // Reset scan state each time the camera is (re)opened.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null); setResult(null);
 
     type BarcodeDetectorCtor = new (opts: { formats: string[] }) => {

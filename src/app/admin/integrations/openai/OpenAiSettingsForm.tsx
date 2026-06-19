@@ -2,7 +2,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Eye, EyeOff, Save, RotateCw, Loader2, CheckCircle2, AlertCircle, Trash2, Beaker,
+  Eye, EyeOff, Save, Loader2, CheckCircle2, AlertCircle, Trash2, Beaker,
 } from 'lucide-react';
 
 interface Props {

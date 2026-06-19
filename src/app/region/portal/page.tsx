@@ -3,6 +3,7 @@ import { RegionTabs } from '../RegionTabs';
 import { isLionsApiConfigured, isOidcConfiguredFlag } from '@/app/zone/portal/client-flags';
 import { ExternalLink, Shield, Globe, RefreshCw } from 'lucide-react';
 import { loadOidcSettings } from '@/lib/oidc/runtime-config';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,10 +33,10 @@ export default async function RegionPortalPage() {
               <ExternalLink size={13} /> Sign in with Lions
             </a>
           ) : (
-            <a href="/admin/integrations/oidc"
+            <Link href="/admin/integrations/oidc"
               className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-white">
               ⚙ Set up OIDC SSO
-            </a>
+            </Link>
           )}
         </div>
         <div className="bg-white rounded-xl border shadow-sm p-5">
@@ -44,9 +45,9 @@ export default async function RegionPortalPage() {
             REST Sync
           </h3>
           <p className="text-sm text-gray-600 mt-2">Pull MyLCI districts → zones → clubs → members.</p>
-          <a href="/admin/sync/lions" className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white border text-sm font-semibold text-gray-800 hover:bg-gray-50">
+          <Link href="/admin/sync/lions" className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white border text-sm font-semibold text-gray-800 hover:bg-gray-50">
             <RefreshCw size={13} /> Open Sync Console
-          </a>
+          </Link>
         </div>
       </div>
     </div>
