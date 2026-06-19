@@ -20,6 +20,8 @@ export async function GET() {
     category: r.category,
     description: r.description,
     configured: r.configured,
+    status: r.status,
+    modeLabel: r.modeLabel,
     docsHref: r.docsHref,
     adminHref: r.adminHref,
     whenMissing: r.whenMissing,
