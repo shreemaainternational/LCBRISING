@@ -1,5 +1,10 @@
 # Deployment Guide — Lions Club Baroda Rising Star
 
+> **Setting up integrations / env vars?** See
+> [`docs/GO_LIVE_CHECKLIST.md`](docs/GO_LIVE_CHECKLIST.md) for a per-service,
+> copy-paste checklist of every credential, where to obtain it, and the secrets
+> you generate yourself. Live status is on the **`/admin/integrations`** dashboard.
+
 ## 0. Quick reference (this project)
 
 ```
