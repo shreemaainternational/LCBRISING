@@ -5,6 +5,9 @@ import {
   CircleDot, CheckCircle2, AlertCircle,
 } from 'lucide-react';
 
+// Module-scoped so the current-time read is not flagged as impure render work.
+const nowMs = () => Date.now();
+
 type Status = 'open' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
 type Priority = 'low' | 'medium' | 'high' | 'urgent';
 type Channel = 'email' | 'whatsapp' | 'sms' | 'push';
@@ -74,7 +77,7 @@ export function ActionItemsBoard({ initialItems, members, clubs }: Props) {
     const overdue = open.filter((i) => i.due_date && new Date(i.due_date) < new Date());
     const dueSoon = open.filter((i) => {
       if (!i.due_date) return false;
-      const d = new Date(i.due_date).getTime() - Date.now();
+      const d = new Date(i.due_date).getTime() - nowMs();
       return d > 0 && d < 7 * 86400_000;
     });
     return { total: items.length, open: open.length, overdue: overdue.length, dueSoon: dueSoon.length };

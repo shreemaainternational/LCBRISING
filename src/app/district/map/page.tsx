@@ -3,6 +3,7 @@ import { DistrictTabs } from '../DistrictTabs';
 import { createAdminClient } from '@/lib/supabase/server';
 import { MapPin, AlertTriangle } from 'lucide-react';
 import { ClubMap, type ClubPin } from './ClubMap';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +57,7 @@ export default async function DistrictMapPage() {
           <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
           <span>
             {missing} club{missing === 1 ? '' : 's'} missing coordinates. Edit each club on
-            <a href="/admin/clubs" className="underline ml-1">/admin/clubs</a> to add lat/lng so they appear on the map.
+            <Link href="/admin/clubs" className="underline ml-1">/admin/clubs</Link> to add lat/lng so they appear on the map.
           </span>
         </div>
       )}

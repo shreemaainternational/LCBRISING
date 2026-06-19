@@ -4,8 +4,8 @@
  * /api/integrations/status endpoint.
  */
 import { integrations, env } from '@/lib/env';
-import { isLionsApiConfigured } from '@/lib/oidc/lions';
-import { isOidcConfigured as isOidcConfiguredAtAll } from '@/lib/oidc';
+import { isLionsApiConfigured, isLionsApiSandboxActive } from '@/lib/oidc/lions';
+import { isOidcConfigured as isOidcConfiguredAtAll, isOidcSandboxActive } from '@/lib/oidc';
 import { isCronAuthConfigured } from '@/lib/cron-auth';
 import { isPushAutoConfigured } from '@/lib/push-config';
 import { isOpenAiAutoConfigured } from '@/lib/ai/openai-config';
@@ -19,6 +19,16 @@ export type IntegrationCategory =
   | 'social'
   | 'media'
   | 'platform';
+
+/**
+ * Tri-state readiness:
+ *  - 'live'     — configured with real external credentials.
+ *  - 'degraded' — switched on but running in a non-production mode (sandbox
+ *                 synthetic data, or a self-provisioned secret). Works, but
+ *                 still "pending" real activation.
+ *  - 'off'      — not configured (the platform degrades gracefully).
+ */
+export type IntegrationStatus = 'live' | 'degraded' | 'off';
 
 export interface IntegrationEnvVar {
   name: string;
@@ -35,6 +45,10 @@ export interface IntegrationDescriptor {
   category: IntegrationCategory;
   description: string;
   configured: boolean;
+  /** Tri-state readiness (configured === status !== 'off'). */
+  status: IntegrationStatus;
+  /** Short note shown for 'degraded' services, e.g. "Sandbox — synthetic data". */
+  modeLabel?: string;
   envVars: IntegrationEnvVar[];
   docsHref?: string;
   adminHref?: string;
@@ -46,7 +60,43 @@ function v(name: string, required = true, opts: Omit<IntegrationEnvVar, 'name' |
   return { name, required, ...opts };
 }
 
+/**
+ * Per-integration degraded-mode detection. Returns a label when a service is
+ * "on" but not running on real production credentials, otherwise undefined.
+ * Keyed by descriptor.key; integrations not listed are simple live/off.
+ */
+function degradedModeLabel(key: string): string | undefined {
+  switch (key) {
+    case 'lions_oidc':
+      return isOidcSandboxActive() ? 'Sandbox — synthetic Lions sign-in' : undefined;
+    case 'lions_rest':
+      return isLionsApiSandboxActive() ? 'Sandbox — synthetic districts / clubs / members' : undefined;
+    case 'web_push':
+      // Env keypair = real/pinned; DB auto-generated keypair = degraded.
+      return !integrations.webPush && isPushAutoConfigured()
+        ? 'Auto-generated keypair (stored in DB — set VAPID_* to pin)'
+        : undefined;
+    case 'vercel_cron':
+      // Env secret = real/pinned; DB auto-provisioned secret = degraded.
+      return !env.CRON_SECRET && isCronAuthConfigured()
+        ? 'Auto-provisioned secret (set CRON_SECRET for Vercel)'
+        : undefined;
+    default:
+      return undefined;
+  }
+}
+
 export function getIntegrationRegistry(): IntegrationDescriptor[] {
+  return baseRegistry().map((d) => {
+    const modeLabel = d.configured ? degradedModeLabel(d.key) : undefined;
+    const status: IntegrationStatus = !d.configured ? 'off' : modeLabel ? 'degraded' : 'live';
+    return { ...d, status, modeLabel };
+  });
+}
+
+type BaseDescriptor = Omit<IntegrationDescriptor, 'status' | 'modeLabel'>;
+
+function baseRegistry(): BaseDescriptor[] {
   return [
     // ---------------- IDENTITY ----------------
     {
@@ -328,6 +378,10 @@ export function summarizeIntegrations() {
     total: all.length,
     configured: all.filter((i) => i.configured).length,
     missing: all.filter((i) => !i.configured).length,
+    // Tri-state breakdown.
+    live: all.filter((i) => i.status === 'live').length,
+    degraded: all.filter((i) => i.status === 'degraded').length,
+    off: all.filter((i) => i.status === 'off').length,
     byCategory: all.reduce<Record<string, number>>((acc, i) => {
       acc[i.category] = (acc[i.category] ?? 0) + 1;
       return acc;

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Heart, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { DonateForm } from './DonateForm';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 

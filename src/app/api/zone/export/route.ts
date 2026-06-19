@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { requireZoneChair, getZoneKpis, getClubScores } from '@/lib/zone-portal';
 
 export const runtime = 'nodejs';

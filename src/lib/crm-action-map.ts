@@ -13,10 +13,10 @@
  */
 import {
   Users, Building2, Banknote, HeartHandshake, Activity, CalendarDays, ImageIcon,
-  Sparkles, Megaphone, Mail, Bell, Settings, RefreshCw, ShieldCheck, Plug,
+  Sparkles, Megaphone, Mail, Bell, RefreshCw, ShieldCheck, Plug,
   ScrollText, Smartphone, BarChart3, Globe, MapPin, QrCode, KeyRound,
-  Send, Vote, Bot, Map as MapIcon, Phone, CreditCard, FileText,
-  Award, GraduationCap, MessageSquare, CheckSquare, Pin, Layers, Download,
+  Send, Vote, Bot, Map as MapIcon, Phone, FileText,
+  Award, GraduationCap, CheckSquare, Layers, Download,
   Upload, Server, Workflow, Cloud, Stamp, Briefcase,
 } from 'lucide-react';
 import type { ComponentType } from 'react';

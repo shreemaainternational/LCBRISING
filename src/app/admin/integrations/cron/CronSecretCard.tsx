@@ -68,9 +68,9 @@ export function CronSecretCard({ masked, lastRotatedAt, envOverride }: Props) {
         <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2 inline-flex items-start gap-1.5">
           <AlertCircle size={12} className="mt-0.5 flex-shrink-0" />
           <span>
-            An env var <code>CRON_SECRET</code> is set on this deployment — Vercel's cron
+            An env var <code>CRON_SECRET</code> is set on this deployment — Vercel&apos;s cron
             invocations are verified against it. The DB-stored value is used as a fallback
-            when the env value doesn't match.
+            when the env value doesn&apos;t match.
           </span>
         </p>
       )}

@@ -6,6 +6,8 @@ export function SubscribeButtons({ year }: { year: string }) {
   const [host, setHost] = useState('');
   const [copied, setCopied] = useState(false);
 
+  // window.location is only available client-side, so resolve the host from an effect.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setHost(window.location.host); }, []);
 
   const httpsUrl = host ? `https://${host}/api/zone/lions-year.ics?year=${year}` : '';

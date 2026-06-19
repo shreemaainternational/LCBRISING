@@ -3,7 +3,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Building2, MoveRight, RefreshCw, Sparkles, Loader2, AlertCircle,
-  CheckCircle2, History, Activity, MapPin, Tag, ChevronDown,
+  CheckCircle2, History, Activity, MapPin, ChevronDown,
 } from 'lucide-react';
 
 export interface ClubRow {
@@ -107,7 +107,7 @@ export function GovernanceConsole({ clubs: initialClubs, zones, districts, histo
   function toggle(id: string) {
     setSelected((s) => {
       const next = new Set(s);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }
@@ -149,7 +149,7 @@ export function GovernanceConsole({ clubs: initialClubs, zones, districts, histo
     setNotice(null);
     const fn = withAi ? startAi : start;
     fn(async () => {
-      let body: Record<string, unknown> = { scope: 'all', with_ai: withAi };
+      const body: Record<string, unknown> = { scope: 'all', with_ai: withAi };
       if (scope === 'selected') {
         if (!selected.size) { setNotice({ ok: false, msg: 'Select clubs first.' }); return; }
         // run one at a time for selected; cheap given small N

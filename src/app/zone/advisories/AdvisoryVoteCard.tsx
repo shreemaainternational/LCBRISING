@@ -31,7 +31,9 @@ export function AdvisoryVoteCard({ advisoryId, options, question, closesAt, anon
     setVoters(j.voters ?? null);
   }
 
-  useEffect(() => { refresh(); }, [advisoryId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Fetch the live tally on mount / when the advisory changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+  useEffect(() => { refresh(); }, [advisoryId]);
 
   const closed = closesAt ? new Date(closesAt) < new Date() : false;
 

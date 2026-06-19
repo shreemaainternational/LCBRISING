@@ -128,7 +128,7 @@ export default async function DiagnosticsPage() {
             <a href={`https://supabase.com/dashboard/project/${ref}/settings/api`}
               target="_blank" rel="noopener"
               className="mt-3 inline-flex items-center gap-1 text-xs text-amber-600 hover:underline">
-              Open this project's API settings <ExternalLink size={11} />
+              Open this project&apos;s API settings <ExternalLink size={11} />
             </a>
           )}
         </CardContent>
@@ -158,18 +158,18 @@ export default async function DiagnosticsPage() {
             cron jobs, AI features, and master sync all work end-to-end.
           </p>
           <p>
-            <strong>SSR fails with "Invalid schema":</strong> The anon key is valid
-            but PostgREST doesn't serve <code>public</code>. Either re-enable
+            <strong>SSR fails with &quot;Invalid schema&quot;:</strong> The anon key is valid
+            but PostgREST doesn&apos;t serve <code>public</code>. Either re-enable
             <code> public</code> in Supabase API settings, or fix the URL to point at
             the right project.
           </p>
           <p>
-            <strong>Admin fails with "Invalid API key":</strong> Service-role key
-            doesn't match the project. Re-copy from Supabase → Settings → API and
+            <strong>Admin fails with &quot;Invalid API key&quot;:</strong> Service-role key
+            doesn&apos;t match the project. Re-copy from Supabase → Settings → API and
             update in Vercel env.
           </p>
           <p>
-            <strong>RPC fails with "does not exist":</strong> Migration 0049 hasn't
+            <strong>RPC fails with &quot;does not exist&quot;:</strong> Migration 0049 hasn&apos;t
             been applied on the project at this URL. Run it in the SQL editor.
           </p>
         </CardContent>

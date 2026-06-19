@@ -9,6 +9,8 @@ export function MobileSyncBanner() {
   const [pending, start] = useTransition();
 
   useEffect(() => {
+    // Render the live clock only after mount to avoid a hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);

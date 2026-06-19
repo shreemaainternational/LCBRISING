@@ -5,10 +5,10 @@
 import type { ReportDoc, ReportFilters, ReportPeriod, ReportType } from '../types';
 import {
   fetchActivities, fetchDonations, fetchMembersSnapshot, fetchVolunteerLogs,
-  fetchEvents, fetchBeneficiaries, fetchAwards, sumBy, groupBy, topN,
+  fetchEvents, fetchBeneficiaries, fetchAwards, sumBy, topN,
 } from '../aggregations';
 import { previousPeriod, monthBucketsBetween, pctDelta } from '../period';
-import { PALETTE, SDG_COLORS, colorAt } from '../brand';
+import { PALETTE, SDG_COLORS } from '../brand';
 import { emptyDoc, fmtINR, fmtInt, fmtShort } from './common';
 
 interface PeriodOpts {
@@ -203,7 +203,7 @@ export async function buildPeriodReport(
     });
     // patch colors by SDG
     const last = doc.charts[doc.charts.length - 1];
-    last.series[0].data.forEach((_v, i) => {
+    last.series[0].data.forEach((_v) => {
       /* visual variety via per-bar colors not currently supported; series color suffices */
     });
     void SDG_COLORS;

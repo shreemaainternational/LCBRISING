@@ -2,7 +2,7 @@
 import type { ReportDoc, ReportFilters, ReportPeriod } from '../types';
 import {
   fetchActivities, fetchDonations, fetchDues, fetchPayments,
-  fetchCSRPartners, sumBy, groupBy, topN, db,
+  fetchCSRPartners, sumBy,
 } from '../aggregations';
 import { monthBucketsBetween } from '../period';
 import { PALETTE } from '../brand';
@@ -89,7 +89,7 @@ export async function buildFinancialReport(p: ReportPeriod, f: ReportFilters): P
       { key: 'exp', label: 'Expenses', align: 'right' },
       { key: 'net', label: 'Net', align: 'right' },
     ],
-    rows: buckets.map((b, i) => {
+    rows: buckets.map((b) => {
       const monthActs = acts.filter((a) => sameMonth(new Date(a.date), b.date));
       const monthDons = dons.filter((x) => sameMonth(new Date(x.created_at), b.date));
       const monthDues = dues.filter((x) => sameMonth(new Date(x.paid_at ?? x.created_at), b.date) && x.status === 'paid');

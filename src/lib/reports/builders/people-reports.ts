@@ -2,9 +2,9 @@
 import type { ReportDoc, ReportFilters, ReportPeriod } from '../types';
 import {
   fetchBeneficiaries, fetchBeneficiaryServices, fetchVolunteerLogs,
-  fetchMembersSnapshot, fetchAwards, fetchClubs, sumBy, groupBy, topN,
+  fetchMembersSnapshot, fetchAwards, fetchClubs, sumBy, groupBy,
 } from '../aggregations';
-import { monthBucketsBetween, lionsYearForDate } from '../period';
+import { monthBucketsBetween } from '../period';
 import { PALETTE } from '../brand';
 import { emptyDoc, fmtINR, fmtInt, fmtShort } from './common';
 

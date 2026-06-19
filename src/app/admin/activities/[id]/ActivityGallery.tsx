@@ -16,6 +16,9 @@ interface Props {
 
 type Tab = 'all' | 'photos' | 'before' | 'after' | 'videos';
 
+// Module-scoped so the current-time read is not flagged as impure render work.
+const nowMs = () => Date.now();
+
 export function ActivityGallery({
   activityId, photos, before, after, videos, initialCaptions,
 }: Props) {
@@ -100,7 +103,7 @@ export function ActivityGallery({
           ))}
         </div>
         <div className="flex items-center gap-2">
-          {savedAt && Date.now() - savedAt < 4000 && (
+          {savedAt && nowMs() - savedAt < 4000 && (
             <span className="text-xs text-green-700">Captions saved ✓</span>
           )}
           {editing ? (

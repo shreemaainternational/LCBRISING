@@ -57,7 +57,7 @@ export default function RisingStarMenu() {
         </div>
 
         <p className="mt-6 text-center text-[10px] text-blue-200/60">
-          Some destinations are still being built — you'll land on a placeholder until they ship.
+          Some destinations are still being built — you&apos;ll land on a placeholder until they ship.
         </p>
       </div>
     </div>

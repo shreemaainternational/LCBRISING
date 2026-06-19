@@ -23,14 +23,6 @@ const TTL_MS = 60_000;
 let cache: { value: OidcSettings | null; expiresAt: number } | null = null;
 let inflight: Promise<OidcSettings | null> | null = null;
 
-function emptySettings(): OidcSettings {
-  return {
-    issuer: null, client_id: null, client_secret: null, redirect_uri: null,
-    scopes: null, audience: null, provider_label: null, discovery_url: null,
-    is_active: false,
-  };
-}
-
 /**
  * Load the active OIDC settings row. Returns null if no service-role
  * client (env-only mode) or no row exists yet.

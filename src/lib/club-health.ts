@@ -75,7 +75,7 @@ async function assessFromClub(club: ClubInput): Promise<ClubHealthAssessment> {
   const since90 = new Date(Date.now() - 90 * 86400_000).toISOString();
   const since60 = new Date(Date.now() - 60 * 86400_000).toISOString();
 
-  const [{ data: members }, { data: acts }, { data: vols }, { data: dues }, { data: attendance }, { data: lastAct }] = await Promise.all([
+  const [{ data: members }, { data: acts }, { data: _vols }, { data: dues }, { data: attendance }, { data: lastAct }] = await Promise.all([
     db.from('members').select('id, status').eq('club_id', club.id).is('deleted_at', null),
     db.from('activities').select('beneficiaries, amount_raised, sponsorship_amount, service_hours, date').eq('club_id', club.id).gte('date', since90.slice(0, 10)),
     db.from('volunteer_logs').select('hours, member_id'),

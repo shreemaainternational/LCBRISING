@@ -93,7 +93,7 @@ export default async function MobileGreetings() {
       {today.length === 0 && upcoming.length === 0 && (
         <div className="bg-white rounded-2xl p-8 text-center text-sm text-gray-500 border border-gray-100">
           <Gift size={28} className="mx-auto text-gray-300 mb-2" />
-          No upcoming birthdays. Once members fill in their birthday in /m/profile they'll appear here.
+          No upcoming birthdays. Once members fill in their birthday in /m/profile they&apos;ll appear here.
         </div>
       )}
 

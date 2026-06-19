@@ -1,6 +1,6 @@
 import PptxGenJS from 'pptxgenjs';
 import type { ReportDoc, RenderedReport, ChartSpec } from './types';
-import { BRAND, PALETTE, hex, colorAt } from './brand';
+import { BRAND, hex, colorAt } from './brand';
 
 const W = 13.333;
 const H = 7.5;
