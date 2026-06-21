@@ -1,0 +1,93 @@
+name: Apply TB Kit Distribution activity (one-shot)
+
+# Push-triggered one-shot: applies supabase/scripts/add_tb_kit_distribution.sql
+# to the LCBRising production Supabase project via the Management API, using
+# the repo secret SUPABASE_ACCESS_TOKEN. Runs automatically when this branch
+# (claude/apply-tbkit) is pushed. The SQL is idempotent, so re-runs are safe.
+
+on:
+  push:
+    branches: [claude/apply-tbkit]
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      REF: mvtqqlfzawyhntnsavbx
+    steps:
+      - name: Verify required secret
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Missing required GitHub repo secret: SUPABASE_ACCESS_TOKEN"
+            echo "Add it at: https://github.com/${{ github.repository }}/settings/secrets/actions"
+            exit 1
+          fi
+          echo "SUPABASE_ACCESS_TOKEN present."
+
+      - uses: actions/checkout@v4
+
+      - name: Verify token can see the project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/proj.json -w "%{http_code}" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$REF")
+          if [ "$code" != "200" ]; then
+            echo "::error::Token cannot see project $REF (HTTP $code)."; cat /tmp/proj.json; exit 1
+          fi
+          echo "Verified project: $(jq -r '.name // empty' /tmp/proj.json) ($REF)"
+
+      - name: Apply TB Kit Distribution SQL
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          jq -Rs '{query: .}' supabase/scripts/add_tb_kit_distribution.sql > /tmp/body.json
+          code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/body.json \
+            "https://api.supabase.com/v1/projects/$REF/database/query")
+          echo "HTTP $code"
+          echo "--- Response ---"
+          jq . /tmp/resp.json 2>/dev/null || cat /tmp/resp.json
+          if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+            echo "::error::Apply failed (HTTP $code)"; exit 1
+          fi
+
+      - name: Verify the activity row is present
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          verify_sql=$(cat <<'SQL'
+          select title,
+                 beneficiaries,
+                 lion_members_count,
+                 service_hours,
+                 expenses,
+                 to_char(date, 'YYYY-MM-DD') as activity_date,
+                 location,
+                 status,
+                 (club_id is not null) as linked_to_club
+          from public.activities
+          where title = 'TB Kit Distribution' and date = date '2024-12-26';
+          SQL
+          )
+          jq -n --arg q "$verify_sql" '{query:$q}' > /tmp/v.json
+          curl -sSf \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/v.json \
+            "https://api.supabase.com/v1/projects/$REF/database/query" | jq .
+
+      - name: Done
+        run: echo "TB Kit Distribution activity applied to production ($REF)."
