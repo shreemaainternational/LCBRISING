@@ -1,9 +1,10 @@
 name: Apply TB Kit Distribution activity (one-shot)
 
-# Push-triggered one-shot: applies supabase/scripts/add_tb_kit_distribution.sql
-# to the LCBRising production Supabase project via the Management API, using
-# the repo secret SUPABASE_ACCESS_TOKEN. Runs automatically when this branch
-# (claude/apply-tbkit) is pushed. The SQL is idempotent, so re-runs are safe.
+# Push-triggered one-shot: inserts the TB Kit Distribution activity directly
+# into the LCBRising production database via the Supabase REST API (PostgREST)
+# using the repo secret SUPABASE_SERVICE_ROLE_KEY (bypasses RLS). The public
+# Recent Activities section and the CRM both read public.activities, so this
+# one row serves both. Idempotent: it checks for an existing row first.
 
 on:
   push:
@@ -13,81 +14,94 @@ permissions:
   contents: read
 
 jobs:
-  apply:
+  insert:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      REF: mvtqqlfzawyhntnsavbx
+      SUPABASE_URL: https://mvtqqlfzawyhntnsavbx.supabase.co
     steps:
       - name: Verify required secret
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo "::error::Missing required GitHub repo secret: SUPABASE_ACCESS_TOKEN"
+          if [ -z "$KEY" ]; then
+            echo "::error::Missing required GitHub repo secret: SUPABASE_SERVICE_ROLE_KEY"
             echo "Add it at: https://github.com/${{ github.repository }}/settings/secrets/actions"
             exit 1
           fi
-          echo "SUPABASE_ACCESS_TOKEN present."
+          echo "SUPABASE_SERVICE_ROLE_KEY present."
 
-      - uses: actions/checkout@v4
-
-      - name: Verify token can see the project
+      - name: Insert activity if not already present
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-          code=$(curl -sS -o /tmp/proj.json -w "%{http_code}" \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$REF")
-          if [ "$code" != "200" ]; then
-            echo "::error::Token cannot see project $REF (HTTP $code)."; cat /tmp/proj.json; exit 1
+          API="$SUPABASE_URL/rest/v1"
+          AUTH=(-H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+
+          echo "Checking for an existing TB Kit Distribution row..."
+          existing=$(curl -sS "${AUTH[@]}" \
+            "$API/activities?select=id&title=eq.TB%20Kit%20Distribution&date=eq.2024-12-26")
+          echo "existing = $existing"
+          if [ "$existing" != "[]" ] && [ -n "$existing" ]; then
+            echo "Already present — nothing to do (idempotent)."
+            exit 0
           fi
-          echo "Verified project: $(jq -r '.name // empty' /tmp/proj.json) ($REF)"
 
-      - name: Apply TB Kit Distribution SQL
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          set -euo pipefail
-          jq -Rs '{query: .}' supabase/scripts/add_tb_kit_distribution.sql > /tmp/body.json
-          code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+          echo "Resolving home club id (optional)..."
+          club=$(curl -sS "${AUTH[@]}" \
+            "$API/clubs?select=id&name=eq.Lions%20Club%20of%20Baroda%20Rising%20Star" \
+            | jq -r 'if type=="array" and length>0 then .[0].id else empty end' || true)
+          echo "club id = ${club:-<none>}"
+
+          desc='Distribution of TB nutrition support kits to patients at the Urban Health Center, Warasiya, Vadodara. Held 09:30 AM – 11:30 AM with 16 Lions volunteers contributing 32 service hours (16 × 2). 620 beneficiaries reached. Expenditure ₹5,500.'
+
+          # Build the row. Include club_id only when resolved.
+          jq -n \
+            --arg title 'TB Kit Distribution' \
+            --arg desc "$desc" \
+            --arg date '2024-12-26' \
+            --arg loc 'Urban Health Center, Warasiya, Vadodara' \
+            --arg club "$club" \
+            '{
+               title: $title,
+               description: $desc,
+               category: "healthcare",
+               beneficiaries: 620,
+               service_hours: 32,
+               volunteer_hours_total: 32,
+               lion_members_count: 16,
+               amount_raised: 0,
+               budget: 5500,
+               expenses: 5500,
+               date: $date,
+               location: $loc,
+               is_medical_camp: true,
+               status: "completed",
+               reported_to_district: false
+             }
+             + (if $club == "" then {} else {club_id: $club} end)' > /tmp/row.json
+
+          echo "Posting row..."
+          code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" -X POST "${AUTH[@]}" \
             -H "Content-Type: application/json" \
-            --data @/tmp/body.json \
-            "https://api.supabase.com/v1/projects/$REF/database/query")
+            -H "Prefer: return=representation" \
+            --data @/tmp/row.json \
+            "$API/activities")
           echo "HTTP $code"
           echo "--- Response ---"
           jq . /tmp/resp.json 2>/dev/null || cat /tmp/resp.json
           if [ "$code" != "200" ] && [ "$code" != "201" ]; then
-            echo "::error::Apply failed (HTTP $code)"; exit 1
+            echo "::error::Insert failed (HTTP $code)"
+            exit 1
           fi
+          echo "TB Kit Distribution activity inserted into production."
 
-      - name: Verify the activity row is present
+      - name: Verify it is now present
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-          verify_sql=$(cat <<'SQL'
-          select title,
-                 beneficiaries,
-                 lion_members_count,
-                 service_hours,
-                 expenses,
-                 to_char(date, 'YYYY-MM-DD') as activity_date,
-                 location,
-                 status,
-                 (club_id is not null) as linked_to_club
-          from public.activities
-          where title = 'TB Kit Distribution' and date = date '2024-12-26';
-          SQL
-          )
-          jq -n --arg q "$verify_sql" '{query:$q}' > /tmp/v.json
-          curl -sSf \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data @/tmp/v.json \
-            "https://api.supabase.com/v1/projects/$REF/database/query" | jq .
-
-      - name: Done
-        run: echo "TB Kit Distribution activity applied to production ($REF)."
+          curl -sS -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+            "$SUPABASE_URL/rest/v1/activities?select=title,date,beneficiaries,lion_members_count,service_hours,expenses,location,status&title=eq.TB%20Kit%20Distribution" \
+            | jq .
