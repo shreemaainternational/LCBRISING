@@ -30,10 +30,17 @@ jobs:
 
       - name: Publish activity (service role key, else management token)
         env:
-          SVC: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          PAT: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SVC1: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SVC2: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SVC3: ${{ secrets.SERVICE_ROLE_KEY }}
+          PAT1: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PAT2: ${{ secrets.SUPABASE_PAT }}
         run: |
           set -uo pipefail
+          # Accept the secret under any of a few common names.
+          SVC="${SVC1:-${SVC2:-${SVC3:-}}}"
+          PAT="${PAT1:-${PAT2:-}}"
+          echo "Detected: service_role_key=$([ -n "$SVC" ] && echo present || echo MISSING), access_token=$([ -n "$PAT" ] && echo present || echo MISSING)"
 
           # ---- Path 1: direct PostgREST insert with the service role key ----
           if [ -n "$SVC" ]; then
