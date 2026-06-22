@@ -1,0 +1,94 @@
+name: Apply TB Kit Distribution activity (one-shot)
+
+# Push-triggered one-shot that publishes the TB Kit Distribution activity to
+# the LCBRising production database. The public Recent Activities section and
+# the CRM both read public.activities, so this one row serves both.
+#
+# It tries two credentials, succeeding if EITHER is valid:
+#   1. SUPABASE_SERVICE_ROLE_KEY  -> direct PostgREST insert (preferred)
+#   2. SUPABASE_ACCESS_TOKEN      -> Management API, runs the SQL script
+#
+# Idempotent. If both secrets are missing/expired, it fails with guidance.
+# After adding/refreshing one secret, just re-run this workflow.
+
+on:
+  push:
+    branches: [claude/apply-tbkit]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: https://mvtqqlfzawyhntnsavbx.supabase.co
+      REF: mvtqqlfzawyhntnsavbx
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish activity (service role key, else management token)
+        env:
+          SVC: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PAT: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -uo pipefail
+
+          # ---- Path 1: direct PostgREST insert with the service role key ----
+          if [ -n "$SVC" ]; then
+            echo "Using SUPABASE_SERVICE_ROLE_KEY (direct REST insert)."
+            API="$SUPABASE_URL/rest/v1"
+            existing=$(curl -sS -H "apikey: $SVC" -H "Authorization: Bearer $SVC" \
+              "$API/activities?select=id&title=eq.TB%20Kit%20Distribution&date=eq.2024-12-26" || echo "ERR")
+            if [ "$existing" != "[]" ] && [ -n "$existing" ] && [ "$existing" != "ERR" ]; then
+              echo "Already present — nothing to do."; echo "$existing"; exit 0
+            fi
+            club=$(curl -sS -H "apikey: $SVC" -H "Authorization: Bearer $SVC" \
+              "$API/clubs?select=id&name=eq.Lions%20Club%20of%20Baroda%20Rising%20Star" \
+              | jq -r 'if type=="array" and length>0 then .[0].id else empty end' 2>/dev/null || true)
+            desc='Distribution of TB nutrition support kits to patients at the Urban Health Center, Warasiya, Vadodara. Held 09:30 AM – 11:30 AM with 16 Lions volunteers contributing 32 service hours (16 × 2). 620 beneficiaries reached. Expenditure ₹5,500.'
+            jq -n --arg desc "$desc" --arg club "$club" \
+              '{title:"TB Kit Distribution",description:$desc,category:"healthcare",
+                beneficiaries:620,service_hours:32,volunteer_hours_total:32,
+                lion_members_count:16,amount_raised:0,budget:5500,expenses:5500,
+                date:"2024-12-26",location:"Urban Health Center, Warasiya, Vadodara",
+                is_medical_camp:true,status:"completed",reported_to_district:false}
+               + (if $club=="" then {} else {club_id:$club} end)' > /tmp/row.json
+            code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" -X POST \
+              -H "apikey: $SVC" -H "Authorization: Bearer $SVC" \
+              -H "Content-Type: application/json" -H "Prefer: return=representation" \
+              --data @/tmp/row.json "$API/activities")
+            echo "HTTP $code"; jq . /tmp/resp.json 2>/dev/null || cat /tmp/resp.json
+            if [ "$code" = "200" ] || [ "$code" = "201" ]; then
+              echo "✅ Inserted via service role key."; exit 0
+            fi
+            echo "Service-role insert failed (HTTP $code); trying management token..."
+          else
+            echo "SUPABASE_SERVICE_ROLE_KEY not set; trying management token..."
+          fi
+
+          # ---- Path 2: Management API runs the idempotent SQL script ----------
+          if [ -n "$PAT" ]; then
+            echo "Using SUPABASE_ACCESS_TOKEN (Management API)."
+            check=$(curl -sS -o /dev/null -w "%{http_code}" \
+              -H "Authorization: Bearer $PAT" "https://api.supabase.com/v1/projects/$REF")
+            if [ "$check" != "200" ]; then
+              echo "::error::SUPABASE_ACCESS_TOKEN cannot access project $REF (HTTP $check). It is likely expired — refresh it."
+              exit 1
+            fi
+            jq -Rs '{query: .}' supabase/scripts/add_tb_kit_distribution.sql > /tmp/body.json
+            code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+              -H "Authorization: Bearer $PAT" -H "Content-Type: application/json" \
+              --data @/tmp/body.json \
+              "https://api.supabase.com/v1/projects/$REF/database/query")
+            echo "HTTP $code"; jq . /tmp/resp.json 2>/dev/null || cat /tmp/resp.json
+            if [ "$code" = "200" ] || [ "$code" = "201" ]; then
+              echo "✅ Applied via management token."; exit 0
+            fi
+            echo "::error::Management API apply failed (HTTP $code)."; exit 1
+          fi
+
+          echo "::error::No usable credential. Add a valid SUPABASE_SERVICE_ROLE_KEY (preferred) or refresh SUPABASE_ACCESS_TOKEN in repo secrets, then re-run."
+          echo "Secrets: https://github.com/${{ github.repository }}/settings/secrets/actions"
+          exit 1
