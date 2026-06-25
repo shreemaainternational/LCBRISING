@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
       // Collapse accidental /admin/admin/* → /admin/* (typed URLs, stale bookmarks).
       { source: '/admin/admin', destination: '/admin', permanent: true },
       { source: '/admin/admin/:path*', destination: '/admin/:path*', permanent: true },
+      // Hand off the generic "make a payment" landing to the SMI Tech portal.
+      { source: '/pay-now', destination: 'https://smi-tech.vercel.app/pay-now', permanent: false },
+      { source: '/pay', destination: 'https://smi-tech.vercel.app/pay-now', permanent: false },
     ];
   },
 };

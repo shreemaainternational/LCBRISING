@@ -1,5 +1,87 @@
 import { z } from 'zod';
 
+// --- Supabase project-ref reconciliation ---------------------------------
+// A common production failure mode is stale Vercel env vars: the URL
+// points at one Supabase project but the anon key (or service-role key)
+// is from a different — sometimes paused — project. Every request then
+// fails with "Invalid API key", and the only fix used to be a manual
+// dashboard edit.
+//
+// Instead, we reconcile here at module-load: extract the project ref
+// from each value and, if they disagree, drop the odd ones out. The
+// baked Zod .default(...) values below act as a known-good fallback
+// pair (URL + anon) for the active LCBRising project.
+
+const BAKED_SUPABASE_URL = 'https://mvtqqlfzawyhntnsavbx.supabase.co';
+const BAKED_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12dHFxbGZ6YXd5aG50bnNhdmJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0ODk3OTksImV4cCI6MjA5MTA2NTc5OX0.x4m5jPXReQLikS2N2vox-ck406RzpqWOc-0qLOstqS4';
+const BAKED_SUPABASE_REF = 'mvtqqlfzawyhntnsavbx';
+
+function refFromUrl(url: string | undefined | null): string | null {
+  if (!url) return null;
+  const m = url.match(/^https?:\/\/([a-z0-9]+)\.supabase\.co\/?$/i);
+  return m?.[1] ?? null;
+}
+
+function refFromJwt(jwt: string | undefined | null): string | null {
+  if (!jwt) return null;
+  const parts = jwt.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = payloadB64 + '='.repeat((4 - (payloadB64.length % 4)) % 4);
+    const json = Buffer.from(padded, 'base64').toString('utf8');
+    const claims = JSON.parse(json) as { ref?: unknown };
+    return typeof claims.ref === 'string' ? claims.ref : null;
+  } catch {
+    return null;
+  }
+}
+
+function reconcileSupabase(): { url: string; anonKey: string; serviceRoleKey: string | undefined } {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const rawAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const rawSr = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  const urlRef = refFromUrl(rawUrl);
+  const anonRef = refFromJwt(rawAnon);
+  const srRef = refFromJwt(rawSr);
+
+  // Best matching pair: prefer URL+anon when they agree.
+  let url = rawUrl ?? BAKED_SUPABASE_URL;
+  let anonKey = rawAnon ?? BAKED_SUPABASE_ANON_KEY;
+  let chosenRef = urlRef && anonRef && urlRef === anonRef ? urlRef : null;
+
+  if (!chosenRef) {
+    // Pair disagrees (or one side missing) — fall back to the baked
+    // known-good pair rather than ship a guaranteed-broken combo.
+    url = BAKED_SUPABASE_URL;
+    anonKey = BAKED_SUPABASE_ANON_KEY;
+    chosenRef = BAKED_SUPABASE_REF;
+    if (rawUrl && rawAnon && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[env] Supabase URL/anon-key mismatch (url ref=${urlRef ?? 'unknown'}, anon ref=${anonRef ?? 'unknown'}). ` +
+          `Falling back to baked defaults for project ref "${BAKED_SUPABASE_REF}".`,
+      );
+    }
+  }
+
+  // Service-role key is only useful if it matches the chosen project ref.
+  const serviceRoleKey = rawSr && srRef === chosenRef ? rawSr : undefined;
+  if (rawSr && !serviceRoleKey && process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[env] SUPABASE_SERVICE_ROLE_KEY belongs to project ref "${srRef ?? 'unknown'}", ` +
+        `not active project "${chosenRef}". Dropping it — admin-only routes will degrade gracefully.`,
+    );
+  }
+
+  return { url, anonKey, serviceRoleKey };
+}
+
+const reconciled = reconcileSupabase();
+
 const schema = z.object({
   NEXT_PUBLIC_SITE_URL: z
     .string()
@@ -126,9 +208,9 @@ const schema = z.object({
 const parsed = schema.parse({
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
   NEXT_PUBLIC_SITE_NAME: process.env.NEXT_PUBLIC_SITE_NAME,
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  NEXT_PUBLIC_SUPABASE_URL: reconciled.url,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: reconciled.anonKey,
+  SUPABASE_SERVICE_ROLE_KEY: reconciled.serviceRoleKey,
   RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
   RAZORPAY_SECRET: process.env.RAZORPAY_SECRET,
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
@@ -215,6 +297,34 @@ export function requireSupabaseEnv() {
 
 export function isSupabaseConfigured() {
   return Boolean(parsed.NEXT_PUBLIC_SUPABASE_URL && parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
+/**
+ * Snapshot of how the Supabase env vars were reconciled at load time.
+ * Useful for the diagnostics / integrations health UIs.
+ */
+export function getSupabaseEnvReport(): {
+  urlRef: string | null;
+  anonRef: string | null;
+  serviceRoleRef: string | null;
+  activeRef: string;
+  urlMatchesAnon: boolean;
+  serviceRoleMatches: boolean;
+  fellBackToBaked: boolean;
+} {
+  const urlRef = refFromUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const anonRef = refFromJwt(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const serviceRoleRef = refFromJwt(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const activeRef = refFromUrl(parsed.NEXT_PUBLIC_SUPABASE_URL) ?? BAKED_SUPABASE_REF;
+  return {
+    urlRef,
+    anonRef,
+    serviceRoleRef,
+    activeRef,
+    urlMatchesAnon: !!urlRef && !!anonRef && urlRef === anonRef,
+    serviceRoleMatches: !!serviceRoleRef && serviceRoleRef === activeRef,
+    fellBackToBaked: activeRef !== urlRef || activeRef !== anonRef,
+  };
 }
 
 export const integrations = {
