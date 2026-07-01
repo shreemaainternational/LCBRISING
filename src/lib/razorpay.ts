@@ -31,6 +31,15 @@ export async function createOrder(params: {
   return order;
 }
 
+/**
+ * Fetch the authoritative payment record from Razorpay. Used to confirm
+ * the real captured status and amount server-side, so a client can never
+ * settle a record with a signature from a different (cheaper) order.
+ */
+export async function fetchPayment(paymentId: string) {
+  return razorpay().payments.fetch(paymentId);
+}
+
 export function verifyCheckoutSignature(args: {
   order_id: string;
   payment_id: string;
