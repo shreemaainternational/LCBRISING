@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { Member, MemberRole } from '@/lib/supabase/database.types';
 import { isDevAuthBypass } from '@/lib/env';
@@ -100,7 +101,33 @@ export async function getCurrentMember(): Promise<Member | null> {
   return (created as Member | null) ?? null;
 }
 
+/**
+ * Guard for API route handlers. On denial it THROWS a NextResponse
+ * (which is an instanceof Response), so the standard route idiom
+ * `catch (err) { if (err instanceof Response) return err; }` returns a
+ * real 401/403 instead of silently falling through to the handler body.
+ * Returns the member on success.
+ *
+ * Do NOT use this in a page/server component — use requireAdminPage(),
+ * which redirects. (redirect() throws NEXT_REDIRECT, which is NOT a
+ * Response and would be swallowed by the API idiom — the original bug.)
+ */
 export async function requireAdmin(): Promise<Member> {
+  const member = await getCurrentMember();
+  if (!member) {
+    throw NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  }
+  if (!ADMIN_ROLES.includes(member.role)) {
+    throw NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
+  return member;
+}
+
+/**
+ * Guard for pages / server components. Redirects to /login (or the
+ * denied page) instead of throwing a Response.
+ */
+export async function requireAdminPage(): Promise<Member> {
   const member = await getCurrentMember();
   if (!member) redirect('/login?redirectTo=/admin');
   if (!ADMIN_ROLES.includes(member.role)) redirect('/?denied=admin');

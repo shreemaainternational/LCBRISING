@@ -1,12 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminPage } from '@/lib/auth';
 import { ShieldCheck } from 'lucide-react';
 import { GovernanceConsole, type ClubRow, type ZoneRow } from './GovernanceConsole';
 
 export const dynamic = 'force-dynamic';
 
 export default async function GovernancePage() {
-  await requireAdmin();
+  await requireAdminPage();
   const db = createAdminClient();
 
   const [{ data: clubs }, { data: zones }, { data: districts }, { data: history }] = await Promise.all([
