@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { isSupabaseConfigured, env } from '@/lib/env';
+import { isSupabaseConfigured, isDevAuthBypass, env } from '@/lib/env';
 
 const ADMIN_PREFIX = '/admin';
 const LOGIN_PATH = '/login';
@@ -43,13 +43,9 @@ export async function proxy(request: NextRequest) {
   // through untouched, so /login can never enter a redirect cycle.
   if (!path.startsWith(ADMIN_PREFIX)) return response;
 
-  // TEMPORARY diagnostic bypass — set ADMIN_AUTH_BYPASS=1 in the
-  // environment, OR visit /crm to set the lcbr_crm cookie, to skip
-  // the auth check entirely. Remove both when no longer needed.
-  if (
-    env.ADMIN_AUTH_BYPASS === '1' ||
-    request.cookies.get('lcbr_crm')?.value === '1'
-  ) {
+  // Development-only bypass (ADMIN_AUTH_BYPASS=1 in a non-production
+  // build). Hard-disabled in production so /admin/* is never public.
+  if (isDevAuthBypass()) {
     return response;
   }
 

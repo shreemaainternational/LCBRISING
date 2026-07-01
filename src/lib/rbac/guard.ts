@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { writeAudit } from '@/lib/audit';
-import { env } from '@/lib/env';
+import { isDevAuthBypass } from '@/lib/env';
 import {
   authorize,
   can,
@@ -18,15 +17,13 @@ const BYPASS_USER_ID = '00000000-0000-0000-0000-000000000000';
  * Resolve the current authenticated member into an RBAC actor scope.
  * Returns null when there is no logged-in user.
  *
- * Honours the same diagnostic bypass that getCurrentMember() uses
- * (env ADMIN_AUTH_BYPASS=1 or the lcbr_crm cookie set by /crm) so
- * an admin who entered via the dev shortcut isn't locked out of
- * permission-gated routes.
+ * Honours the same development-only bypass that getCurrentMember() uses
+ * (isDevAuthBypass() — ADMIN_AUTH_BYPASS=1 in a non-production build) so
+ * a developer isn't locked out of permission-gated routes locally. This
+ * is hard-disabled in production.
  */
 export async function currentActor(): Promise<(ActorScope & { user_id: string }) | null> {
-  const cookieStore = await cookies();
-  const crmCookie = cookieStore.get('lcbr_crm')?.value === '1';
-  if (env.ADMIN_AUTH_BYPASS === '1' || crmCookie) {
+  if (isDevAuthBypass()) {
     return {
       user_id: BYPASS_USER_ID,
       role: 'international_admin',

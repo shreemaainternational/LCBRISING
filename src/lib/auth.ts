@@ -1,14 +1,14 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { Member, MemberRole } from '@/lib/supabase/database.types';
-import { env } from '@/lib/env';
+import { isDevAuthBypass } from '@/lib/env';
 
 const ADMIN_ROLES: MemberRole[] = ['admin', 'president', 'secretary', 'treasurer'];
 
-// TEMPORARY diagnostic identity returned when ADMIN_AUTH_BYPASS=1 so
-// /admin/* renders without a real Supabase session. Remove the env var
-// once login is verified.
+// Development-only diagnostic identity returned when isDevAuthBypass()
+// is true (ADMIN_AUTH_BYPASS=1 in a non-production build). Never active
+// in production — see isDevAuthBypass() in @/lib/env.
 const BYPASS_MEMBER = {
   id: '00000000-0000-0000-0000-000000000000',
   user_id: '00000000-0000-0000-0000-000000000000',
@@ -37,12 +37,9 @@ const BYPASS_MEMBER = {
  *      auth user with no members row at all.
  */
 export async function getCurrentMember(): Promise<Member | null> {
-  // Diagnostic bypass — short-circuit BEFORE any Supabase call so even
-  // a stale or partial auth state can't fall through and dump the user
-  // back on /login.
-  const cookieStore = await cookies();
-  const crmCookie = cookieStore.get('lcbr_crm')?.value === '1';
-  if (env.ADMIN_AUTH_BYPASS === '1' || crmCookie) return BYPASS_MEMBER;
+  // Development-only bypass — short-circuit BEFORE any Supabase call.
+  // Hard-disabled in production, so it can never expose /admin publicly.
+  if (isDevAuthBypass()) return BYPASS_MEMBER;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -104,7 +101,33 @@ export async function getCurrentMember(): Promise<Member | null> {
   return (created as Member | null) ?? null;
 }
 
+/**
+ * Guard for API route handlers. On denial it THROWS a NextResponse
+ * (which is an instanceof Response), so the standard route idiom
+ * `catch (err) { if (err instanceof Response) return err; }` returns a
+ * real 401/403 instead of silently falling through to the handler body.
+ * Returns the member on success.
+ *
+ * Do NOT use this in a page/server component — use requireAdminPage(),
+ * which redirects. (redirect() throws NEXT_REDIRECT, which is NOT a
+ * Response and would be swallowed by the API idiom — the original bug.)
+ */
 export async function requireAdmin(): Promise<Member> {
+  const member = await getCurrentMember();
+  if (!member) {
+    throw NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  }
+  if (!ADMIN_ROLES.includes(member.role)) {
+    throw NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
+  return member;
+}
+
+/**
+ * Guard for pages / server components. Redirects to /login (or the
+ * denied page) instead of throwing a Response.
+ */
+export async function requireAdminPage(): Promise<Member> {
   const member = await getCurrentMember();
   if (!member) redirect('/login?redirectTo=/admin');
   if (!ADMIN_ROLES.includes(member.role)) redirect('/?denied=admin');

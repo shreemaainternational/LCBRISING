@@ -40,6 +40,14 @@ function pickProfile(req: NextRequest): SandboxIdentity {
 }
 
 export async function GET(req: NextRequest) {
+  // Hard-disabled in production. This route mints a real, privileged
+  // session for a synthetic identity — a testing tool only. Gating it
+  // on NODE_ENV ensures a stray sandbox_mode toggle can never expose
+  // admin access on the live site.
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'sandbox_disabled_in_production' }, { status: 404 });
+  }
+
   await loadOidcSettings(true);
   if (!isOidcSandboxActive()) {
     return NextResponse.json({ error: 'sandbox_disabled', message: 'Enable sandbox mode at /admin/integrations/oidc first.' }, { status: 503 });
@@ -121,11 +129,11 @@ export async function GET(req: NextRequest) {
     } catch (e) { console.error('magic link mint failed:', e); }
   }
 
-  // 4. Fallback: drop a cookie so /admin/getCurrentMember resolves
-  //    the sandbox identity (uses the same shape as the dev-bypass
-  //    cookie). The user can complete sign-in by setting a password
-  //    later from /admin/profile.
-  const res = NextResponse.redirect(new URL(returnTo, req.url));
-  res.cookies.set('lcbr_crm', '1', { path: '/', maxAge: 60 * 60 * 24, sameSite: 'lax' });
-  return res;
+  // 4. If we reach here the magic link could not be minted (no service
+  //    role / generateLink unavailable). Fail explicitly rather than
+  //    granting access — the old cookie shortcut has been removed.
+  return NextResponse.json(
+    { error: 'sandbox_signin_failed', message: 'Could not mint a sandbox session. Ensure the service role key is set.' },
+    { status: 500 },
+  );
 }

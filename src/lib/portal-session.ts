@@ -11,7 +11,17 @@ interface SessionPayload {
 }
 
 function secret(): string {
-  return env.PORTAL_SESSION_SECRET ?? env.SUPABASE_SERVICE_ROLE_KEY ?? 'lcbrs-dev-only-secret-change-me';
+  const configured = env.PORTAL_SESSION_SECRET ?? env.SUPABASE_SERVICE_ROLE_KEY;
+  if (configured) return configured;
+  // Never sign portal sessions with a hardcoded, world-readable literal
+  // in production — anyone could forge a session cookie for any phone
+  // number. Fail closed instead; the dev-only literal is for local use.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'PORTAL_SESSION_SECRET (or SUPABASE_SERVICE_ROLE_KEY) must be set in production.',
+    );
+  }
+  return 'lcbrs-dev-only-secret-change-me';
 }
 
 function sign(value: string): string {

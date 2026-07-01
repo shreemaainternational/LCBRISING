@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createAdminClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminPage } from '@/lib/auth';
 import { formatINR, formatDate } from '@/lib/utils';
 import { getPaymentStats } from '@/lib/payment-stats';
 import { ReviewControls } from './ReviewControls';
@@ -50,7 +50,7 @@ async function safe<T>(label: string, fn: () => Promise<T>): Promise<{ data: T |
 }
 
 export default async function AdminPaymentsPage() {
-  await requireAdmin();
+  await requireAdminPage();
   const supabase = createAdminClient();
 
   const [invoicesResult, paymentsResult, refundsResult, statsResult] = await Promise.all([

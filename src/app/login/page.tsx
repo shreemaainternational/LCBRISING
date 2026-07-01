@@ -1,15 +1,11 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { integrations, env } from '@/lib/env';
+import { integrations, isDevAuthBypass, env } from '@/lib/env';
 import LoginForm from './LoginForm';
 
 export default async function LoginPage() {
-  // When the admin auth bypass is on (env var OR the /crm cookie),
-  // /login should just forward into /admin so the user never sees the
-  // form.
-  const cookieStore = await cookies();
-  const crmCookie = cookieStore.get('lcbr_crm')?.value === '1';
-  if (env.ADMIN_AUTH_BYPASS === '1' || crmCookie) redirect('/admin');
+  // In local development with the bypass on, skip the form and go
+  // straight to /admin. Never active in production.
+  if (isDevAuthBypass()) redirect('/admin');
 
   const oidcEnabled = integrations.lionsOidc;
   const providerLabel = env.LIONS_OIDC_PROVIDER_LABEL ?? 'Lions';
