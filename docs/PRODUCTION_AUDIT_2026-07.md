@@ -13,26 +13,22 @@
 
 ## 0. The headline you need first
 
-Two things dominate everything else:
+**Identity confirmed:** this platform is for the **Lions Club of Baroda Rising Star**
+(District 3232-F1, Vadodara). "Shree Maa International" is the operating/GitHub
+organisation; the product itself is the Lions Club NGO platform. The branding, the
+80G/NGO framing, the receipts, the UPI account (`9712299333@ybl`), and the
+privacy/terms pages are all for the correct entity — so there is **no identity or
+legal-entity mismatch**. (Verified: "Lions"/"Baroda" appears 934 times across the code.)
 
-**1. This code is not for a travel company.** You described this as the automation
-project for *Shree Maa International, a travel company*. The code is, top to bottom,
-a platform for the **Lions Club of Baroda Rising Star** — an NGO in Vadodara. The
-name "Shree Maa" and the words "travel / tour / itinerary / flight / hotel" appear
-**zero times** in the code. The word "Lions"/"Baroda" appears **934 times** — in the
-receipts, emails, tax paperwork, payment account (`9712299333@ybl`), branding, and
-legal pages. So before anything technical: **the entire legal identity, the tax
-receipts, the bank/UPI account, and the privacy/terms pages belong to a different
-organisation.** If this is meant to run your travel business, almost none of the
-business/legal layer is yours.
+The one thing that dominates everything else:
 
-**2. The admin area is wide open to the public.** There is a live URL — `/crm` — that
+**The admin area is wide open to the public.** There is a live URL — `/crm` — that
 hands anyone who visits it a 30-day "you are the top administrator" pass, with **no
 password**. The code even says so in a comment: *"Anyone who knows this URL can access
 /admin."* Three independent reviews confirmed it. Until this is removed, all member
 data, donor data, payments, and beneficiary records are effectively public.
 
-Neither of these is a "polish later" item. They are go/no-go blockers.
+This is not a "polish later" item. It is a go/no-go blocker.
 
 ---
 
@@ -44,7 +40,7 @@ Neither of these is a "polish later" item. They are go/no-go blockers.
 | **Legal & Compliance** | **2 / 10** | Wrong legal entity, invalid tax receipts, no consent, exposed sensitive data. |
 | **Stability & Reliability** | **3 / 10** | Zero automated tests, no error monitoring, jobs can silently double-send or die. |
 | **DevOps / CI-CD** | **3 / 10** | No safety gate on changes; some automation scripts are dangerous. |
-| **Strategy & Scope** | **3 / 10** | Enormous feature sprawl for a single organisation; unclear product focus. |
+| **Strategy & Scope** | **4 / 10** | Identity is clear (Lions Club NGO); the risk is enormous feature sprawl vs. a hardened core. |
 | **System Design (scaling)** | **4 / 10** | Heavy work crammed into 30–60 second web requests; schedule doesn't match the hosting plan. |
 | **Architecture** | **5 / 10** | Good code organisation, but the job/payment engine has correctness gaps. |
 | **Code Quality** | **5 / 10** | Clean, strict, tidy on the surface; the database layer is secretly untyped. |
@@ -115,8 +111,8 @@ The receipts are labelled "80G" (India's tax-deduction rule for donations) but a
 **missing every legally required field**: the organisation's PAN, the 80G registration
 number and its validity, the amount in words, the payment mode, and the Form 10BE
 reference. There's also no sign of the mandatory Form 10BD filing. A donor **cannot
-legally claim a tax deduction** with these. (And per section 0, they're in the wrong
-organisation's name anyway.)
+legally claim a tax deduction** with these — even though the organisation name on them
+is correct.
 
 ### 3.5 Legal/Privacy — sensitive people's data is exposed and consent isn't recorded
 `supabase/migrations/0020`, `src/app/api/beneficiaries/*`
@@ -200,18 +196,13 @@ and access control. None of the three is reliably in place.
 - **It was built fast and largely by AI.** 115 commits, ~140 pull requests, most
   auto-generated, with recent history dominated by "re-run … apply" retries against the
   live database. This explains both the impressive breadth *and* the shaky foundations.
-- **The product identity is unresolved.** Between "travel company" (your words) and
-  "Lions Club NGO" (the code), the project doesn't currently know what it is. That has
-  to be settled first — it determines the data model, the legal setup, and half the
-  features.
+- **Product identity is clear** (Lions Club of Baroda Rising Star) — this is *not* a
+  concern. The strategy risk is purely the scope sprawl above: too many half-deep
+  features rather than a focused, fully-hardened core.
 
 ---
 
 ## 7. A realistic path to production
-
-**Step 0 — Decide what this actually is.** Travel company or Lions Club NGO? Everything
-downstream depends on this answer. If it's the travel company, a large rebrand + legal
-re-do is needed; if it's the NGO, ignore the identity issue and proceed.
 
 **Phase 1 — Stop the bleeding (days, not weeks):**
 1. Delete the `/crm` backdoor and the bypass cookie/switch (3.1).
@@ -243,7 +234,7 @@ came together. But it is **not production-ready**: a public passwordless admin b
 payment amounts trusted from the browser, tax receipts that aren't legally valid, exposed
 sensitive personal data, and a total absence of automated tests or error monitoring are
 each, on their own, launch-blockers. Fix the handful of critical items first (they're
-concentrated and fixable in days), settle the travel-vs-NGO identity question, then add
+concentrated and fixable in days), then add
 the testing and compliance safety nets. The foundation is salvageable and much of the
 hard integration work is already done — the gap is in safety, correctness, and focus,
 not in raw capability.
