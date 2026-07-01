@@ -200,6 +200,19 @@ const parsed = schema.parse({
 
 export const env = parsed;
 
+/**
+ * Development-only admin auth bypass.
+ *
+ * Returns true ONLY outside production AND when ADMIN_AUTH_BYPASS=1.
+ * It can NEVER be true in a production deployment, regardless of the
+ * env var or any cookie — this permanently closes the public admin
+ * backdoor that the old `/crm` cookie shortcut created. Use for local
+ * development only.
+ */
+export function isDevAuthBypass(): boolean {
+  return process.env.NODE_ENV !== 'production' && parsed.ADMIN_AUTH_BYPASS === '1';
+}
+
 export function requireSupabaseEnv() {
   if (!parsed.NEXT_PUBLIC_SUPABASE_URL || !parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     throw new Error(

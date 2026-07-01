@@ -1,14 +1,13 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { Member, MemberRole } from '@/lib/supabase/database.types';
-import { env } from '@/lib/env';
+import { isDevAuthBypass } from '@/lib/env';
 
 const ADMIN_ROLES: MemberRole[] = ['admin', 'president', 'secretary', 'treasurer'];
 
-// TEMPORARY diagnostic identity returned when ADMIN_AUTH_BYPASS=1 so
-// /admin/* renders without a real Supabase session. Remove the env var
-// once login is verified.
+// Development-only diagnostic identity returned when isDevAuthBypass()
+// is true (ADMIN_AUTH_BYPASS=1 in a non-production build). Never active
+// in production — see isDevAuthBypass() in @/lib/env.
 const BYPASS_MEMBER = {
   id: '00000000-0000-0000-0000-000000000000',
   user_id: '00000000-0000-0000-0000-000000000000',
@@ -37,12 +36,9 @@ const BYPASS_MEMBER = {
  *      auth user with no members row at all.
  */
 export async function getCurrentMember(): Promise<Member | null> {
-  // Diagnostic bypass — short-circuit BEFORE any Supabase call so even
-  // a stale or partial auth state can't fall through and dump the user
-  // back on /login.
-  const cookieStore = await cookies();
-  const crmCookie = cookieStore.get('lcbr_crm')?.value === '1';
-  if (env.ADMIN_AUTH_BYPASS === '1' || crmCookie) return BYPASS_MEMBER;
+  // Development-only bypass — short-circuit BEFORE any Supabase call.
+  // Hard-disabled in production, so it can never expose /admin publicly.
+  if (isDevAuthBypass()) return BYPASS_MEMBER;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
