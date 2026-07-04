@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminPage } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/server';
 import { formatINR, formatDate } from '@/lib/utils';
 import { CommissionActions } from './CommissionActions';
@@ -7,7 +7,7 @@ import { CommissionActions } from './CommissionActions';
 export const dynamic = 'force-dynamic';
 
 export default async function CommissionsPage() {
-  await requireAdmin();
+  await requireAdminPage();
   const supabase = createAdminClient();
 
   const { data: records } = await supabase

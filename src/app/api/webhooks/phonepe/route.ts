@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/server';
 import { markInvoicePaid } from '@/lib/invoices';
 import { buildReceiptNo } from '@/lib/utils';
@@ -15,13 +15,21 @@ export const runtime = 'nodejs';
  * PhonePe sends an X-VERIFY header which is sha256(base64Body + saltKey) + '###' + saltIndex.
  * For the merchant-callback flavor that uses HTTP basic auth, we check the auth header instead.
  */
+/** Constant-time string comparison; false on length mismatch. */
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a, 'utf-8');
+  const bb = Buffer.from(b, 'utf-8');
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
+
 function verifyPhonePeSignature(rawBody: string, header: string | null): boolean {
   if (!header || !env.PHONEPE_SALT_KEY) return false;
   const [signature, idx] = header.split('###');
   if (!signature || !idx) return false;
   if (env.PHONEPE_SALT_INDEX && idx !== env.PHONEPE_SALT_INDEX) return false;
   const expected = createHash('sha256').update(rawBody + env.PHONEPE_SALT_KEY).digest('hex');
-  return expected === signature;
+  return safeEqual(expected, signature);
 }
 
 function verifyBasicAuth(header: string | null): boolean {
@@ -29,7 +37,7 @@ function verifyBasicAuth(header: string | null): boolean {
   if (!header.startsWith('Basic ')) return false;
   const decoded = Buffer.from(header.slice(6), 'base64').toString('utf-8');
   const [user, pass] = decoded.split(':');
-  return user === env.PHONEPE_WEBHOOK_USERNAME && pass === env.PHONEPE_WEBHOOK_PASSWORD;
+  return safeEqual(user ?? '', env.PHONEPE_WEBHOOK_USERNAME) && safeEqual(pass ?? '', env.PHONEPE_WEBHOOK_PASSWORD);
 }
 
 type PhonePeEvent = {
