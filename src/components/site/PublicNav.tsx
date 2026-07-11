@@ -104,6 +104,9 @@ export function PublicNav() {
               <span className="block text-lg sm:text-xl font-bold text-white">
                 Baroda Rising Star
               </span>
+              <span className="block text-[10px] tracking-[0.15em] text-brand-200/80 italic mt-0.5">
+                Service First
+              </span>
             </span>
           </Link>
 

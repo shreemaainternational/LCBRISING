@@ -55,9 +55,12 @@ export async function Footer() {
               <span className="block text-base font-bold">Baroda Rising Star</span>
             </span>
           </Link>
+          <p className="text-base font-bold text-brand-200 italic mb-2">
+            Service First
+          </p>
           <p className="text-sm text-gray-300 leading-relaxed mb-4 max-w-xs">
             Empowering communities through service, compassion, and collective
-            action. Together, we serve.
+            action.
           </p>
           <Link
             href="/about"
