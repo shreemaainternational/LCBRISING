@@ -58,7 +58,7 @@ export default async function MobileGreetings() {
         <div aria-hidden className="absolute inset-0 opacity-25"
           style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.4), transparent 35%)' }} />
         <div className="relative p-5 text-white">
-          <div className="inline-flex items-center gap-1.5 text-amber-100 text-[10px] uppercase tracking-[0.18em] font-bold">
+          <div className="inline-flex items-center gap-1.5 text-blue-100 text-[10px] uppercase tracking-[0.18em] font-bold">
             <Gift size={11} /> Greetings
           </div>
           <h1 className="text-2xl font-extrabold leading-tight mt-1">
@@ -98,14 +98,14 @@ export default async function MobileGreetings() {
       )}
 
       <Link href="/m/greetings/new"
-        className="block bg-gradient-to-br from-amber-400 to-amber-600 text-white rounded-2xl p-4 shadow-md active:scale-[0.99] transition">
+        className="block bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-2xl p-4 shadow-md active:scale-[0.99] transition">
         <div className="flex items-center justify-between">
           <div>
-            <div className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] font-bold text-amber-100">
+            <div className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] font-bold text-blue-100">
               <Sparkles size={11} /> AI Greeting Generator
             </div>
             <div className="text-base font-extrabold mt-1">Create a branded greeting</div>
-            <div className="text-[11px] text-amber-50 mt-0.5">Birthday · Anniversary · Award · Festival</div>
+            <div className="text-[11px] text-blue-50 mt-0.5">Birthday · Anniversary · Award · Festival</div>
           </div>
           <ChevronRight size={20} />
         </div>
@@ -133,10 +133,10 @@ function PersonRow({ m, highlight }: { m: MemberRow; highlight?: boolean }) {
   const age = ageOn(m.birthday);
   return (
     <div className={`flex items-center gap-3 rounded-2xl p-3 shadow-sm border ${
-      highlight ? 'bg-gradient-to-r from-rose-50 to-amber-50 border-rose-200' : 'bg-white border-gray-100'
+      highlight ? 'bg-gradient-to-r from-rose-50 to-blue-50 border-rose-200' : 'bg-white border-gray-100'
     }`}>
       <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold ${
-        highlight ? 'bg-gradient-to-br from-rose-500 to-amber-500' : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+        highlight ? 'bg-gradient-to-br from-rose-500 to-blue-800' : 'bg-gradient-to-br from-blue-500 to-indigo-600'
       }`}>
         {highlight ? '🎂' : initial}
       </div>
@@ -150,7 +150,7 @@ function PersonRow({ m, highlight }: { m: MemberRow; highlight?: boolean }) {
       </div>
       <div className="flex gap-1">
         <Link href={`/m/greetings/new?for=${m.id}`} aria-label="Send greeting"
-          className="w-9 h-9 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm active:scale-95 transition">
+          className="w-9 h-9 rounded-full bg-blue-800 text-white flex items-center justify-center shadow-sm active:scale-95 transition">
           <Gift size={14} />
         </Link>
         {m.phone && (

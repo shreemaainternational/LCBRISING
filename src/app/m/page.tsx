@@ -17,7 +17,7 @@ const DISTRICT_RANK: Record<string, number> = {
   zone_chairperson: 4,
 };
 
-type OfficerRow = { role: string; member: { name: string; avatar_url: string | null } | null };
+type OfficerRow = { role: string; notes: string | null; source_id: string | null; member: { name: string; avatar_url: string | null } | null };
 
 export default async function MobileHome() {
   const db = createAdminClient();
@@ -33,7 +33,7 @@ export default async function MobileHome() {
     db.from('members').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     db.from('activities').select('*', { count: 'exact', head: true }),
     db.from('officers')
-      .select('role, member:members(name, avatar_url)')
+      .select('role, notes, source_id, member:members(name, avatar_url)')
       .eq('scope_kind', 'district')
       .eq('status', 'active'),
     db.from('districts').select('governor_name, cabinet_secretary_name, cabinet_treasurer_name, updated_at').limit(1).maybeSingle(),
@@ -43,8 +43,11 @@ export default async function MobileHome() {
   // stored on the district row when no officer records exist yet.
   let leaders = ((officers ?? []) as unknown as OfficerRow[])
     .filter((o) => o.member)
-    .sort((a, b) => (DISTRICT_RANK[a.role] ?? 9) - (DISTRICT_RANK[b.role] ?? 9))
-    .map((o) => ({ name: o.member!.name, roleLabel: roleLabel(o.role), avatar: o.member!.avatar_url }));
+    .sort((a, b) =>
+      (a.source_id ?? 'zzz').localeCompare(b.source_id ?? 'zzz') ||
+      (DISTRICT_RANK[a.role] ?? 9) - (DISTRICT_RANK[b.role] ?? 9),
+    )
+    .map((o) => ({ name: o.member!.name, roleLabel: o.notes ?? roleLabel(o.role), avatar: o.member!.avatar_url }));
 
   if (!leaders.length && district) {
     leaders = [

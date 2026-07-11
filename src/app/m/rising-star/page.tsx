@@ -13,7 +13,7 @@ const ACTIONS = [
   { href: '/m/events', label: 'Register for Event', icon: Calendar, color: 'from-indigo-500 to-indigo-700' },
   { href: '/m/blood/request', label: 'Emergency Blood Request', icon: Droplet, color: 'from-rose-600 to-red-700' },
   { href: '/m/networking/refer', label: 'Add Member Reference', icon: UserPlus, color: 'from-teal-500 to-teal-700' },
-  { href: '/m/announcements/new', label: 'Create Announcement', icon: Megaphone, color: 'from-amber-500 to-orange-600' },
+  { href: '/m/announcements/new', label: 'Create Announcement', icon: Megaphone, color: 'from-blue-800 to-orange-600' },
 ];
 
 export default function RisingStarMenu() {
@@ -25,7 +25,7 @@ export default function RisingStarMenu() {
       <div className="relative">
         <div className="flex items-start justify-between mb-6">
           <div>
-            <div className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-amber-300 mb-2 font-bold">
+            <div className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-blue-300 mb-2 font-bold">
               ✦ Rising Star Center
             </div>
             <h1 className="text-2xl font-extrabold leading-tight">

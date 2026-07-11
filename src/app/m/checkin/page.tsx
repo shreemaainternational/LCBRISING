@@ -41,7 +41,7 @@ export default async function MobileCheckin() {
                   href={`/api/qr/${e.id}/card`}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-3 py-1.5 rounded-md bg-amber-500 text-white text-xs font-semibold"
+                  className="px-3 py-1.5 rounded-md bg-blue-800 text-white text-xs font-semibold"
                 >
                   QR card
                 </a>

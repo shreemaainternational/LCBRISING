@@ -79,7 +79,7 @@ export function CheckinScanner() {
           <div className="relative aspect-square w-full bg-black rounded-xl overflow-hidden">
             <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
             <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute inset-x-8 inset-y-12 border-2 border-amber-400/80 rounded-2xl" />
+              <div className="absolute inset-x-8 inset-y-12 border-2 border-blue-600/80 rounded-2xl" />
             </div>
             <button type="button" onClick={() => setOpen(false)}
               className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center">

@@ -11,7 +11,7 @@ const DISTRICT_RANK: Record<string, number> = {
   region_chairperson: 3, zone_chairperson: 4,
 };
 
-type OfficerRow = { role: string; member: { name: string; avatar_url: string | null } | null };
+type OfficerRow = { role: string; notes: string | null; source_id: string | null; member: { name: string; avatar_url: string | null } | null };
 
 export default async function MyDistrict() {
   const db = createAdminClient();
@@ -28,14 +28,17 @@ export default async function MyDistrict() {
     db.from('clubs').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     db.from('members').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     db.from('activities').select('*', { count: 'exact', head: true }),
-    db.from('officers').select('role, member:members(name, avatar_url)').eq('scope_kind', 'district').eq('status', 'active'),
+    db.from('officers').select('role, notes, source_id, member:members(name, avatar_url)').eq('scope_kind', 'district').eq('status', 'active'),
     db.from('clubs').select('id, name, city').is('deleted_at', null).order('name').limit(12),
   ]);
 
   const leaders = ((officers ?? []) as unknown as OfficerRow[])
     .filter((o) => o.member)
-    .sort((a, b) => (DISTRICT_RANK[a.role] ?? 9) - (DISTRICT_RANK[b.role] ?? 9))
-    .map((o) => ({ name: o.member!.name, roleLabel: roleLabel(o.role), avatar: o.member!.avatar_url }));
+    .sort((a, b) =>
+      (a.source_id ?? 'zzz').localeCompare(b.source_id ?? 'zzz') ||
+      (DISTRICT_RANK[a.role] ?? 9) - (DISTRICT_RANK[b.role] ?? 9),
+    )
+    .map((o) => ({ name: o.member!.name, roleLabel: o.notes ?? roleLabel(o.role), avatar: o.member!.avatar_url }));
 
   return (
     <>

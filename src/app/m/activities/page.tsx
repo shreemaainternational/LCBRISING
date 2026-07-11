@@ -13,7 +13,7 @@ export default async function MobileActivities() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-navy-800">Activities</h1>
         <Link href="/m/activities/new"
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500 text-white text-sm font-semibold">
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-800 text-white text-sm font-semibold">
           <Plus size={16} /> Log
         </Link>
       </div>
@@ -50,7 +50,7 @@ export default async function MobileActivities() {
         ))}
         {!data?.length && (
           <div className="text-center text-sm text-gray-500 py-10 bg-white rounded-xl">
-            No activities yet. <Link href="/m/activities/new" className="text-amber-600 underline">Log the first one</Link>.
+            No activities yet. <Link href="/m/activities/new" className="text-blue-800 underline">Log the first one</Link>.
           </div>
         )}
       </div>

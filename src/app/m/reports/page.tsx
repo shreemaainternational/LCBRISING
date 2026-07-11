@@ -15,7 +15,7 @@ export default async function MobileReports() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-navy-800">Reports</h1>
         <Link href="/admin/reports/new"
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500 text-white text-sm font-semibold">
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-800 text-white text-sm font-semibold">
           <BarChart3 size={16} /> Generate
         </Link>
       </div>

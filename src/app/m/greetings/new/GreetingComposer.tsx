@@ -264,7 +264,7 @@ export function GreetingComposer({ members, initialRecipientId, initialOccasion 
           {OCCASIONS.map((o) => (
             <button key={o.key} type="button" onClick={() => setOccasion(o.key)}
               className={`py-2 rounded-xl text-[11px] font-bold border-2 ${
-                occasion === o.key ? 'border-amber-400 bg-amber-50 text-amber-800' : 'border-transparent bg-gray-100 text-gray-600'
+                occasion === o.key ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-transparent bg-gray-100 text-gray-600'
               }`}>
               <div className="text-base leading-none mb-0.5">{o.emoji}</div>
               {o.label}
@@ -298,13 +298,13 @@ export function GreetingComposer({ members, initialRecipientId, initialOccasion 
 
       {/* Generate */}
       <button type="button" onClick={generate} disabled={pending}
-        className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-white font-bold shadow-md shadow-amber-500/30 disabled:opacity-60 active:scale-[0.99] transition">
+        className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-800 to-blue-800 text-white font-bold shadow-md shadow-blue-800/30 disabled:opacity-60 active:scale-[0.99] transition">
         {pending ? <Loader2 className="animate-spin" size={16} /> :
           text ? <RefreshCw size={16} /> : <Sparkles size={16} />}
         {pending ? 'Writing…' : text ? 'Regenerate' : 'Generate with AI'}
       </button>
       {source === 'template' && !pending && (
-        <p className="text-[11px] text-amber-700 inline-flex items-center gap-1 -mt-2">
+        <p className="text-[11px] text-blue-800 inline-flex items-center gap-1 -mt-2">
           <AlertCircle size={11} /> Used hand-written template — set OPENAI_API_KEY for AI generation.
         </p>
       )}
@@ -366,7 +366,7 @@ export function GreetingComposer({ members, initialRecipientId, initialOccasion 
         </button>
         <button type="button" onClick={copyText} disabled={!text}
           className={`inline-flex items-center justify-center gap-1.5 py-3 rounded-2xl font-bold text-sm shadow-sm active:scale-95 transition ${
-            text ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-400'
+            text ? 'bg-blue-800 text-white' : 'bg-gray-200 text-gray-400'
           }`}>
           {copied ? <Check size={16} /> : <Copy size={16} />}
           {copied ? 'Copied' : 'Copy text'}

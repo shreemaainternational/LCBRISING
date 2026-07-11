@@ -29,7 +29,7 @@ export default async function MobileDirectory({ searchParams }: Props) {
       <header className="relative rounded-3xl overflow-hidden shadow-lg shadow-blue-900/15">
         <div className="absolute inset-0 bg-gradient-to-br from-[#0B2D6B] to-[#1E3A8A]" />
         <div className="relative p-4 text-white">
-          <div className="inline-flex items-center gap-1.5 text-amber-200 text-[10px] uppercase tracking-[0.18em] font-bold">
+          <div className="inline-flex items-center gap-1.5 text-blue-200 text-[10px] uppercase tracking-[0.18em] font-bold">
             <BookUser size={11} /> Directory
           </div>
           <h1 className="text-xl font-extrabold mt-1">
@@ -45,7 +45,7 @@ export default async function MobileDirectory({ searchParams }: Props) {
         <input type="hidden" name="tab" value={tab} />
         <input type="search" name="q" defaultValue={q}
           placeholder="Search clubs, officers, vendors…"
-          className="w-full pl-9 pr-3 py-2.5 rounded-2xl border bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          className="w-full pl-9 pr-3 py-2.5 rounded-2xl border bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
       </form>
 
@@ -145,7 +145,7 @@ function CategoryGroup({ title, icon: Icon, children, flat }: {
   return (
     <div>
       <div className="flex items-center gap-1.5 mb-2 px-1">
-        <Icon size={12} className="text-amber-500" />
+        <Icon size={12} className="text-blue-800" />
         <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-600">{title}</h2>
       </div>
       <div className={flat ? 'grid grid-cols-2 gap-2' : 'space-y-2'}>{children}</div>
@@ -159,7 +159,7 @@ function PersonCard({ role, name, phone, email }: {
   const initial = (name || '?').charAt(0).toUpperCase();
   return (
     <div className="flex items-center gap-3 bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
-      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center font-bold">
+      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 text-white flex items-center justify-center font-bold">
         {initial}
       </div>
       <div className="flex-1 min-w-0">

@@ -108,7 +108,7 @@ export function PushToggle() {
             onClick={status === 'enabled' ? disable : enable}
             disabled={busy || !publicKey}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
-              status === 'enabled' ? 'bg-gray-100 text-gray-700' : 'bg-amber-500 text-white'
+              status === 'enabled' ? 'bg-gray-100 text-gray-700' : 'bg-blue-800 text-white'
             } disabled:opacity-60`}
           >
             {busy ? <Loader2 className="animate-spin inline" size={12} /> : status === 'enabled' ? 'Disable' : 'Enable'}
@@ -116,7 +116,7 @@ export function PushToggle() {
         )}
       </div>
       {status === 'disabled' && !publicKey && (
-        <p className="text-[11px] text-amber-700 mt-2 inline-flex items-center gap-1">
+        <p className="text-[11px] text-blue-800 mt-2 inline-flex items-center gap-1">
           <AlertCircle size={11} /> VAPID keys not configured on server
         </p>
       )}
