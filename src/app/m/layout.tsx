@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentMember } from '@/lib/auth';
-import { env } from '@/lib/env';
 import { MobileTabBar } from './MobileTabBar';
 import { MobileServiceWorker } from './MobileServiceWorker';
 
@@ -22,8 +21,8 @@ export default async function MobileLayout({ children }: { children: React.React
           <Link href="/m" className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={env.NEXT_PUBLIC_BRAND_LOGO_URL || '/logo.png'}
-              alt="Lions Club of Baroda Rising Star"
+              src="/logo-lions.svg"
+              alt="Lions Clubs International"
               className="h-9 w-9 rounded-full object-cover ring-2 ring-amber-300/40"
             />
             <div className="leading-tight">

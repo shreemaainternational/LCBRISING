@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Lions Clubs International">
+  <defs>
+    <path id="lci-top" d="M28,100 A72,72 0 0 1 172,100" />
+    <path id="lci-bottom" d="M30,100 A70,70 0 0 0 170,100" />
+    <!-- Lion head: maned face -->
+    <g id="lci-lion">
+      <path d="M12,0 L6.47,2.68 L8.49,8.49 L2.68,6.47 L0,12 L-2.68,6.47 L-8.49,8.49 L-6.47,2.68
+               L-12,0 L-6.47,-2.68 L-8.49,-8.49 L-2.68,-6.47 L0,-12 L2.68,-6.47 L8.49,-8.49 L6.47,-2.68 Z"
+            fill="#F2B90C" />
+      <circle cx="0" cy="0" r="7" fill="#08319C" />
+      <circle cx="-3" cy="-1.5" r="1.2" fill="#F2B90C" />
+      <circle cx="3" cy="-1.5" r="1.2" fill="#F2B90C" />
+      <path d="M-2.5,2 Q0,4.5 2.5,2 Q0,3 -2.5,2 Z" fill="#F2B90C" />
+    </g>
+  </defs>
+
+  <!-- Outer gold ring -->
+  <circle cx="100" cy="100" r="98" fill="#F2B90C" />
+  <!-- Blue field -->
+  <circle cx="100" cy="100" r="89" fill="#08319C" />
+
+  <!-- Curved lettering -->
+  <g fill="#F2B90C" font-family="Georgia, 'Times New Roman', serif" font-weight="700">
+    <text font-size="22" letter-spacing="4" text-anchor="middle">
+      <textPath href="#lci-top" startOffset="50%">LIONS</textPath>
+    </text>
+    <text font-size="15" letter-spacing="2" text-anchor="middle">
+      <textPath href="#lci-bottom" startOffset="50%">INTERNATIONAL</textPath>
+    </text>
+  </g>
+
+  <!-- Central medallion -->
+  <circle cx="100" cy="100" r="50" fill="#08319C" stroke="#F2B90C" stroke-width="4" />
+
+  <!-- Two lion heads flanking the central L -->
+  <use href="#lci-lion" transform="translate(72,100)" />
+  <use href="#lci-lion" transform="translate(128,100)" />
+
+  <!-- Central "L" -->
+  <text x="100" y="118" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-weight="700" font-size="52" fill="#F2B90C">L</text>
+</svg>
