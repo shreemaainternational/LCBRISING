@@ -23,7 +23,7 @@ export default async function LoginPage() {
         <h1 className="text-3xl md:text-4xl font-bold text-white">
           Lions Club CRM
         </h1>
-        <p className="text-blue-200 mt-1">AI-Powered Management System</p>
+        <p className="text-blue-200 mt-1">Service First</p>
       </div>
 
       {/* Card */}
