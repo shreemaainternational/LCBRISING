@@ -1,14 +1,17 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Bell, Settings } from 'lucide-react';
 import { getCurrentMember } from '@/lib/auth';
 import { env } from '@/lib/env';
 import { MobileTabBar } from './MobileTabBar';
 import { MobileServiceWorker } from './MobileServiceWorker';
 
+const DISTRICT_CODE = '3232F1';
+
 export const metadata = {
-  title: 'Lions Mobile · Baroda Rising Star',
+  title: 'Lions District 3232F1 · Service First',
   viewport: 'width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no',
-  themeColor: '#0B1F4D',
+  themeColor: '#1e40af',
 };
 
 export default async function MobileLayout({ children }: { children: React.ReactNode }) {
@@ -16,30 +19,38 @@ export default async function MobileLayout({ children }: { children: React.React
   if (!member) redirect('/login?redirectTo=/m');
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-      <header className="sticky top-0 z-30 bg-navy-900 text-white shadow-sm">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <Link href="/m" className="flex items-center gap-2.5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={env.NEXT_PUBLIC_BRAND_LOGO_URL || '/logo.png'}
-              alt="Lions Club of Baroda Rising Star"
-              className="h-9 w-9 rounded-full object-cover ring-2 ring-amber-300/40"
-            />
-            <div className="leading-tight">
-              <div className="text-sm font-bold text-amber-300">Service First</div>
-              <div className="text-[10px] text-blue-100/80 -mt-0.5">
-                District 3232 F1 | Region V | Zone I Year 2026-2027
-              </div>
-            </div>
+    <div className="min-h-screen bg-[#eef1f5] flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <header
+        className="sticky top-0 z-30 bg-[#1e40af] text-white shadow-md"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        <div className="px-4 py-3 flex items-center justify-between gap-3">
+          <Link href="/m" className="flex items-center gap-3 min-w-0">
+            <span className="h-11 w-11 rounded-full bg-white flex items-center justify-center ring-1 ring-white/40 flex-none overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={env.NEXT_PUBLIC_BRAND_LOGO_URL || '/logo.png'}
+                alt="Lions District 3232F1"
+                className="h-9 w-9 object-contain"
+              />
+            </span>
+            <span className="leading-tight min-w-0">
+              <span className="block text-lg font-extrabold truncate">District {DISTRICT_CODE}</span>
+              <span className="block text-xs text-blue-100/90 -mt-0.5">Service First</span>
+            </span>
           </Link>
-          <Link href="/m/profile" className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm font-bold">
-            {member.name.charAt(0).toUpperCase()}
-          </Link>
+          <div className="flex items-center gap-1.5 flex-none">
+            <Link href="/m/events" aria-label="Updates" className="w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center">
+              <Bell size={20} />
+            </Link>
+            <Link href="/m/profile" aria-label="Settings" className="w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center">
+              <Settings size={20} />
+            </Link>
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 pb-24 px-4 pt-4 max-w-screen-sm w-full mx-auto">
+      <main className="flex-1 pb-24 px-4 pt-4 max-w-screen-sm w-full mx-auto space-y-4">
         {children}
       </main>
 
