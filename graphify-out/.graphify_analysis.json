@@ -3452,17 +3452,17 @@
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `createAdminClient()` connect `createAdminClient` to `index.ts`, `build-activity-report.js`, `index.ts`, `requirePermission`, `requireDistrictGovernor`, `server.ts`, `lions.ts`, `requireZoneChair`, `requireAdmin`, `loadOidcSettings`, `card.tsx`, `invoices.ts`, `env.ts`, `utils.ts`, `route.ts`, `auth.ts`, `route.ts`, `portal-session.ts`, `integrations-registry.ts`, `CardHeader`, `loadLionsApiSettings`, `engine.ts`, `LionsYearCalendar.tsx`, `clientIp`, `multi-district-portal.ts`, `requireRegionChair`, `push.ts`, `sendEmail`, `page.tsx`, `formatINRShort`, `getCurrentMember`, `GreetingComposer.tsx`, `default-district.ts`, `page.tsx`, `page.tsx`, `ZoneTabs.tsx`, `club-health.ts`, `GovernanceConsole.tsx`, `page.tsx`, `route.ts`, `ActionItemsBoard.tsx`, `compliance.ts`, `page.tsx`, `billing.ts`, `page.tsx`, `dedupe.ts`, `page.tsx`, `zone-awards.ts`, `MinutesBoard.tsx`, `page.tsx`, `page.tsx`, `AgendaBoard.tsx`, `page.tsx`, `page.tsx`, `page.tsx`, `page.tsx`, `cron-auth.ts`, `index.ts`, `page.tsx`, `loadVapidConfig`, `layout.tsx`, `page.tsx`, `page.tsx`, `route.ts`, `route.ts`, `route.ts`, `route.ts`, `route.ts`, `route.ts`, `route.ts`, `page.tsx`?",
+      "question": "Why does `createAdminClient()` connect `Generic Entity Admin API` to `Report Generation`, `Activity Report Builder`, `CSV Import Adapters`, `Permission Guards & Audit`, `District Dashboard`, `Club Officers & Audit`, `Lions Sync Hub`, `Zone Chair Portal API`, `Admin Beneficiary API`, `OIDC Auth Setup`, `Admin Settings Cards`, `Invoice Payment Page`, `App Root Config`, `Activity Gallery & Blog Admin`, `Generic CRUD API Helpers`, `Core DB Types & Auth`, `PhonePe Payment Webhook`, `Portal Login & Preferences`, `Integrations Setup`, `Admin Invoice Management`, `Webhook Secrets & Encryption`, `Job Automation Engine`, `Region/MD Calendar`, `Payment Proof OCR`, `Multi-District Dashboard`, `Region Dashboard`, `Push Notifications`, `Donor Pack Generation`, `Mobile Home Dashboard`, `Campaigns & Donations`, `Mobile Events & Voting`, `Greeting Composer`, `District Bootstrap Logic`, `Automation Board`, `Zone Analytics`, `Zone Profile Pages`, `Club Health Assessment`, `Governance Console`, `Beneficiary Profile Forms`, `CSV Parsing Utility`, `Action Items Board`, `Dues Compliance`, `Sync Queue Monitoring`, `Dues Billing Cycle`, `Dues Billing Panel`, `Member Deduplication`, `Zone Dashboard`, `Zone Awards Eligibility`, `Meeting Minutes Board`, `Advisory Voting`, `Zone Approvals`, `Meeting Agenda Board`, `Sync & Webhook Dashboard`, `District Circulars`, `Mobile Directory`, `Diagnostics Page`, `Cron Auth Setup`, `AI Video Generation`, `Mobile Greetings Page`, `Push VAPID Setup`, `Admin Layout Shell`, `Entity Sync Queue`, `Beneficiary Search Page`, `Admin Roles API`, `Cron Settings API`, `OpenAI Key Settings API`, `Signed File Upload`, `OIDC Settings API`, `Generic API Route Validation`, `File Upload API`, `Mobile Check-in Scanner`?",
       "why": "High betweenness centrality (0.246) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `createClient()` connect `server.ts` to `requirePermission`, `requireAdmin`, `quick-add-presets.ts`, `utils.ts`, `route.ts`, `auth.ts`, `route.ts`, `loadLionsApiSettings`, `PageHero.tsx`, `page.tsx`, `guard.ts`, `Footer.tsx`, `formatINRShort`, `page.tsx`, `getCurrentMember`, `default-district.ts`, `page.tsx`, `isDevAuthBypass`, `isSupabaseConfigured`, `page.tsx`, `page.tsx`, `page.tsx`, `page.tsx`, `page.tsx`, `layout.tsx`, `page.tsx`, `page.tsx`, `route.ts`, `route.ts`, `route.ts`?",
+      "question": "Why does `createClient()` connect `Club Officers & Audit` to `Permission Guards & Audit`, `Admin Beneficiary API`, `Admin Directory Pages`, `Activity Gallery & Blog Admin`, `Generic CRUD API Helpers`, `Core DB Types & Auth`, `PhonePe Payment Webhook`, `Webhook Secrets & Encryption`, `Public About Pages`, `Public Home Page`, `Authorization Permissions`, `Public Site Footer`, `Campaigns & Donations`, `Blog Detail Page`, `Mobile Events & Voting`, `District Bootstrap Logic`, `Sync Queue Monitoring`, `Auth Sign In/Up`, `Public Sitemap & Featured`, `Blog Post Editor`, `Diagnostics Page`, `Blog Explorer Page`, `Impact Stats Page`, `Admin Dashboard Charts`, `Admin Layout Shell`, `Admin Media Manager`, `Events Listing Page`, `Admin Roles API`, `Club Insights Generation`, `Generic API Route Validation`?",
       "why": "High betweenness centrality (0.054) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `PDFDocument` connect `build-activity-report.js` to `sendEmail`, `invoices.ts`?",
+      "question": "Why does `PDFDocument` connect `Activity Report Builder` to `Donor Pack Generation`, `Invoice Payment Page`?",
       "why": "High betweenness centrality (0.039) - this node is a cross-community bridge."
     },
     {
@@ -3472,17 +3472,17 @@
     },
     {
       "type": "low_cohesion",
-      "question": "Should `index.ts` be split into smaller, more focused modules?",
+      "question": "Should `Report Generation` be split into smaller, more focused modules?",
       "why": "Cohesion score 0.05805609915198956 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `build-activity-report.js` be split into smaller, more focused modules?",
+      "question": "Should `Activity Report Builder` be split into smaller, more focused modules?",
       "why": "Cohesion score 0.05201292976785189 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `index.ts` be split into smaller, more focused modules?",
+      "question": "Should `CSV Import Adapters` be split into smaller, more focused modules?",
       "why": "Cohesion score 0.07884615384615384 - nodes in this community are weakly interconnected."
     }
   ]

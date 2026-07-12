@@ -46,6 +46,10 @@ __pycache__/
 
 # graphify local build cache (regenerable AST cache, machine-local)
 /graphify-out/cache/
+# graphify dated backup snapshots (created on re-label/re-cluster)
+/graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+# codex hook config graphify writes with a machine-local absolute path
+/.codex/
 
 # intermediate page renders for the docx builder
 docs/_pages/
