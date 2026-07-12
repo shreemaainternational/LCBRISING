@@ -12,12 +12,12 @@ export default async function MobileProfile() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-gradient-to-br from-navy-900 to-blue-700 rounded-2xl p-5 text-white shadow-lg">
-        <div className="w-20 h-20 rounded-full bg-amber-500 text-white flex items-center justify-center text-3xl font-bold mb-3">
+      <div className="bg-gradient-to-br from-[#1e40af] to-[#2547c8] rounded-2xl p-5 text-white shadow-lg">
+        <div className="w-20 h-20 rounded-full bg-white/15 ring-1 ring-white/30 text-white flex items-center justify-center text-3xl font-bold mb-3">
           {member.name.charAt(0).toUpperCase()}
         </div>
         <h1 className="text-xl font-bold">{member.name}</h1>
-        <p className="text-sm text-amber-200/90 capitalize mt-0.5">{member.role}</p>
+        <p className="text-sm text-blue-100/90 capitalize mt-0.5">{member.role}</p>
       </div>
 
       <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">

@@ -197,7 +197,7 @@ export function LogActivityForm() {
 
       <div className="sticky bottom-24 -mx-4 px-4 pt-2 pb-3 bg-gray-50/95 backdrop-blur border-t">
         <button type="button" onClick={submit} disabled={pending}
-          className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-amber-500 active:bg-amber-600 text-white font-semibold disabled:opacity-60">
+          className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-blue-800 active:bg-blue-800 text-white font-semibold disabled:opacity-60">
           {pending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
           {pending ? 'Saving…' : 'Save Activity'}
         </button>

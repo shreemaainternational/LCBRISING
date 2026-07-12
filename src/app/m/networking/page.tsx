@@ -36,13 +36,13 @@ export default async function MobileNetworking({ searchParams }: Props) {
 
   return (
     <div className="space-y-4">
-      <header className="relative rounded-3xl overflow-hidden shadow-lg shadow-blue-900/15">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0B2D6B] via-purple-700 to-violet-900" />
+      <header className="relative rounded-2xl overflow-hidden shadow-lg shadow-blue-900/15">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1e40af] to-[#2547c8]" />
         <div aria-hidden className="absolute inset-0 opacity-25"
-          style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(244,180,0,0.5), transparent 35%)' }} />
+          style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(96,165,250,0.6), transparent 40%)' }} />
         <div className="relative p-5 text-white">
-          <div className="inline-flex items-center gap-1.5 text-amber-200 text-[10px] uppercase tracking-[0.18em] font-bold">
-            <Network size={11} /> Networking
+          <div className="inline-flex items-center gap-1.5 text-blue-100 text-[10px] uppercase tracking-[0.18em] font-bold">
+            <Network size={11} /> Lions Business Network
           </div>
           <h1 className="text-2xl font-extrabold leading-tight mt-1">
             Grow with the<br/>Lions Family
@@ -62,7 +62,7 @@ export default async function MobileNetworking({ searchParams }: Props) {
       <div className="grid grid-cols-2 gap-3">
         <Link href="/m/networking/business-wall"
           className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 active:scale-95 transition">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-amber-50 text-amber-700 flex items-center justify-center mb-2">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 text-[#1e40af] flex items-center justify-center mb-2">
             <Briefcase size={18} />
           </div>
           <div className="text-sm font-bold text-navy-900">Business Wall</div>
@@ -97,7 +97,7 @@ export default async function MobileNetworking({ searchParams }: Props) {
       <form className="relative" action="/m/networking">
         <input type="search" name="q" defaultValue={q}
           placeholder="Search members or clubs…"
-          className="w-full pl-9 pr-3 py-2.5 rounded-2xl border bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          className="w-full pl-9 pr-3 py-2.5 rounded-2xl border bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
       </form>
 
@@ -161,7 +161,7 @@ function MemberRow({ m }: { m: DirRow }) {
           </a>
         )}
         <Link href={`/m/networking/refer?to=${m.id}`} aria-label="Refer"
-          className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center">
+          className="w-9 h-9 rounded-full bg-blue-50 text-[#1e40af] flex items-center justify-center">
           <ArrowUpRight size={14} />
         </Link>
       </div>

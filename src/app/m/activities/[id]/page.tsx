@@ -35,7 +35,7 @@ export default async function MobileActivityDetail({ params }: { params: Promise
         <Stat icon={Users}    label="Beneficiaries" value={String(a.beneficiaries ?? 0)} color="bg-emerald-100 text-emerald-700" />
         <Stat icon={Clock}    label="Service Hours" value={String(a.service_hours ?? 0)} color="bg-purple-100 text-purple-700" />
         <Stat icon={Users}    label="Lions"        value={String(a.lion_members_count ?? 0)} color="bg-blue-100 text-blue-700" />
-        <Stat icon={Banknote} label="Funds Raised" value={formatINR(Number(a.amount_raised ?? 0))} color="bg-amber-100 text-amber-700" />
+        <Stat icon={Banknote} label="Funds Raised" value={formatINR(Number(a.amount_raised ?? 0))} color="bg-blue-100 text-blue-800" />
       </div>
 
       {(a.before_photos?.length || a.after_photos?.length || a.photos?.length) ? (
