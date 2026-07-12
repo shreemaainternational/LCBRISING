@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { Member, MemberRole } from '@/lib/supabase/database.types';
@@ -42,7 +43,29 @@ export async function getCurrentMember(): Promise<Member | null> {
   if (isDevAuthBypass()) return BYPASS_MEMBER;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  let { data: { user } } = await supabase.auth.getUser();
+
+  // Fallback: a Bearer access token in the Authorization header. The
+  // browser holds a valid Supabase session (it can upload straight to
+  // storage) even when the SSR cookie is stale, oversized/chunked, or
+  // lost to a browser-vs-server refresh-token race. Authenticated
+  // clients forward that token so mutations don't fail with "not signed
+  // in" while the user is clearly logged in.
+  if (!user) {
+    try {
+      const authz = (await headers()).get('authorization');
+      const token = authz?.toLowerCase().startsWith('bearer ')
+        ? authz.slice(7).trim()
+        : null;
+      if (token) {
+        const { data } = await supabase.auth.getUser(token);
+        user = data.user;
+      }
+    } catch {
+      // headers() unavailable outside a request scope — ignore.
+    }
+  }
+
   if (!user) return null;
 
   // Tier 1 — RLS-scoped.

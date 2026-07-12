@@ -5,6 +5,7 @@ import {
   Plus, X, Loader2, CheckCircle2, AlertCircle, Sparkles,
 } from 'lucide-react';
 import { PhotoMultiUpload } from './PhotoMultiUpload';
+import { createClient } from '@/lib/supabase/client';
 
 export type FieldType =
   | 'text' | 'email' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local'
@@ -133,9 +134,19 @@ export function QuickAddCard({
     const body = beforeSubmit ? beforeSubmit(payload) : payload;
 
     start(async () => {
+      // Forward the browser session's access token as a Bearer header so
+      // the API authenticates even if the SSR cookie is stale/oversized —
+      // the server falls back to this token (see getCurrentMember()).
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      try {
+        const { data: { session } } = await createClient().auth.getSession();
+        if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      } catch {
+        // No browser session available — fall back to cookie auth.
+      }
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(body),
       });
       const j = await res.json().catch(() => ({}));
