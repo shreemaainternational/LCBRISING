@@ -44,5 +44,8 @@ next-env.d.ts
 __pycache__/
 *.pyc
 
+# graphify local build cache (regenerable AST cache, machine-local)
+/graphify-out/cache/
+
 # intermediate page renders for the docx builder
 docs/_pages/
