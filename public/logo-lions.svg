@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="512" height="512">
+  <defs>
+    <path id="top" d="M 100,100 m -74,0 a 74,74 0 1,1 148,0" />
+    <path id="bot" d="M 100,100 m -78,0 a 78,78 0 0,0 156,0" />
+    <radialGradient id="gold" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#FFD966"/>
+      <stop offset="55%" stop-color="#F5B301"/>
+      <stop offset="100%" stop-color="#D99400"/>
+    </radialGradient>
+  </defs>
+
+  <!-- outer gold rim -->
+  <circle cx="100" cy="100" r="99" fill="url(#gold)"/>
+  <!-- navy band -->
+  <circle cx="100" cy="100" r="95" fill="#0B2D6B"/>
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#gold)" stroke-width="2.5"/>
+
+  <!-- arced text -->
+  <g fill="#F5B301" font-family="Georgia, 'Times New Roman', serif" font-weight="700" letter-spacing="3">
+    <text font-size="20">
+      <textPath href="#top" startOffset="50%" text-anchor="middle">LIONS</textPath>
+    </text>
+    <text font-size="14.5">
+      <textPath href="#bot" startOffset="50%" text-anchor="middle">INTERNATIONAL</textPath>
+    </text>
+  </g>
+
+  <!-- side stars separating the words -->
+  <g fill="url(#gold)">
+    <path d="M22,100 l4,-4 l4,4 l-4,4 z"/>
+    <path d="M170,100 l4,-4 l4,4 l-4,4 z"/>
+  </g>
+
+  <!-- center medallion -->
+  <circle cx="100" cy="100" r="63" fill="url(#gold)"/>
+  <circle cx="100" cy="100" r="63" fill="none" stroke="#0B2D6B" stroke-width="2"/>
+
+  <!-- two lion-head profiles facing outward, flanking the L -->
+  <g fill="#0B2D6B">
+    <!-- left lion, facing left -->
+    <g transform="translate(72,100)">
+      <path d="M6,-22 C-14,-22 -24,-6 -24,4 C-24,16 -14,24 2,24 C2,18 -2,16 -2,10
+               C-8,12 -16,8 -16,2 C-10,4 -6,2 -6,-2 C-12,-2 -18,-6 -16,-12
+               C-10,-8 -4,-10 0,-14 C2,-20 6,-22 6,-22 Z"/>
+      <circle cx="-14" cy="0" r="2.2" fill="url(#gold)"/>
+    </g>
+    <!-- right lion, facing right (mirror) -->
+    <g transform="translate(128,100) scale(-1,1)">
+      <path d="M6,-22 C-14,-22 -24,-6 -24,4 C-24,16 -14,24 2,24 C2,18 -2,16 -2,10
+               C-8,12 -16,8 -16,2 C-10,4 -6,2 -6,-2 C-12,-2 -18,-6 -16,-12
+               C-10,-8 -4,-10 0,-14 C2,-20 6,-22 6,-22 Z"/>
+      <circle cx="-14" cy="0" r="2.2" fill="url(#gold)"/>
+    </g>
+    <!-- central L -->
+    <text x="100" y="118" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+          font-weight="700" font-size="58">L</text>
+  </g>
+</svg>

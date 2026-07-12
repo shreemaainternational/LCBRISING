@@ -6,7 +6,6 @@ import {
 import {
   Card, CardHeading, LeadershipStrip, StatTile, RowCard, IconAction, roleLabel,
 } from './_ui';
-import { env } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,13 +78,13 @@ export default async function MobileHome() {
           style={{ backgroundImage: 'radial-gradient(circle at 15% 15%, rgba(244,180,0,0.55), transparent 35%), radial-gradient(circle at 95% 85%, rgba(59,130,246,0.6), transparent 40%)' }}
         />
         <div className="relative p-6 text-center text-white">
-          {/* Lions logo, top-left */}
-          <span className="absolute top-4 left-4 h-12 w-12 rounded-full bg-white flex items-center justify-center ring-2 ring-amber-300/60 shadow-md overflow-hidden">
+          {/* Lions International emblem, top-left */}
+          <span className="absolute top-4 left-4 h-12 w-12 rounded-full shadow-md overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={env.NEXT_PUBLIC_BRAND_LOGO_URL || '/logo.png'}
-              alt="Lions Club of Baroda Rising Star"
-              className="h-10 w-10 object-contain"
+              src="/logo-lions.png"
+              alt="Lions Clubs International"
+              className="h-12 w-12 object-contain"
             />
           </span>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-300/40 mb-3">
