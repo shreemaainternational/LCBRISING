@@ -1,11 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import {
   ShieldCheck, Users, CalendarCheck, CalendarDays,
-  HeartHandshake, Megaphone, GraduationCap,
+  HeartHandshake, Megaphone, GraduationCap, Sparkles,
 } from 'lucide-react';
 import {
   Card, CardHeading, LeadershipStrip, StatTile, RowCard, IconAction, roleLabel,
 } from './_ui';
+import { env } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,8 +62,42 @@ export default async function MobileHome() {
     ? new Date(district.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
     : '—';
 
+  // Time-of-day greeting, computed in India Standard Time.
+  const hour = Number(
+    new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'Asia/Kolkata' }).format(new Date()),
+  );
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
   return (
     <>
+      {/* Slogan hero — premium royal blue + gold */}
+      <section className="relative rounded-3xl overflow-hidden shadow-xl shadow-blue-900/20">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0B2D6B] via-[#0B2D6B] to-[#1E3A8A]" />
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-25"
+          style={{ backgroundImage: 'radial-gradient(circle at 15% 15%, rgba(244,180,0,0.55), transparent 35%), radial-gradient(circle at 95% 85%, rgba(59,130,246,0.6), transparent 40%)' }}
+        />
+        <div className="relative p-6 text-center text-white">
+          {/* Lions logo, top-left */}
+          <span className="absolute top-4 left-4 h-12 w-12 rounded-full bg-white flex items-center justify-center ring-2 ring-amber-300/60 shadow-md overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={env.NEXT_PUBLIC_BRAND_LOGO_URL || '/logo.png'}
+              alt="Lions Club of Baroda Rising Star"
+              className="h-10 w-10 object-contain"
+            />
+          </span>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-300/40 mb-3">
+            <Sparkles size={11} className="text-amber-300" />
+            <span className="text-[10px] uppercase tracking-[0.18em] font-bold text-amber-200">{greeting}</span>
+          </div>
+          <h1 className="text-3xl font-extrabold leading-tight tracking-tight">Service First</h1>
+          <p className="text-sm text-blue-100/90 mt-2">District 3232 F1 &nbsp;|&nbsp; Region V &nbsp;|&nbsp; Zone I</p>
+          <p className="text-sm text-blue-100/90 mt-0.5">Year 2026-27</p>
+        </div>
+      </section>
+
       {/* Current Leadership */}
       <Card className="p-4">
         <CardHeading>Current Leadership</CardHeading>
