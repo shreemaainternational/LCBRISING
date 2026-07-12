@@ -22,7 +22,7 @@ const upsertSchema = z.object({
 export async function GET() {
   let actor: { id: string } | null = null;
   try { actor = (await requireAdmin()) as { id: string }; }
-  catch (err) { if (err instanceof Response) return err; }
+  catch (err) { if (err instanceof Response) return err; throw err; }
   void actor;
 
   const db = createAdminClient();
@@ -48,7 +48,7 @@ export async function GET() {
 export async function PUT(req: Request) {
   let actor: { id: string } | null = null;
   try { actor = (await requireAdmin()) as { id: string }; }
-  catch (err) { if (err instanceof Response) return err; }
+  catch (err) { if (err instanceof Response) return err; throw err; }
 
   const body = await req.json().catch(() => ({}));
   const parsed = upsertSchema.safeParse(body);
@@ -83,7 +83,7 @@ export async function PUT(req: Request) {
  * current admin once, then re-mask. Used by the "Copy" button.
  */
 export async function POST() {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const { data } = await createAdminClient().from('cron_settings').select('secret').eq('id', 'singleton').maybeSingle();
   return NextResponse.json({ secret: data?.secret ?? null });
 }

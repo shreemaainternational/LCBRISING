@@ -15,7 +15,7 @@ const schema = z.object({
 export async function POST(req: Request) {
   let actor: { id: string } | null = null;
   try { actor = (await requireAdmin()) as { id: string }; }
-  catch (err) { if (err instanceof Response) return err; }
+  catch (err) { if (err instanceof Response) return err; throw err; }
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);

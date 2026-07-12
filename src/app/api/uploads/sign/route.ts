@@ -48,7 +48,7 @@ interface SignedItem {
  * avoiding the platform's ~4.5 MB serverless request-body cap (HTTP 413).
  */
 export async function POST(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
 
   const body = (await req.json().catch(() => null)) as SignRequest | null;
   const files = body?.files ?? [];

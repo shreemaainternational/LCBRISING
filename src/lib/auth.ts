@@ -104,13 +104,17 @@ export async function getCurrentMember(): Promise<Member | null> {
 /**
  * Guard for API route handlers. On denial it THROWS a NextResponse
  * (which is an instanceof Response), so the standard route idiom
- * `catch (err) { if (err instanceof Response) return err; }` returns a
- * real 401/403 instead of silently falling through to the handler body.
+ * `catch (err) { if (err instanceof Response) return err; throw err; }`
+ * returns a real 401/403 for a denial and re-throws anything else.
  * Returns the member on success.
  *
+ * The trailing `throw err` matters: without it, a non-Response error
+ * (a transient getCurrentMember() failure, or an accidental redirect()
+ * throwing NEXT_REDIRECT) would be swallowed and the handler body would
+ * run UNAUTHENTICATED. Re-throwing fails closed as a 500 instead.
+ *
  * Do NOT use this in a page/server component — use requireAdminPage(),
- * which redirects. (redirect() throws NEXT_REDIRECT, which is NOT a
- * Response and would be swallowed by the API idiom — the original bug.)
+ * which redirects.
  */
 export async function requireAdmin(): Promise<Member> {
   const member = await getCurrentMember();

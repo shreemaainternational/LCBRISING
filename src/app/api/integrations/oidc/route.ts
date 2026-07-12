@@ -26,7 +26,7 @@ const upsertSchema = z.object({
 );
 
 export async function GET() {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const db = createAdminClient();
   const { data } = await db.from('lions_oidc_settings').select('*').eq('id', 'singleton').maybeSingle();
   // never leak the secret to the client
@@ -41,7 +41,7 @@ export async function GET() {
 export async function PUT(req: Request) {
   let actor: { id: string } | null = null;
   try { actor = (await requireAdmin()) as { id: string }; }
-  catch (err) { if (err instanceof Response) return err; }
+  catch (err) { if (err instanceof Response) return err; throw err; }
 
   const body = await req.json().catch(() => null);
   const parsed = upsertSchema.safeParse(body);
@@ -115,7 +115,7 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE() {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   await createAdminClient().from('lions_oidc_settings').update({ is_active: false }).eq('id', 'singleton');
   invalidateOidcSettingsCache();
   return NextResponse.json({ ok: true });

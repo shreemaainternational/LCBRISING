@@ -15,7 +15,7 @@ export const maxDuration = 60;
  * Otherwise regenerate from the persisted metadata and stream inline.
  */
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
 
   const { id } = await ctx.params;
   const db = createAdminClient();

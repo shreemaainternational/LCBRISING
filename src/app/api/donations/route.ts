@@ -21,7 +21,7 @@ function friendlyError(message: string): string {
 
 /** GET — list recent donations. */
 export async function GET(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const url = new URL(req.url);
   const limit = Math.min(Number(url.searchParams.get('limit') ?? 100), 500);
   const supa = await createClient();
@@ -46,7 +46,7 @@ const schema = z.object({
 
 /** POST — manually record an offline donation (cheque, cash, bank transfer). */
 export async function POST(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });

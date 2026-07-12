@@ -74,7 +74,7 @@ const SPECS: Record<string, EntitySpec> = {
 };
 
 export async function GET(req: Request, { params }: { params: Promise<{ entity: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const { entity } = await params;
   const spec = SPECS[entity];
   if (!spec) return NextResponse.json({ error: 'unknown_entity', allowed: Object.keys(SPECS) }, { status: 400 });

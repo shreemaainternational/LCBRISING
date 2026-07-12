@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 /** GET /api/reports — list generated reports + catalog. */
 export async function GET(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const url = new URL(req.url);
   const limit = Math.min(Number(url.searchParams.get('limit') ?? 100), 200);
   const type = url.searchParams.get('type');
