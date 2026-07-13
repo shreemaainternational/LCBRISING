@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, LogIn, User } from 'lucide-react';
-import { signInAction, signUpAction } from './actions';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginForm() {
   return (
@@ -33,36 +33,45 @@ function LoginInner() {
     setNotice(null);
 
     try {
+      const supabase = createClient();
+
       if (mode === 'signin') {
-        const result = await signInAction(email, password, redirectTo);
-        // On success the action calls redirect() and never returns a
-        // result here — Next.js performs the navigation. We only reach
-        // this branch on a real failure.
-        if (!result.ok) {
-          setError(result.error);
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          setError(error.message);
           setLoading(false);
-        } else {
-          setNotice('Signed in successfully. Taking you to your dashboard…');
+          return;
         }
-      } else {
-        const result = await signUpAction(email, password, name, redirectTo);
-        if (!result.ok) {
-          setError(result.error);
-          setLoading(false);
-        } else {
-          // Reaching here means Supabase requires email confirmation
-          // (no session created); otherwise the action would have
-          // redirected and we wouldn't be here.
-          setNotice(
-            'Account created. Please check your email to confirm your address before signing in.',
-          );
-          setLoading(false);
-        }
+        // The browser client has now written the session cookie. Use a
+        // full navigation (not the client router) so the middleware and
+        // the server layout read the fresh cookie on the very next
+        // request — a soft push can race ahead of the cookie and bounce
+        // straight back to /login with no error shown.
+        setNotice('Signed in successfully. Taking you to your dashboard…');
+        window.location.assign(redirectTo || '/admin');
+        return;
       }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name } },
+      });
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+      // No session means Supabase requires email confirmation first.
+      if (!data.session) {
+        setNotice(
+          'Account created. Please check your email to confirm your address before signing in.',
+        );
+        setLoading(false);
+        return;
+      }
+      window.location.assign(redirectTo || '/admin');
     } catch (err) {
-      // A NEXT_REDIRECT thrown by the server action is rethrown here on
-      // the client — let it propagate so Next.js handles the navigation.
-      if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err;
       setError(err instanceof Error ? err.message : String(err));
       setLoading(false);
     }
