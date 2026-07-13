@@ -42,13 +42,35 @@ function LoginInner() {
           setLoading(false);
           return;
         }
-        // The browser client has now written the session cookie. Use a
-        // full navigation (not the client router) so the middleware and
-        // the server layout read the fresh cookie on the very next
-        // request — a soft push can race ahead of the cookie and bounce
-        // straight back to /login with no error shown.
-        setNotice('Signed in successfully. Taking you to your dashboard…');
-        window.location.assign(redirectTo || '/admin');
+        // Sign-in succeeded and the browser now holds the session cookie.
+        // Before navigating, confirm the SERVER can see that session and
+        // resolve a member — otherwise /admin would bounce back here with
+        // no explanation. Surface the precise reason instead.
+        setNotice('Signed in — checking your access…');
+        const probe = await fetch('/api/auth/whoami', { cache: 'no-store' })
+          .then((r) => r.json())
+          .catch(() => ({ ok: false, reason: 'network' }));
+
+        if (probe.ok) {
+          setNotice('Signed in successfully. Taking you to your dashboard…');
+          // Full navigation so the middleware/layout read the fresh cookie.
+          window.location.assign(redirectTo || '/admin');
+          return;
+        }
+
+        setNotice(null);
+        if (probe.reason === 'no_member') {
+          setError(
+            `Signed in as ${probe.email ?? email}, but this account isn't linked to a member profile yet, so the CRM can't open. An administrator needs to add this email under Members (or the deployment is missing its Supabase service-role key).`,
+          );
+        } else if (probe.reason === 'no_server_session') {
+          setError(
+            'Signed in, but the session did not persist on the server. Allow cookies for this site (disable tracking/ITP blocking) and try again.',
+          );
+        } else {
+          setError('Signed in, but could not verify access. Please try again.');
+        }
+        setLoading(false);
         return;
       }
 
