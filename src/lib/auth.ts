@@ -19,6 +19,12 @@ const BOOTSTRAP_ADMIN_EMAILS = (
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
 
+/** True if `email` is one of the configured bootstrap-admin owner emails. */
+export function isBootstrapAdminEmail(email: string | null | undefined): boolean {
+  const e = email?.trim().toLowerCase();
+  return !!e && BOOTSTRAP_ADMIN_EMAILS.includes(e);
+}
+
 /**
  * Synthesize an in-memory admin Member for a bootstrap-admin auth user
  * when the database has no row for them yet. Returns null for everyone
@@ -29,8 +35,7 @@ function bootstrapAdminMember(user: {
   email?: string | null;
   user_metadata?: Record<string, unknown>;
 }): Member | null {
-  const email = user.email?.toLowerCase();
-  if (!email || !BOOTSTRAP_ADMIN_EMAILS.includes(email)) return null;
+  if (!isBootstrapAdminEmail(user.email)) return null;
   return {
     id: user.id,
     user_id: user.id,
@@ -62,17 +67,11 @@ const BYPASS_MEMBER = {
 /**
  * Resolve the current member for the logged-in auth user.
  *
- * Multi-tier lookup so a valid auth session ALWAYS yields a member
- * row — otherwise the admin layout redirects to /login while
- * middleware redirects back to /admin → ERR_TOO_MANY_REDIRECTS:
- *
- *   1. RLS-scoped query (normal path).
- *   2. Service-role query by user_id — covers a members table with
- *      no "read your own row" RLS policy.
- *   3. Service-role query by email, then back-fill user_id — covers
- *      rows created before the auth user existed (seeded / imported).
- *   4. Auto-provision a minimal member row — covers a brand-new
- *      auth user with no members row at all.
+ * Uses resolveMemberForUser()'s multi-tier lookup so a valid auth session
+ * ALWAYS yields a member row — otherwise the admin layout redirects to
+ * /login while middleware redirects back to /admin →
+ * ERR_TOO_MANY_REDIRECTS. Finally applies the bootstrap-admin override so
+ * the configured owner email is always an admin.
  */
 export async function getCurrentMember(): Promise<Member | null> {
   // Development-only bypass — short-circuit BEFORE any Supabase call.
@@ -105,6 +104,40 @@ export async function getCurrentMember(): Promise<Member | null> {
 
   if (!user) return null;
 
+  const member = await resolveMemberForUser(supabase, user);
+
+  // Bootstrap-admin override: the configured owner email(s) are ALWAYS
+  // full admins, even when a lower-privilege members row already exists
+  // (e.g. a Tier-4 auto-provisioned 'member', or a seeded/imported row).
+  // Without this the owner's own non-admin row shadows the bootstrap
+  // allowlist, and RBAC-guarded routes reject them with a bare
+  // "forbidden" while admin *pages* still load — an inconsistent lockout.
+  if (isBootstrapAdminEmail(user.email)) {
+    const base = member ?? bootstrapAdminMember(user);
+    if (base && base.role !== 'admin') return { ...base, role: 'admin' as MemberRole };
+    return base;
+  }
+
+  return member;
+}
+
+/**
+ * Multi-tier member resolution for an authenticated auth user. Kept
+ * separate from getCurrentMember() so the bootstrap-admin override can be
+ * applied uniformly to whatever this returns.
+ *
+ *   1. RLS-scoped query (normal path).
+ *   2. Service-role query by user_id — covers a members table with
+ *      no "read your own row" RLS policy.
+ *   3. Service-role query by email, then back-fill user_id — covers
+ *      rows created before the auth user existed (seeded / imported).
+ *   4. Auto-provision a minimal member row — covers a brand-new
+ *      auth user with no members row at all.
+ */
+async function resolveMemberForUser(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> },
+): Promise<Member | null> {
   // Tier 1 — RLS-scoped.
   const { data: rlsRow } = await supabase
     .from('members')
