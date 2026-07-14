@@ -24,6 +24,29 @@ const BOOTSTRAP_ADMIN_EMAILS = (
  * when the database has no row for them yet. Returns null for everyone
  * else, so it only ever grants access to the configured owner email(s).
  */
+function isBootstrapAdminEmail(email?: string | null): boolean {
+  return !!email && BOOTSTRAP_ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
+/**
+ * Bootstrap-admin safety net. The configured owner email(s) must always
+ * resolve to a full admin, even when the database holds a stale, lower-
+ * privilege row for them — e.g. one auto-provisioned by Tier 4 below as a
+ * plain 'member', or a seeded/imported non-admin row. Without this, the
+ * owner gets a real 'member' row on first sign-in (before the
+ * bootstrapAdminMember() fallback is ever reached) and is then
+ * permanently locked out of member.create / club.create / sync, surfacing
+ * as spurious "forbidden" errors in their own CRM. Promotes the in-memory
+ * role to 'admin'; persistence is handled best-effort at the call sites
+ * that hold a service-role client.
+ */
+function promoteBootstrapAdmin(member: Member): Member {
+  if (isBootstrapAdminEmail(member.email) && member.role !== 'admin') {
+    return { ...member, role: 'admin' as MemberRole };
+  }
+  return member;
+}
+
 function bootstrapAdminMember(user: {
   id: string;
   email?: string | null;
@@ -111,7 +134,7 @@ export async function getCurrentMember(): Promise<Member | null> {
     .select('*')
     .eq('user_id', user.id)
     .maybeSingle();
-  if (rlsRow) return rlsRow as Member;
+  if (rlsRow) return promoteBootstrapAdmin(rlsRow as Member);
 
   // Tiers 2-4 need the service role. If it isn't configured we can't
   // recover from the DB — fall back to the bootstrap-admin allowlist so
@@ -119,13 +142,22 @@ export async function getCurrentMember(): Promise<Member | null> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return bootstrapAdminMember(user);
   const admin = createAdminClient();
 
+  const bootstrapAdmin = isBootstrapAdminEmail(user.email);
+
   // Tier 2 — by user_id, bypassing RLS.
   const { data: byUserId } = await admin
     .from('members')
     .select('*')
     .eq('user_id', user.id)
     .maybeSingle();
-  if (byUserId) return byUserId as Member;
+  if (byUserId) {
+    // Persist an upgrade for an owner stuck on a stale low-privilege row
+    // (e.g. a prior Tier-4 auto-provision) so future lookups are correct.
+    if (bootstrapAdmin && byUserId.role !== 'admin') {
+      await admin.from('members').update({ role: 'admin' }).eq('id', byUserId.id);
+    }
+    return promoteBootstrapAdmin(byUserId as Member);
+  }
 
   // Tier 3 — by email; back-fill the missing user_id link.
   if (user.email) {
@@ -135,15 +167,20 @@ export async function getCurrentMember(): Promise<Member | null> {
       .eq('email', user.email)
       .maybeSingle();
     if (byEmail) {
-      if (!byEmail.user_id) {
-        await admin.from('members').update({ user_id: user.id }).eq('id', byEmail.id);
+      const patch: Record<string, unknown> = {};
+      if (!byEmail.user_id) patch.user_id = user.id;
+      if (bootstrapAdmin && byEmail.role !== 'admin') patch.role = 'admin';
+      if (Object.keys(patch).length) {
+        await admin.from('members').update(patch).eq('id', byEmail.id);
       }
-      return { ...byEmail, user_id: user.id } as Member;
+      return promoteBootstrapAdmin({ ...byEmail, user_id: user.id, ...patch } as Member);
     }
   }
 
   // Tier 4 — auto-provision a minimal member row so the session is
-  // never "orphaned". Defaults to the lowest-privilege role.
+  // never "orphaned". Bootstrap-admin owners are provisioned as active
+  // admins (so they are never locked out of their own CRM); everyone
+  // else gets the lowest-privilege role, pending approval.
   const { data: created } = await admin
     .from('members')
     .insert({
@@ -153,8 +190,8 @@ export async function getCurrentMember(): Promise<Member | null> {
         (user.user_metadata?.name as string | undefined) ??
         user.email?.split('@')[0] ??
         'New Member',
-      role: 'member',
-      status: 'pending',
+      role: bootstrapAdmin ? 'admin' : 'member',
+      status: bootstrapAdmin ? 'active' : 'pending',
     })
     .select()
     .single();
