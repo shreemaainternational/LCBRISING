@@ -7,6 +7,7 @@ import { env } from '@/lib/env';
 import { getPrefsForPhone } from '@/lib/customer-prefs';
 import { generateContent } from '@/lib/ai/openai';
 import { createAutofillJob, getAutofillJob, exportDesign, getExportJob } from '@/lib/canva/client';
+import { loadCanvaRuntime } from '@/lib/canva/config';
 import { dispatchToPlatform, type Platform } from '@/lib/social/dispatcher';
 import { integrations } from '@/lib/env';
 
@@ -282,7 +283,10 @@ const handlers: Record<string, JobHandler> = {
       language: 'en',
     });
 
-    if (integrations.canva) {
+    // Canva is usable when connected via env token OR the OAuth connect
+    // flow (DB) — check the runtime, not just the env-derived flag.
+    const canvaReady = (await loadCanvaRuntime()).connected;
+    if (canvaReady) {
       const job = await createAutofillJob({
         templateKey: 'flyer',
         data: {

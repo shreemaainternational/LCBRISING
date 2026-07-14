@@ -1,24 +1,18 @@
-import { env, integrations } from '@/lib/env';
 import { CANVA_TEMPLATES, type CanvaTemplateKey } from '@/templates/config';
+import { getCanvaAccessToken } from '@/lib/canva/config';
 
 const CANVA_BASE = 'https://api.canva.com/rest/v1';
 
-function authHeader() {
-  // Canva Connect: prefer service token; otherwise fall back to OAuth client.
-  if (env.CANVA_API_KEY) return `Bearer ${env.CANVA_API_KEY}`;
-  if (env.CANVA_CLIENT_ID && env.CANVA_CLIENT_SECRET) {
-    const basic = Buffer.from(`${env.CANVA_CLIENT_ID}:${env.CANVA_CLIENT_SECRET}`).toString('base64');
-    return `Basic ${basic}`;
-  }
-  throw new Error('Canva is not configured');
-}
-
 async function canvaFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  if (!integrations.canva) throw new Error('Canva is not configured');
+  // Resource endpoints require a per-account OAuth *access token* (Bearer).
+  // getCanvaAccessToken() returns the env static token when set, otherwise
+  // the connect-flow token, auto-refreshing on expiry. Throws a
+  // descriptive error when Canva is not connected.
+  const token = await getCanvaAccessToken();
   const res = await fetch(`${CANVA_BASE}${path}`, {
     ...init,
     headers: {
-      'authorization': authHeader(),
+      'authorization': `Bearer ${token}`,
       'content-type': 'application/json',
       ...(init.headers ?? {}),
     },

@@ -6,13 +6,14 @@ import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
 import { loadCronSecret } from '@/lib/cron-auth';
 import { loadVapidConfig } from '@/lib/push-config';
 import { loadOpenAiConfig } from '@/lib/ai/openai-config';
+import { loadCanvaRuntime } from '@/lib/canva/config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
-  await Promise.all([loadOidcSettings(true), loadLionsApiSettings(true), loadCronSecret(true), loadVapidConfig(true), loadOpenAiConfig(true)]);
+  await Promise.all([loadOidcSettings(true), loadLionsApiSettings(true), loadCronSecret(true), loadVapidConfig(true), loadOpenAiConfig(true), loadCanvaRuntime(true)]);
   const registry = getIntegrationRegistry();
   const safeRegistry = registry.map((r) => ({
     key: r.key,

@@ -9,6 +9,7 @@ import { isOidcConfigured as isOidcConfiguredAtAll, isOidcSandboxActive } from '
 import { isCronAuthConfigured } from '@/lib/cron-auth';
 import { isPushAutoConfigured } from '@/lib/push-config';
 import { isOpenAiAutoConfigured } from '@/lib/ai/openai-config';
+import { isCanvaConnected, isCanvaOAuthConnected } from '@/lib/canva/config';
 
 export type IntegrationCategory =
   | 'identity'
@@ -80,6 +81,12 @@ function degradedModeLabel(key: string): string | undefined {
       // Env secret = real/pinned; DB auto-provisioned secret = degraded.
       return !env.CRON_SECRET && isCronAuthConfigured()
         ? 'Auto-provisioned secret (set CRON_SECRET for Vercel)'
+        : undefined;
+    case 'canva':
+      // OAuth connect = durable (auto-refreshes). A pinned static
+      // CANVA_API_KEY works but can't self-refresh once it expires.
+      return env.CANVA_API_KEY && !isCanvaOAuthConnected()
+        ? 'Static token (CANVA_API_KEY) — connect an account for auto-refresh'
         : undefined;
     default:
       return undefined;
@@ -321,7 +328,10 @@ function baseRegistry(): BaseDescriptor[] {
       name: 'Canva',
       category: 'media',
       description: 'Canva Connect API for branded creatives / event posters.',
-      configured: integrations.canva,
+      // Live when a usable token exists: the OAuth connect flow (DB) or a
+      // pinned env token. Note: client id/secret alone is NOT enough — a
+      // token still has to be minted via the connect flow.
+      configured: isCanvaConnected(),
       envVars: [
         v('CANVA_CLIENT_ID', false),
         v('CANVA_CLIENT_SECRET', false),
@@ -329,7 +339,7 @@ function baseRegistry(): BaseDescriptor[] {
         v('CANVA_REDIRECT_URI', false),
       ],
       whenMissing: 'Canva-powered creative actions on /admin/creative degrade.',
-      adminHref: '/admin/creative',
+      adminHref: '/admin/integrations/canva',
     },
     {
       key: 'cloudinary',
