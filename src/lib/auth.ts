@@ -7,6 +7,43 @@ import { isDevAuthBypass } from '@/lib/env';
 
 const ADMIN_ROLES: MemberRole[] = ['admin', 'president', 'secretary', 'treasurer'];
 
+// Bootstrap admins: emails that are treated as full admins even when no
+// members row exists yet. Covers the very first sign-in on a fresh
+// deployment (no service-role key to auto-provision, RLS can't self-insert)
+// so the owner is never locked out of their own CRM. Configurable via
+// BOOTSTRAP_ADMIN_EMAILS (comma-separated); defaults to the org owner.
+const BOOTSTRAP_ADMIN_EMAILS = (
+  process.env.BOOTSTRAP_ADMIN_EMAILS ?? 'info@shreemaainternational.com'
+)
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+/**
+ * Synthesize an in-memory admin Member for a bootstrap-admin auth user
+ * when the database has no row for them yet. Returns null for everyone
+ * else, so it only ever grants access to the configured owner email(s).
+ */
+function bootstrapAdminMember(user: {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, unknown>;
+}): Member | null {
+  const email = user.email?.toLowerCase();
+  if (!email || !BOOTSTRAP_ADMIN_EMAILS.includes(email)) return null;
+  return {
+    id: user.id,
+    user_id: user.id,
+    name: (user.user_metadata?.name as string | undefined) ?? 'Administrator',
+    email: user.email,
+    role: 'admin' as MemberRole,
+    lions_role: null,
+    status: 'active',
+    club_id: null,
+    joined_at: null,
+  } as unknown as Member;
+}
+
 // Development-only diagnostic identity returned when isDevAuthBypass()
 // is true (ADMIN_AUTH_BYPASS=1 in a non-production build). Never active
 // in production — see isDevAuthBypass() in @/lib/env.
@@ -77,8 +114,9 @@ export async function getCurrentMember(): Promise<Member | null> {
   if (rlsRow) return rlsRow as Member;
 
   // Tiers 2-4 need the service role. If it isn't configured we can't
-  // recover — return null and let the caller handle it.
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  // recover from the DB — fall back to the bootstrap-admin allowlist so
+  // the owner isn't locked out, otherwise return null.
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return bootstrapAdminMember(user);
   const admin = createAdminClient();
 
   // Tier 2 — by user_id, bypassing RLS.
@@ -121,7 +159,7 @@ export async function getCurrentMember(): Promise<Member | null> {
     .select()
     .single();
 
-  return (created as Member | null) ?? null;
+  return (created as Member | null) ?? bootstrapAdminMember(user);
 }
 
 /**
