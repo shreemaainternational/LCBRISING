@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { socialPostSchema } from '@/lib/validation/schemas';
 import { createAdminClient } from '@/lib/supabase/server';
+import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requireAdmin } from '@/lib/auth';
 import { enqueueJob } from '@/lib/automation/engine';
 
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
 
   const { data: rows, error } = await supabase
     .from('social_posts').insert(inserts).select('id, platform');
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
 
   // For immediate posts, enqueue a job per row
   if (!isScheduled) {
