@@ -1,5 +1,37 @@
 import { z } from 'zod';
 
+/**
+ * Normalize a Supabase project URL down to its bare origin.
+ *
+ * Supabase API URLs are ALWAYS just `https://<ref>.supabase.co` (or a
+ * custom-domain root) with no path. supabase-js builds every request by
+ * appending a service prefix (`/auth/v1/token`, `/rest/v1/<table>`, …) to
+ * this value. If the configured URL carries a stray trailing slash, an
+ * accidental path (`/rest/v1`), surrounding whitespace, or the direct-DB
+ * host (`db.<ref>.supabase.co`, which is Postgres — NOT the API gateway),
+ * the composed request path is wrong and Supabase's gateway rejects it
+ * with "Invalid path specified in request URL" (auth) or a schema/route
+ * error (rest). Collapsing to the origin here makes those env typos
+ * harmless instead of a hard, cryptic login failure.
+ */
+export function normalizeSupabaseUrl(raw: string): string {
+  const trimmed = (raw ?? '').trim();
+  try {
+    const u = new URL(trimmed);
+    // The direct-database host is not the API gateway. Map it back to the
+    // gateway host so auth/rest calls resolve. Guarded to the exact
+    // `db.<ref>.supabase.co` shape so custom domains are untouched.
+    const host = /^db\.[a-z0-9]+\.supabase\.co$/i.test(u.host)
+      ? u.host.replace(/^db\./i, '')
+      : u.host;
+    return `${u.protocol}//${host}`;
+  } catch {
+    // Not a parseable URL — fall back to trimming a trailing slash so the
+    // downstream zod .url() check still runs against the caller's value.
+    return trimmed.replace(/\/+$/, '');
+  }
+}
+
 const schema = z.object({
   NEXT_PUBLIC_SITE_URL: z
     .string()
@@ -16,7 +48,11 @@ const schema = z.object({
   // Supabase is optional at module-load time so the app still builds
   // and serves marketing pages before the project is wired up.
   // Routes that actually call Supabase will throw a clear error if missing.
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url().default("https://mvtqqlfzawyhntnsavbx.supabase.co"),
+  NEXT_PUBLIC_SUPABASE_URL: z
+    .string()
+    .url()
+    .default('https://mvtqqlfzawyhntnsavbx.supabase.co')
+    .transform(normalizeSupabaseUrl),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20).default("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12dHFxbGZ6YXd5aG50bnNhdmJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0ODk3OTksImV4cCI6MjA5MTA2NTc5OX0.x4m5jPXReQLikS2N2vox-ck406RzpqWOc-0qLOstqS4"),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
 
