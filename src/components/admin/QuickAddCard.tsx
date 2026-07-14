@@ -46,8 +46,23 @@ export interface QuickAddCardProps {
   accent?: 'amber' | 'blue' | 'emerald' | 'purple' | 'rose' | 'cyan' | 'navy';
   /** If set, redirect to this URL on success (use {id} for the new row id). */
   redirectTo?: string;
-  /** Optional transform applied to the payload right before POST. */
+  /** Optional transform applied to the payload right before POST.
+   *  NOTE: a function CANNOT be passed from a Server Component to this
+   *  Client Component — Next.js throws "Functions cannot be passed
+   *  directly to Client Components". Server-rendered callers (the quick-add
+   *  presets) must use the serializable `promotePhotos` descriptor instead. */
   beforeSubmit?: (payload: Record<string, unknown>) => Record<string, unknown>;
+  /** Serializable replacement for a photo-promoting beforeSubmit: lift the
+   *  uploaded photos into scalar/array fields, then drop the raw photos
+   *  array. Safe to pass across the Server→Client boundary. */
+  promotePhotos?: {
+    /** Photos field name to read from (default "photos"). */
+    from?: string;
+    /** Field that receives photos[0] — only when it is not already set. */
+    first?: string;
+    /** Field that receives the full photos array. */
+    all?: string;
+  };
   /** Optional API path used for the response key (defaults to the entity title lowercased). */
   responseKey?: string;
 }
@@ -64,7 +79,7 @@ const ACCENT: Record<NonNullable<QuickAddCardProps['accent']>, string> = {
 
 export function QuickAddCard({
   title, endpoint, fields, description, accent = 'amber',
-  redirectTo, beforeSubmit, responseKey,
+  redirectTo, beforeSubmit, promotePhotos, responseKey,
 }: QuickAddCardProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -130,6 +145,24 @@ export function QuickAddCard({
       else if (f.cast === 'int')     payload[f.name] = parseInt(String(raw), 10);
       else if (f.cast === 'boolean') payload[f.name] = !!raw;
       else                           payload[f.name] = raw;
+    }
+    // Serializable photo promotion (server-rendered presets use this
+    // instead of a beforeSubmit function, which can't cross the RSC
+    // boundary): lift the first / all uploaded photos into named fields,
+    // then drop the raw photos array.
+    if (promotePhotos) {
+      const src = promotePhotos.from ?? 'photos';
+      const photos = payload[src];
+      if (Array.isArray(photos) && photos.length) {
+        if (
+          promotePhotos.first &&
+          (payload[promotePhotos.first] == null || payload[promotePhotos.first] === '')
+        ) {
+          payload[promotePhotos.first] = photos[0];
+        }
+        if (promotePhotos.all) payload[promotePhotos.all] = photos;
+      }
+      delete payload[src];
     }
     const body = beforeSubmit ? beforeSubmit(payload) : payload;
 

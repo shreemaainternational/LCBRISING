@@ -151,17 +151,10 @@ export function eventsPreset(): Omit<QuickAddCardProps, 'title'> {
     responseKey: 'event',
     // Events table stores a single cover_url. Promote the first uploaded
     // photo to cover, drop the rest (we can wire a media gallery later).
-    beforeSubmit: (p) => {
-      const photos = p.photos as string[] | undefined;
-      if (photos?.length) {
-        const out = { ...p, cover_url: p.cover_url || photos[0] };
-        delete (out as Record<string, unknown>).photos;
-        return out;
-      }
-      const out = { ...p };
-      delete (out as Record<string, unknown>).photos;
-      return out;
-    },
+    // Serializable descriptor — a beforeSubmit function can't be passed
+    // from this server-rendered preset into the QuickAddCard client
+    // component (Next.js throws and the page 500s).
+    promotePhotos: { first: 'cover_url' },
     fields: [
       { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Eye Camp, Installation Night…' },
       { name: 'date', label: 'Starts At', type: 'datetime-local', required: true },
@@ -220,16 +213,9 @@ export function socialPreset(): Omit<QuickAddCardProps, 'title'> {
     accent: 'rose',
     description: 'Queue a post for one platform without going through the Creative Builder.',
     responseKey: 'post',
-    beforeSubmit: (p) => {
-      const photos = p.photos as string[] | undefined;
-      const out = { ...p } as Record<string, unknown>;
-      if (photos?.length) {
-        out.image_url = (out.image_url as string) || photos[0];
-        out.image_urls = photos;
-      }
-      delete out.photos;
-      return out;
-    },
+    // Serializable photo promotion (see QuickAddCard.promotePhotos):
+    // first photo → image_url (if unset), full set → image_urls.
+    promotePhotos: { first: 'image_url', all: 'image_urls' },
     fields: [
       { name: 'platform', label: 'Platform', type: 'select', required: true, options: [
         { value: 'facebook', label: 'Facebook' },
@@ -252,13 +238,9 @@ export function beneficiariesPreset(): Omit<QuickAddCardProps, 'title'> {
     accent: 'emerald',
     description: 'Quickly create a beneficiary record. Add demographics + service history from the profile page.',
     responseKey: 'beneficiary',
-    beforeSubmit: (p) => {
-      const photos = p.photos as string[] | undefined;
-      const out = { ...p } as Record<string, unknown>;
-      if (photos?.length) out.photo_url = photos[0];
-      delete out.photos;
-      return out;
-    },
+    // Serializable photo promotion (see QuickAddCard.promotePhotos):
+    // first uploaded photo → photo_url.
+    promotePhotos: { first: 'photo_url' },
     fields: [
       { name: 'full_name', label: 'Full Name', type: 'text', required: true },
       { name: 'phone', label: 'Phone', type: 'tel' },

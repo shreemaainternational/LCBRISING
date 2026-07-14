@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getCurrentMember } from '@/lib/auth';
 import { writeAudit } from '@/lib/audit';
 import { isDevAuthBypass } from '@/lib/env';
 import {
@@ -17,10 +17,19 @@ const BYPASS_USER_ID = '00000000-0000-0000-0000-000000000000';
  * Resolve the current authenticated member into an RBAC actor scope.
  * Returns null when there is no logged-in user.
  *
- * Honours the same development-only bypass that getCurrentMember() uses
- * (isDevAuthBypass() — ADMIN_AUTH_BYPASS=1 in a non-production build) so
- * a developer isn't locked out of permission-gated routes locally. This
- * is hard-disabled in production.
+ * Delegates the actual member lookup to getCurrentMember() so the RBAC
+ * layer sees exactly the same identity the rest of the app does. That
+ * gives permission-gated routes (club.create, sync.trigger, …) the same
+ * safety nets getCurrentMember() provides:
+ *   - the bootstrap-admin allowlist (BOOTSTRAP_ADMIN_EMAILS — the owner
+ *     is never locked out of their own CRM on a fresh deployment),
+ *   - the Bearer access-token fallback for stale/oversized SSR cookies,
+ *   - the service-role lookup tiers, and
+ *   - legacy 'admin' → international_admin promotion.
+ *
+ * Without this, currentActor() ran its own RLS-only query and resolved
+ * the owner to a plain 'member' whenever no members row existed yet,
+ * which surfaced as spurious "forbidden" errors on club create + sync.
  */
 export async function currentActor(): Promise<(ActorScope & { user_id: string }) | null> {
   if (isDevAuthBypass()) {
@@ -33,30 +42,23 @@ export async function currentActor(): Promise<(ActorScope & { user_id: string })
     };
   }
 
-  const supa = await createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) return null;
-
-  const { data } = await supa
-    .from('members')
-    .select('id, club_id, district_id, lions_role, role')
-    .eq('user_id', user.id)
-    .maybeSingle();
+  const member = await getCurrentMember();
+  if (!member) return null;
 
   // Members with the legacy role 'admin' are platform owners — always
   // promote them to international_admin regardless of lions_role.
-  const legacyAdmin = (data?.role as string | undefined) === 'admin';
+  const legacyAdmin = (member.role as string | undefined) === 'admin';
   const role: LionsRole = legacyAdmin
     ? 'international_admin'
-    : ((data?.lions_role as LionsRole | undefined) ??
-       legacyToLions((data?.role as string | undefined) ?? 'member'));
+    : ((member.lions_role as LionsRole | null | undefined) ??
+       legacyToLions((member.role as string | undefined) ?? 'member'));
 
   return {
-    user_id: user.id,
+    user_id: member.user_id ?? member.id ?? BYPASS_USER_ID,
     role,
-    member_id: data?.id ?? null,
-    club_id: data?.club_id ?? null,
-    district_id: data?.district_id ?? null,
+    member_id: member.id ?? null,
+    club_id: member.club_id ?? null,
+    district_id: member.district_id ?? null,
   };
 }
 
