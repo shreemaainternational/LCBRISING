@@ -28,6 +28,17 @@ export function supabaseMismatchDiagnostic(detail: string): string {
   ].join(' ');
 }
 
+export function supabaseUrlPathDiagnostic(detail: string): string {
+  const ref = projectRefFromUrl();
+  return [
+    `Supabase rejected the request path — NEXT_PUBLIC_SUPABASE_URL is malformed (project ref "${ref}").`,
+    `It must be the bare API origin with NO trailing slash and NO path, e.g. "https://${ref}.supabase.co".`,
+    `Common mistakes: a trailing "/", an appended "/rest/v1" or "/auth/v1", surrounding spaces, or using the direct-DB host "db.${ref}.supabase.co" instead of the API host.`,
+    `Fix NEXT_PUBLIC_SUPABASE_URL in Vercel → Settings → Environment Variables and redeploy.`,
+    `Detail: ${detail}`,
+  ].join(' ');
+}
+
 export function supabaseSchemaDiagnostic(detail: string): string {
   const ref = projectRefFromUrl();
   return [
@@ -47,6 +58,9 @@ export function describeSupabaseError(message: string | null | undefined): strin
   if (!detail) return 'Supabase request failed for an unknown reason.';
   if (/invalid schema/i.test(detail) && /invalid api key/i.test(detail)) {
     return supabaseMismatchDiagnostic(detail);
+  }
+  if (/invalid path specified|no route matched/i.test(detail)) {
+    return supabaseUrlPathDiagnostic(detail);
   }
   if (/invalid schema/i.test(detail)) return supabaseSchemaDiagnostic(detail);
   if (/invalid api key|jwt|jws/i.test(detail)) return supabaseMismatchDiagnostic(detail);

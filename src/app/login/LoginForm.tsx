@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, LogIn, User } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { describeSupabaseError } from '@/lib/supabase/errors';
 
 export default function LoginForm() {
   return (
@@ -38,7 +39,7 @@ function LoginInner() {
       if (mode === 'signin') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          setError(error.message);
+          setError(describeSupabaseError(error.message));
           setLoading(false);
           return;
         }
@@ -80,7 +81,7 @@ function LoginInner() {
         options: { data: { name } },
       });
       if (error) {
-        setError(error.message);
+        setError(describeSupabaseError(error.message));
         setLoading(false);
         return;
       }
