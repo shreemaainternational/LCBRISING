@@ -43,7 +43,7 @@ const patchSchema = z.object({
 });
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const { id } = await ctx.params;
   const { data, error } = await createAdminClient().from('activities').select('*').eq('id', id).single();
   if (error) return NextResponse.json({ error: 'not_found' }, { status: 404 });
@@ -51,7 +51,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const { id } = await ctx.params;
   const body = await req.json().catch(() => null);
   const parsed = patchSchema.safeParse(body);
@@ -63,7 +63,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 }
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const { id } = await ctx.params;
   const { error } = await createAdminClient().from('activities').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

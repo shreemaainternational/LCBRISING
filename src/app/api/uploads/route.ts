@@ -33,7 +33,7 @@ interface UploadedItem {
  * `folder` field (default "activities"). Returns per-file results.
  */
 export async function POST(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
 
   const ct = req.headers.get('content-type') ?? '';
   if (!ct.includes('multipart/form-data')) {

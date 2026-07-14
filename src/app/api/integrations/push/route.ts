@@ -19,7 +19,7 @@ function maskKey(s: string): string {
 
 /** GET — return current keypair status (masked private key). */
 export async function GET() {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   await loadVapidConfig(true); // lazy-generate if missing
 
   const db = createAdminClient();
@@ -48,7 +48,7 @@ export async function GET() {
 export async function PUT(req: Request) {
   let actor: { id: string } | null = null;
   try { actor = (await requireAdmin()) as { id: string }; }
-  catch (err) { if (err instanceof Response) return err; }
+  catch (err) { if (err instanceof Response) return err; throw err; }
 
   const body = await req.json().catch(() => ({}));
   const parsed = upsertSchema.safeParse(body);
@@ -86,7 +86,7 @@ export async function PUT(req: Request) {
 
 /** POST /reveal — return the full private key once. */
 export async function POST() {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   await loadVapidConfig(true);
   const { data } = await createAdminClient().from('push_settings')
     .select('public_key, private_key, subject').eq('id', 'singleton').maybeSingle();

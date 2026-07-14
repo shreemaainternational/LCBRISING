@@ -11,7 +11,7 @@ export const maxDuration = 60;
  * application/json with { base64, mimeType }.
  */
 export async function POST(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
 
   const ct = req.headers.get('content-type') ?? '';
   let bytes: Uint8Array | null = null;

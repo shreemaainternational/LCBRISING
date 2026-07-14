@@ -21,7 +21,7 @@ const schema = z.object({
 
 /** POST /api/push/send — admin-only push dispatcher. */
 export async function POST(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   if (!(await isPushConfiguredAsync())) {
     return NextResponse.json({ error: 'web_push_not_configured' }, { status: 503 });
   }

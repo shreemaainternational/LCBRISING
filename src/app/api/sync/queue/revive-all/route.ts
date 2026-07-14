@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 /** POST /api/sync/queue/revive-all — flip every dead/failed job back to pending. */
 export async function POST() {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const db = createAdminClient();
   const { data, error } = await db.from('sync_queue')
     .update({

@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
  * migration 0050_enable_lions_sandbox_rpc.sql.
  */
 export async function POST() {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
 
   // Prefer SSR + RPC — no service role required.
   const supa = await createClient();

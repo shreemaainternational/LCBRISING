@@ -1,10 +1,48 @@
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { Member, MemberRole } from '@/lib/supabase/database.types';
 import { isDevAuthBypass } from '@/lib/env';
 
 const ADMIN_ROLES: MemberRole[] = ['admin', 'president', 'secretary', 'treasurer'];
+
+// Bootstrap admins: emails that are treated as full admins even when no
+// members row exists yet. Covers the very first sign-in on a fresh
+// deployment (no service-role key to auto-provision, RLS can't self-insert)
+// so the owner is never locked out of their own CRM. Configurable via
+// BOOTSTRAP_ADMIN_EMAILS (comma-separated); defaults to the org owner.
+const BOOTSTRAP_ADMIN_EMAILS = (
+  process.env.BOOTSTRAP_ADMIN_EMAILS ?? 'info@shreemaainternational.com'
+)
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+/**
+ * Synthesize an in-memory admin Member for a bootstrap-admin auth user
+ * when the database has no row for them yet. Returns null for everyone
+ * else, so it only ever grants access to the configured owner email(s).
+ */
+function bootstrapAdminMember(user: {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, unknown>;
+}): Member | null {
+  const email = user.email?.toLowerCase();
+  if (!email || !BOOTSTRAP_ADMIN_EMAILS.includes(email)) return null;
+  return {
+    id: user.id,
+    user_id: user.id,
+    name: (user.user_metadata?.name as string | undefined) ?? 'Administrator',
+    email: user.email,
+    role: 'admin' as MemberRole,
+    lions_role: null,
+    status: 'active',
+    club_id: null,
+    joined_at: null,
+  } as unknown as Member;
+}
 
 // Development-only diagnostic identity returned when isDevAuthBypass()
 // is true (ADMIN_AUTH_BYPASS=1 in a non-production build). Never active
@@ -42,7 +80,29 @@ export async function getCurrentMember(): Promise<Member | null> {
   if (isDevAuthBypass()) return BYPASS_MEMBER;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  let { data: { user } } = await supabase.auth.getUser();
+
+  // Fallback: a Bearer access token in the Authorization header. The
+  // browser holds a valid Supabase session (it can upload straight to
+  // storage) even when the SSR cookie is stale, oversized/chunked, or
+  // lost to a browser-vs-server refresh-token race. Authenticated
+  // clients forward that token so mutations don't fail with "not signed
+  // in" while the user is clearly logged in.
+  if (!user) {
+    try {
+      const authz = (await headers()).get('authorization');
+      const token = authz?.toLowerCase().startsWith('bearer ')
+        ? authz.slice(7).trim()
+        : null;
+      if (token) {
+        const { data } = await supabase.auth.getUser(token);
+        user = data.user;
+      }
+    } catch {
+      // headers() unavailable outside a request scope — ignore.
+    }
+  }
+
   if (!user) return null;
 
   // Tier 1 — RLS-scoped.
@@ -54,8 +114,9 @@ export async function getCurrentMember(): Promise<Member | null> {
   if (rlsRow) return rlsRow as Member;
 
   // Tiers 2-4 need the service role. If it isn't configured we can't
-  // recover — return null and let the caller handle it.
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  // recover from the DB — fall back to the bootstrap-admin allowlist so
+  // the owner isn't locked out, otherwise return null.
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return bootstrapAdminMember(user);
   const admin = createAdminClient();
 
   // Tier 2 — by user_id, bypassing RLS.
@@ -98,19 +159,23 @@ export async function getCurrentMember(): Promise<Member | null> {
     .select()
     .single();
 
-  return (created as Member | null) ?? null;
+  return (created as Member | null) ?? bootstrapAdminMember(user);
 }
 
 /**
  * Guard for API route handlers. On denial it THROWS a NextResponse
  * (which is an instanceof Response), so the standard route idiom
- * `catch (err) { if (err instanceof Response) return err; }` returns a
- * real 401/403 instead of silently falling through to the handler body.
+ * `catch (err) { if (err instanceof Response) return err; throw err; }`
+ * returns a real 401/403 for a denial and re-throws anything else.
  * Returns the member on success.
  *
+ * The trailing `throw err` matters: without it, a non-Response error
+ * (a transient getCurrentMember() failure, or an accidental redirect()
+ * throwing NEXT_REDIRECT) would be swallowed and the handler body would
+ * run UNAUTHENTICATED. Re-throwing fails closed as a 500 instead.
+ *
  * Do NOT use this in a page/server component — use requireAdminPage(),
- * which redirects. (redirect() throws NEXT_REDIRECT, which is NOT a
- * Response and would be swallowed by the API idiom — the original bug.)
+ * which redirects.
  */
 export async function requireAdmin(): Promise<Member> {
   const member = await getCurrentMember();

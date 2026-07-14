@@ -22,7 +22,7 @@ function maskKey(s: string): string {
 }
 
 export async function GET() {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const db = createAdminClient();
   const { data } = await db.from('openai_settings')
     .select('id, api_key, model, base_url, is_active, monthly_cost_cap_usd, last_test_ok, last_test_at, last_test_error, configured_at, updated_at')
@@ -42,7 +42,7 @@ export async function GET() {
 export async function PUT(req: Request) {
   let actor: { id: string } | null = null;
   try { actor = (await requireAdmin()) as { id: string }; }
-  catch (err) { if (err instanceof Response) return err; }
+  catch (err) { if (err instanceof Response) return err; throw err; }
 
   const body = await req.json().catch(() => ({}));
   const parsed = upsertSchema.safeParse(body);
@@ -97,7 +97,7 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE() {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   await createAdminClient().from('openai_settings').update({
     api_key: null, is_active: false,
   }).eq('id', 'singleton');

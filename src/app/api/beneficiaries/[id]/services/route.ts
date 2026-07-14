@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 /** POST /api/beneficiaries/[id]/services — log a new service event */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const { id } = await ctx.params;
   const body = await req.json().catch(() => ({}));
   const parsed = beneficiaryServiceSchema.safeParse({ ...body, beneficiary_id: id });
@@ -40,7 +40,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
 /** DELETE /api/beneficiaries/[id]/services?serviceId=… */
 export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const { id } = await ctx.params;
   const url = new URL(req.url);
   const serviceId = url.searchParams.get('serviceId');

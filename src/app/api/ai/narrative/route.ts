@@ -32,7 +32,7 @@ const schema = z.object({
 
 /** POST /api/ai/narrative — generate a narrative block. */
 export async function POST(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
 /** GET /api/ai/narrative/translate?text=... — quick GU translation. */
 export async function GET(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const url = new URL(req.url);
   const text = url.searchParams.get('text');
   if (!text) return NextResponse.json({ error: 'missing_text' }, { status: 400 });

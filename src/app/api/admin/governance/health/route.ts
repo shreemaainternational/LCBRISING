@@ -17,7 +17,7 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const body = await req.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'invalid' }, { status: 400 });
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
   const { data } = await createAdminClient().from('clubs')
     .select('id, name, club_number, zone_id, health_score, health_assessed_at, health_commentary')
     .is('deleted_at', null)

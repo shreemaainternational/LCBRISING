@@ -8,7 +8,7 @@ import { enqueueJob } from '@/lib/automation/engine';
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
-  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; }
+  try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
 
   const body = await req.json().catch(() => null);
   const parsed = canvaDesignSchema.safeParse(body);

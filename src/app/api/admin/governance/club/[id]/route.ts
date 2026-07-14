@@ -15,7 +15,7 @@ const patchSchema = z.object({
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   let actor: { id: string } | null = null;
   try { actor = (await requireAdmin()) as { id: string }; }
-  catch (err) { if (err instanceof Response) return err; }
+  catch (err) { if (err instanceof Response) return err; throw err; }
 
   const { id } = await ctx.params;
   const body = await req.json().catch(() => null);

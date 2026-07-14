@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, LogIn, User } from 'lucide-react';
-import { signInAction, signUpAction } from './actions';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginForm() {
   return (
@@ -33,36 +33,67 @@ function LoginInner() {
     setNotice(null);
 
     try {
+      const supabase = createClient();
+
       if (mode === 'signin') {
-        const result = await signInAction(email, password, redirectTo);
-        // On success the action calls redirect() and never returns a
-        // result here — Next.js performs the navigation. We only reach
-        // this branch on a real failure.
-        if (!result.ok) {
-          setError(result.error);
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          setError(error.message);
           setLoading(false);
-        } else {
+          return;
+        }
+        // Sign-in succeeded and the browser now holds the session cookie.
+        // Before navigating, confirm the SERVER can see that session and
+        // resolve a member — otherwise /admin would bounce back here with
+        // no explanation. Surface the precise reason instead.
+        setNotice('Signed in — checking your access…');
+        const probe = await fetch('/api/auth/whoami', { cache: 'no-store' })
+          .then((r) => r.json())
+          .catch(() => ({ ok: false, reason: 'network' }));
+
+        if (probe.ok) {
           setNotice('Signed in successfully. Taking you to your dashboard…');
+          // Full navigation so the middleware/layout read the fresh cookie.
+          window.location.assign(redirectTo || '/admin');
+          return;
         }
-      } else {
-        const result = await signUpAction(email, password, name, redirectTo);
-        if (!result.ok) {
-          setError(result.error);
-          setLoading(false);
-        } else {
-          // Reaching here means Supabase requires email confirmation
-          // (no session created); otherwise the action would have
-          // redirected and we wouldn't be here.
-          setNotice(
-            'Account created. Please check your email to confirm your address before signing in.',
+
+        setNotice(null);
+        if (probe.reason === 'no_member') {
+          setError(
+            `Signed in as ${probe.email ?? email}, but this account isn't linked to a member profile yet, so the CRM can't open. An administrator needs to add this email under Members (or the deployment is missing its Supabase service-role key).`,
           );
-          setLoading(false);
+        } else if (probe.reason === 'no_server_session') {
+          setError(
+            'Signed in, but the session did not persist on the server. Allow cookies for this site (disable tracking/ITP blocking) and try again.',
+          );
+        } else {
+          setError('Signed in, but could not verify access. Please try again.');
         }
+        setLoading(false);
+        return;
       }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name } },
+      });
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+      // No session means Supabase requires email confirmation first.
+      if (!data.session) {
+        setNotice(
+          'Account created. Please check your email to confirm your address before signing in.',
+        );
+        setLoading(false);
+        return;
+      }
+      window.location.assign(redirectTo || '/admin');
     } catch (err) {
-      // A NEXT_REDIRECT thrown by the server action is rethrown here on
-      // the client — let it propagate so Next.js handles the navigation.
-      if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err;
       setError(err instanceof Error ? err.message : String(err));
       setLoading(false);
     }
