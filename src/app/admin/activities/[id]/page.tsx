@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { formatINR, formatDate } from '@/lib/utils';
 import {
   ArrowLeft, MapPin, Calendar, Users, Clock, Banknote,
-  HeartPulse, Sparkles, Image as ImageIcon,
+  HeartPulse, Sparkles, Image as ImageIcon, Pencil,
 } from 'lucide-react';
 import { ActivityGallery } from './ActivityGallery';
 
@@ -29,9 +29,17 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <Link href="/admin/activities" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-navy-800">
-        <ArrowLeft size={14} /> Back to Activities
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/admin/activities" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-navy-800">
+          <ArrowLeft size={14} /> Back to Activities
+        </Link>
+        <Link
+          href={`/admin/activities/${a.id}/edit`}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-800 text-white text-sm font-semibold hover:bg-blue-900"
+        >
+          <Pencil size={14} /> Edit activity
+        </Link>
+      </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -106,7 +114,13 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         <Card>
           <CardContent className="py-10 text-center text-gray-500">
             <Sparkles className="mx-auto mb-2 text-amber-400" size={28} />
-            <div className="text-sm">No media uploaded yet. Edit the activity to add photos.</div>
+            <div className="text-sm">No media uploaded yet.</div>
+            <Link
+              href={`/admin/activities/${a.id}/edit`}
+              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-800 text-white text-sm font-semibold hover:bg-blue-900"
+            >
+              <Pencil size={14} /> Add photos
+            </Link>
           </CardContent>
         </Card>
       )}

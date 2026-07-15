@@ -5,7 +5,7 @@ import { formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { activitiesPreset } from '@/components/admin/quick-add-presets';
-import { Activity as ActivityIcon } from 'lucide-react';
+import { Activity as ActivityIcon, Pencil } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +45,7 @@ export default async function AdminActivitiesPage() {
                   <th className="text-right p-3">Beneficiaries</th>
                   <th className="text-right p-3">Hours</th>
                   <th className="text-right p-3">Raised</th>
+                  <th className="text-right p-3">Edit</th>
                 </tr>
               </thead>
               <tbody>
@@ -60,6 +61,15 @@ export default async function AdminActivitiesPage() {
                     <td className="p-3 text-right">{a.beneficiaries}</td>
                     <td className="p-3 text-right">{Number(a.service_hours)}</td>
                     <td className="p-3 text-right">{Number(a.amount_raised)}</td>
+                    <td className="p-3 text-right">
+                      <Link
+                        href={`/admin/activities/${a.id}/edit`}
+                        className="inline-flex items-center gap-1 text-navy-700 hover:text-blue-800 hover:underline"
+                        aria-label={`Edit ${a.title}`}
+                      >
+                        <Pencil size={13} /> Edit
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
