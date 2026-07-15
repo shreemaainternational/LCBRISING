@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { integrations } from '@/lib/env';
 import { formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
@@ -9,7 +10,13 @@ import { Calendar } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminEventsPage() {
-  const supabase = await createClient();
+  // Read through the service-role client when available so the admin table
+  // is not blanked by the events_public_read RLS policy, which trips
+  // "infinite recursion detected in policy for relation members" on databases
+  // where migration 0059 has not been applied. This page is already gated by
+  // the admin layout (getCurrentMember → redirect), so bypassing RLS to list
+  // all events here is safe.
+  const supabase = integrations.supabaseAdmin ? createAdminClient() : await createClient();
   const { data: events } = await supabase.from('events').select('*').order('date', { ascending: false });
   const preset = eventsPreset();
 

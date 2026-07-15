@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Calendar, MapPin, ArrowRight } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/env';
+import { getUpcomingPublicEvents } from '@/lib/events';
 
 type EventRow = {
   id: string;
@@ -12,20 +11,7 @@ type EventRow = {
 };
 
 async function getUpcoming(): Promise<EventRow[]> {
-  if (!isSupabaseConfigured()) return [];
-  try {
-    const supa = await createClient();
-    const { data } = await supa
-      .from('events')
-      .select('id, title, date, location, description')
-      .eq('is_public', true)
-      .gte('date', new Date().toISOString())
-      .order('date')
-      .limit(3);
-    return (data ?? []) as EventRow[];
-  } catch {
-    return [];
-  }
+  return getUpcomingPublicEvents(3);
 }
 
 function formatDateParts(d: string) {

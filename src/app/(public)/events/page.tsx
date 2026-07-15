@@ -1,22 +1,12 @@
 import type { Metadata } from 'next';
 import { Calendar, Clock, MapPin } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/env';
+import { getUpcomingPublicEvents, getPastPublicEvents, type PublicEventRow } from '@/lib/events';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = { title: 'Events', alternates: { canonical: '/events' } };
 export const revalidate = 60;
 
-type EventRow = {
-  id: string;
-  title: string;
-  description: string | null;
-  date: string;
-  end_date: string | null;
-  location: string | null;
-  cover_url: string | null;
-  category: string | null;
-};
+type EventRow = PublicEventRow;
 
 const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&w=900&q=70',
@@ -41,24 +31,10 @@ function fmtTime(iso: string) {
 }
 
 export default async function EventsPage() {
-  let upcoming: EventRow[] = [];
-  let past: EventRow[] = [];
-  if (isSupabaseConfigured()) {
-    const supabase = await createClient();
-    const now = new Date().toISOString();
-    const [u, p] = await Promise.all([
-      supabase.from('events').select('*').eq('is_public', true).gte('date', now).order('date'),
-      supabase
-        .from('events')
-        .select('*')
-        .eq('is_public', true)
-        .lt('date', now)
-        .order('date', { ascending: false })
-        .limit(6),
-    ]);
-    upcoming = (u.data ?? []) as EventRow[];
-    past = (p.data ?? []) as EventRow[];
-  }
+  const [upcoming, past] = await Promise.all([
+    getUpcomingPublicEvents(),
+    getPastPublicEvents(6),
+  ]);
 
   return (
     <>
