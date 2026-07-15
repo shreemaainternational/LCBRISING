@@ -61,7 +61,7 @@ async function getRecentActivities() {
     const supabase = await createClient();
     const { data } = await supabase
       .from('activities')
-      .select('id, title, description, beneficiaries, date, location')
+      .select('id, title, description, beneficiaries, date, location, photos')
       .order('date', { ascending: false })
       .limit(3);
     return data ?? [];
@@ -112,18 +112,30 @@ export default async function HomePage() {
           <p className="text-gray-500">Activities will appear here once added.</p>
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
-            {activities.map((a) => (
-              <Card key={a.id}>
-                <CardContent className="p-6">
-                  <div className="text-xs text-brand-600 font-medium mb-1">{formatDate(a.date)}</div>
-                  <h3 className="font-semibold text-lg text-navy-800 mb-2">{a.title}</h3>
-                  <p className="text-sm text-gray-600 line-clamp-3">{a.description ?? ''}</p>
-                  <div className="text-xs text-gray-500 mt-4">
-                    {a.beneficiaries} beneficiaries · {a.location ?? 'Vadodara'}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {activities.map((a) => {
+              const cover = (a as { photos?: string[] | null }).photos?.find(Boolean);
+              return (
+                <Card key={a.id} className="overflow-hidden">
+                  {cover && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={cover}
+                      alt={a.title}
+                      loading="lazy"
+                      className="h-44 w-full object-cover"
+                    />
+                  )}
+                  <CardContent className="p-6">
+                    <div className="text-xs text-brand-600 font-medium mb-1">{formatDate(a.date)}</div>
+                    <h3 className="font-semibold text-lg text-navy-800 mb-2">{a.title}</h3>
+                    <p className="text-sm text-gray-600 line-clamp-3">{a.description ?? ''}</p>
+                    <div className="text-xs text-gray-500 mt-4">
+                      {a.beneficiaries} beneficiaries · {a.location ?? 'Vadodara'}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
