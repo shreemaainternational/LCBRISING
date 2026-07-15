@@ -18,7 +18,9 @@ export const LIONS_ROLE_VALUES = [
 
 export const enterpriseMemberSchema = memberSchema.extend({
   district_id: z.string().uuid().optional().nullable(),
-  lions_member_id: z.string().max(64).optional().nullable(),
+  // Membership number (LCI member ID) is mandatory when adding a member.
+  // Updates use enterpriseMemberSchema.partial(), so this stays optional there.
+  lions_member_id: z.string().trim().min(1, 'Membership number is required').max(64),
   lions_role: z.enum(LIONS_ROLE_VALUES).optional().nullable(),
   whatsapp: z.string().max(32).optional().nullable(),
   birthday: z.string().optional().nullable(),

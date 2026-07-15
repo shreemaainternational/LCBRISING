@@ -52,8 +52,8 @@ const TEMPLATE_HEADERS = [
   'Name', 'Email', 'Phone', 'WhatsApp', 'Role', 'Status', 'Club', 'Birthday', 'Lions Member ID',
 ];
 const TEMPLATE_SAMPLE = [
-  ['Lion Ramesh Patel', 'ramesh@example.com', '+919876543210', '+919876543210', 'member', 'active', '', '1980-04-15', ''],
-  ['Lion Priya Sharma', 'priya@example.com', '+919812345678', '', 'officer', 'active', '', '', ''],
+  ['Lion Ramesh Patel', 'ramesh@example.com', '+919876543210', '+919876543210', 'member', 'active', '', '1980-04-15', '1234567'],
+  ['Lion Priya Sharma', 'priya@example.com', '+919812345678', '', 'officer', 'active', '', '', '2345678'],
 ];
 
 /** Strip everything but a-z0-9 so header matching is punctuation/space-insensitive. */
@@ -178,9 +178,11 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
         const rawBirthday = cm.birthday === undefined ? '' : (r[cm.birthday] ?? '');
         const birthday = toDateString(rawBirthday);
 
+        const lionsMemberId = get('lions_member_id');
         let error: string | undefined;
         if (!name || name.length < 2) error = 'Name is required (min 2 chars)';
         else if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) error = 'Valid email required';
+        else if (!lionsMemberId) error = 'Membership number is required';
 
         parsed.push({
           row: i + 1,
@@ -281,7 +283,8 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
           </h3>
           <p className="text-xs text-gray-600 mt-0.5">
             Upload an <strong>.xlsx</strong>, <strong>.xls</strong> or <strong>.csv</strong> file. Columns:
-            {' '}Name, Email, Phone, WhatsApp, Role, Status, Club, Birthday, Lions Member ID. Only Name &amp; Email are required.
+            {' '}Name, Email, Phone, WhatsApp, Role, Status, Club, Birthday, Membership Number.
+            {' '}<strong>Name, Email &amp; Membership Number are required.</strong>
           </p>
         </div>
         <button
@@ -337,6 +340,7 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
                   <th className="text-left px-2 py-1.5 w-8">#</th>
                   <th className="text-left px-2 py-1.5">Name</th>
                   <th className="text-left px-2 py-1.5">Email</th>
+                  <th className="text-left px-2 py-1.5">Member #</th>
                   <th className="text-left px-2 py-1.5">Phone</th>
                   <th className="text-left px-2 py-1.5">Role</th>
                   <th className="text-left px-2 py-1.5">Status</th>
@@ -348,13 +352,14 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
                   <tr key={r.row} className={r.error ? 'border-t bg-red-50' : 'border-t'}>
                     <td className="px-2 py-1 text-gray-400">{r.row}</td>
                     {r.error ? (
-                      <td className="px-2 py-1 text-red-700" colSpan={6}>
+                      <td className="px-2 py-1 text-red-700" colSpan={7}>
                         {r.name || r.email || '(blank)'} — {r.error}
                       </td>
                     ) : (
                       <>
                         <td className="px-2 py-1 font-medium">{r.name}</td>
                         <td className="px-2 py-1">{r.email}</td>
+                        <td className="px-2 py-1">{r.lions_member_id ?? '—'}</td>
                         <td className="px-2 py-1">{r.phone ?? '—'}</td>
                         <td className="px-2 py-1 capitalize">{r.role}</td>
                         <td className="px-2 py-1 capitalize">{r.status}</td>
