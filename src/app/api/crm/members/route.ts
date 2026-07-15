@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { enterpriseMemberSchema } from '@/lib/validation/schemas';
 import { writeAudit } from '@/lib/audit';
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
   if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%,lions_member_id.ilike.%${q}%`);
 
   const { data, error, count } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
   return NextResponse.json({ members: data ?? [], total: count ?? 0, limit, offset });
 }
 
@@ -47,9 +48,15 @@ export async function POST(req: NextRequest) {
   });
   if (isGuardFailure(actor)) return actor;
 
-  const supa = await createClient();
-  const { data, error } = await supa.from('members').insert(parsed.data).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // Trusted admin write (already gated by requirePermission above). Use the
+  // service-role client so the INSERT and its .select() read-back bypass RLS:
+  // the members SELECT policy is self-referential on databases where migration
+  // 0059 has not been applied, which surfaces as "infinite recursion detected
+  // in policy for relation members" on the Create Member form. Bypassing RLS
+  // here fixes it regardless of DB state, matching /api/events and /api/dues.
+  const db = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
+  const { data, error } = await db.from('members').insert(parsed.data).select().single();
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
 
   await writeAudit({
     action: 'member.create',

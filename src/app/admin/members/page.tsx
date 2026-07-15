@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
+import { BulkMemberUpload } from '@/components/admin/BulkMemberUpload';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { membersPreset } from '@/components/admin/quick-add-presets';
 import { Users } from 'lucide-react';
@@ -25,6 +26,10 @@ export default async function MembersPage() {
           <p className="text-gray-600">All members across the chapter.</p>
         </div>
         <QuickAddCard title="Member" {...preset} />
+      </div>
+
+      <div className="mb-6">
+        <BulkMemberUpload clubs={clubs ?? []} />
       </div>
 
       {!members?.length ? (
