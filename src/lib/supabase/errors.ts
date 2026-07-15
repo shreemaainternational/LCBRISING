@@ -49,6 +49,16 @@ export function supabaseSchemaDiagnostic(detail: string): string {
   ].join(' ');
 }
 
+export function supabaseRecursionDiagnostic(detail: string): string {
+  return [
+    `Row-level security hit "infinite recursion detected in policy for relation members".`,
+    `The database still has the original self-referential members policies. Apply migration`,
+    `supabase/migrations/0059_fix_members_rls_recursion.sql in the Supabase SQL Editor`,
+    `(it is idempotent and safe to re-run) to replace them with the SECURITY DEFINER helpers.`,
+    `Detail: ${detail}`,
+  ].join(' ');
+}
+
 /**
  * Map a raw Supabase error message to a human-friendly diagnostic.
  * Returns the original message unchanged when it isn't a known config error.
@@ -56,6 +66,9 @@ export function supabaseSchemaDiagnostic(detail: string): string {
 export function describeSupabaseError(message: string | null | undefined): string {
   const detail = (message ?? '').trim();
   if (!detail) return 'Supabase request failed for an unknown reason.';
+  if (/infinite recursion detected in policy/i.test(detail)) {
+    return supabaseRecursionDiagnostic(detail);
+  }
   if (/invalid schema/i.test(detail) && /invalid api key/i.test(detail)) {
     return supabaseMismatchDiagnostic(detail);
   }
