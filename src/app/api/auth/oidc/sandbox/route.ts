@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 import { isOidcSandboxActive } from '@/lib/oidc';
+import { isLionsSandboxAllowed } from '@/lib/env';
 import { writeAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -40,12 +41,17 @@ function pickProfile(req: NextRequest): SandboxIdentity {
 }
 
 export async function GET(req: NextRequest) {
-  // Hard-disabled in production. This route mints a real, privileged
-  // session for a synthetic identity — a testing tool only. Gating it
-  // on NODE_ENV ensures a stray sandbox_mode toggle can never expose
-  // admin access on the live site.
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'sandbox_disabled_in_production' }, { status: 404 });
+  // This route mints a real, privileged session for a synthetic identity
+  // — a testing tool only. It's allowed off live production (local dev +
+  // Vercel preview/branch deploys) and, on the live production domain,
+  // only when LIONS_SANDBOX_ALLOW_PRODUCTION="true" is explicitly set.
+  // The admin-only sandbox_mode DB toggle below is the second gate, so a
+  // stray toggle alone can never expose admin access on the live site.
+  if (!isLionsSandboxAllowed()) {
+    return NextResponse.json({
+      error: 'sandbox_disabled_in_production',
+      message: 'The Lions sandbox sign-in is blocked on the live production domain. It works on preview/branch deploys, or set LIONS_SANDBOX_ALLOW_PRODUCTION="true" to enable it here.',
+    }, { status: 404 });
   }
 
   await loadOidcSettings(true);

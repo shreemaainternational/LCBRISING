@@ -74,6 +74,15 @@ const schema = z.object({
   // and return a synthetic admin member. Remove in production.
   ADMIN_AUTH_BYPASS: z.string().optional(),
 
+  // Vercel-injected deployment environment: 'production' | 'preview' | 'development'.
+  // Lets us treat preview/branch deploys as non-production even though
+  // Vercel builds them with NODE_ENV=production.
+  VERCEL_ENV: z.string().optional(),
+  // Explicit opt-in to allow the Lions sandbox sign-in on the LIVE
+  // production domain (set to "true"). Off by default — the sandbox mints
+  // a privileged synthetic session, so this must be a conscious choice.
+  LIONS_SANDBOX_ALLOW_PRODUCTION: z.string().optional(),
+
   // --- AI ---
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
@@ -184,6 +193,8 @@ const parsed = schema.parse({
   CRON_SECRET: process.env.CRON_SECRET,
   ADMIN_BOOTSTRAP_EMAIL: process.env.ADMIN_BOOTSTRAP_EMAIL,
   ADMIN_AUTH_BYPASS: process.env.ADMIN_AUTH_BYPASS,
+  VERCEL_ENV: process.env.VERCEL_ENV,
+  LIONS_SANDBOX_ALLOW_PRODUCTION: process.env.LIONS_SANDBOX_ALLOW_PRODUCTION,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_MODEL: process.env.OPENAI_MODEL,
   CANVA_CLIENT_ID: process.env.CANVA_CLIENT_ID,
@@ -259,6 +270,32 @@ export const env = parsed;
  */
 export function isDevAuthBypass(): boolean {
   return process.env.NODE_ENV !== 'production' && parsed.ADMIN_AUTH_BYPASS === '1';
+}
+
+/**
+ * True only on the LIVE production deployment.
+ *
+ * Vercel builds preview/branch deploys with NODE_ENV=production, so we
+ * prefer VERCEL_ENV (which is 'preview' for those) when it's present and
+ * only fall back to NODE_ENV off Vercel. This lets preview URLs behave
+ * like non-production while the real production domain stays locked down.
+ */
+export function isLiveProduction(): boolean {
+  if (parsed.VERCEL_ENV) return parsed.VERCEL_ENV === 'production';
+  return process.env.NODE_ENV === 'production';
+}
+
+/**
+ * Whether the Lions sandbox sign-in route may run.
+ *
+ * Allowed off live production (local dev + Vercel preview/branch deploys),
+ * or on live production only when LIONS_SANDBOX_ALLOW_PRODUCTION="true" is
+ * explicitly set. The route still additionally requires the admin-only
+ * sandbox_mode DB toggle, so this is defense-in-depth, not the sole gate.
+ */
+export function isLionsSandboxAllowed(): boolean {
+  if (!isLiveProduction()) return true;
+  return parsed.LIONS_SANDBOX_ALLOW_PRODUCTION === 'true';
 }
 
 export function requireSupabaseEnv() {
