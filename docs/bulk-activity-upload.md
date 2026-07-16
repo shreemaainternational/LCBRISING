@@ -37,7 +37,25 @@ Categories are mapped to the app's service categories:
 
 ## How to upload
 
-### Option A — In-app bulk uploader (recommended)
+### Option A — In-app Excel uploader (recommended)
+
+**Admin → Activities → "Bulk upload (Excel)".** Drop the Lion Portal
+*Service Activities Information* `.xlsx` export in **as-is** — the banner,
+filter block and subtotal rows are skipped automatically. Then:
+
+1. Pick the club (defaults to **Lions Club of Baroda Rising Star**).
+2. Review the parsed preview table (title, date, category, beneficiaries,
+   Lion members, hours, funds raised) with running totals.
+3. Click **Import** — every row is linked to the selected club, and
+   re-uploading is idempotent (existing `(club, title, date, category)`
+   rows are skipped, not duplicated).
+
+The same panel also accepts a plain `.xlsx` / `.csv` with columns
+`Title, Date, Category, Beneficiaries, Lion Members, Service Hours,
+Amount Raised, Location, Description` (a "Download template" button
+provides a starter sheet).
+
+### Option B — Generic CSV via Admin → Sync
 
 1. Sign in as an admin and go to **Admin → Sync**.
 2. Choose entity **activities** and upload `baroda-rising-star-activities.csv`.
@@ -47,9 +65,9 @@ Categories are mapped to the app's service categories:
 
 > The CSV leaves `club_id` blank. To attach every row to the club during
 > import, fill the `club_id` column with the Baroda Rising Star club's UUID
-> first, or use Option B which resolves the club by name automatically.
+> first, or use Option A / C which resolve the club automatically.
 
-### Option B — Seed migration
+### Option C — Seed migration
 
 Apply `supabase/migrations/0061_seed_baroda_rising_star_activities.sql` with
 your normal migration flow. It:
