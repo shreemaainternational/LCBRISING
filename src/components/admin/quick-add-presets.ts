@@ -184,6 +184,7 @@ export function activitiesPreset(): Omit<QuickAddCardProps, 'title'> {
         { value: 'vision', label: 'Vision' },
         { value: 'hunger', label: 'Hunger Relief' },
         { value: 'environment', label: 'Environment' },
+        { value: 'relief', label: 'Disaster Relief' },
         { value: 'diabetes', label: 'Diabetes Awareness' },
         { value: 'childhood_cancer', label: 'Childhood Cancer' },
         { value: 'humanitarian', label: 'Humanitarian' },
