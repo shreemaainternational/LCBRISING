@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { formatINR } from '@/lib/utils';
 import { Users, Banknote, HeartHandshake, Activity as ActivityIcon } from 'lucide-react';
 import {
@@ -12,7 +12,13 @@ import { QuickActionsBar } from '@/components/admin/QuickActionsBar';
 export const dynamic = 'force-dynamic';
 
 async function getDashboardData() {
-  const supabase = await createClient();
+  // This page lives inside the admin-gated layout. Read via the service-role
+  // client so the member-count queries bypass RLS: the members SELECT policy is
+  // self-referential on databases where migration 0059 has not been applied, so
+  // under the invoker client those counts error out and render as 0 (which is
+  // why "Total Members" showed 0 while Activities — a public-read table —
+  // counted fine). Bypassing RLS here reports the true counts.
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
   const [
     { count: totalMembers },
     { count: activeMembers },
