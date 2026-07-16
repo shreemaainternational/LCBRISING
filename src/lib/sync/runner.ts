@@ -8,6 +8,41 @@ function key(source: string, entity: string): string {
   return `${source}:${entity}`;
 }
 
+/**
+ * Strip characters Postgres' jsonb type rejects. A U+0000 (NUL) byte —
+ * common when a binary upload (e.g. an .xlsx workbook) is read as text —
+ * makes jsonb inserts fail with "unsupported Unicode escape sequence", and
+ * lone UTF-16 surrogates are invalid too. Applied recursively to anything
+ * we persist into a jsonb column.
+ */
+function sanitizeForJsonb<T>(value: T): T {
+  if (typeof value === 'string') {
+    return value.replace(/\u0000/g, '').replace(/[\uD800-\uDFFF]/g, '') as unknown as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((v) => sanitizeForJsonb(v)) as unknown as T;
+  }
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = sanitizeForJsonb(v);
+    }
+    return out as unknown as T;
+  }
+  return value;
+}
+
+/**
+ * Build the jsonb `context` for a sync_logs row. The raw upload payload can
+ * be megabytes of CSV/spreadsheet text (and may contain NUL bytes), so we
+ * never store it verbatim — only lightweight, sanitized metadata.
+ */
+function logContext(payload: Record<string, unknown> | undefined, extra?: Record<string, unknown>) {
+  const { csv, ...meta } = payload ?? {};
+  const size = typeof csv === 'string' ? csv.length : undefined;
+  return sanitizeForJsonb({ ...meta, ...(size !== undefined ? { csv_length: size } : {}), ...extra });
+}
+
 export function registerAdapter(adapter: SyncAdapter): void {
   ADAPTERS.set(key(adapter.source, adapter.entity), adapter);
 }
@@ -48,7 +83,7 @@ export async function runSyncJob(job: SyncJobInput): Promise<{ logId: string; re
       triggered_by: job.triggered_by ?? null,
       integration_id: job.integration_id ?? null,
       cursor: job.cursor ?? null,
-      context: job.payload ?? {},
+      context: logContext(job.payload),
     })
     .select('id')
     .single();
@@ -83,7 +118,7 @@ export async function runSyncJob(job: SyncJobInput): Promise<{ logId: string; re
         records_skipped: result.skipped,
         records_failed: result.failed,
         cursor: result.next_cursor ?? null,
-        context: { failures: result.failures, ...(job.payload ?? {}) },
+        context: logContext(job.payload, { failures: result.failures }),
       })
       .eq('id', logId);
 
@@ -103,7 +138,7 @@ export async function runSyncJob(job: SyncJobInput): Promise<{ logId: string; re
       .update({
         status: 'failed',
         finished_at: new Date().toISOString(),
-        error_message: message.slice(0, 4000),
+        error_message: sanitizeForJsonb(message).slice(0, 4000),
       })
       .eq('id', logId);
     await writeAudit({
