@@ -41,6 +41,7 @@ type BulkResponse = {
   skipped?: number;
   failed?: number;
   clubs_created?: number;
+  placement?: { region: string | null; zone: string | null } | null;
   to_insert?: number;
   dry_run?: boolean;
   rows?: RowResult[];
@@ -138,6 +139,8 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
   const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [source, setSource] = useState<'lions' | 'template' | null>(null);
+  const [region, setRegion] = useState('');
+  const [zone, setZone] = useState('');
   const [rows, setRows] = useState<ParsedRow[] | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [result, setResult] = useState<BulkResponse | null>(null);
@@ -355,7 +358,11 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       const res = await fetch('/api/crm/members/bulk', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ members: payloadRows() }),
+        body: JSON.stringify({
+          members: payloadRows(),
+          region: region.trim() || undefined,
+          zone: zone.trim() || undefined,
+        }),
       });
       const j = (await res.json().catch(() => ({}))) as BulkResponse;
       if (!res.ok) {
@@ -433,6 +440,31 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
         {rows && (
           <button type="button" onClick={resetAll} className="text-xs text-gray-500 hover:underline">Clear</button>
         )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-end gap-3">
+        <label className="block">
+          <span className="block text-xs font-semibold text-gray-700 mb-1">Region</span>
+          <input
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            placeholder="e.g. Region 5"
+            className="px-3 py-2 border rounded-md text-sm bg-white w-40"
+          />
+        </label>
+        <label className="block">
+          <span className="block text-xs font-semibold text-gray-700 mb-1">Zone</span>
+          <input
+            value={zone}
+            onChange={(e) => setZone(e.target.value)}
+            placeholder="e.g. Zone 1"
+            className="px-3 py-2 border rounded-md text-sm bg-white w-40"
+          />
+        </label>
+        <span className="text-xs text-gray-500 pb-2 max-w-md">
+          Optional. When set, the club(s) in this file are created/placed under this Region &amp; Zone
+          (in District 3232 F1), so the roster organizes zone-wise. Leave blank to import without a zone.
+        </span>
       </div>
 
       {parseError && (
@@ -518,6 +550,11 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
           </div>
           {(result.clubs_created ?? 0) > 0 && (
             <div className="mt-1 text-xs text-emerald-700">{result.clubs_created} club(s) created from the upload.</div>
+          )}
+          {result.placement && (result.placement.region || result.placement.zone) && (
+            <div className="mt-1 text-xs text-emerald-700">
+              Club placed under {[result.placement.region, result.placement.zone].filter(Boolean).join(' · ')}.
+            </div>
           )}
           {(result.rows?.some((r) => r.status === 'skipped' || r.status === 'failed')) && (
             <details className="mt-2">

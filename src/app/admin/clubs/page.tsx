@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { clubsPreset } from '@/components/admin/quick-add-presets';
@@ -9,7 +9,10 @@ import { Users, MapPin, Calendar, Building2 } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function ClubsPage() {
-  const supa = await createClient();
+  // Admin-gated page: read via the service-role client so the per-club member
+  // counts bypass the self-referential members RLS policy (otherwise they'd all
+  // show 0 where migration 0059 is unapplied).
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
   const [{ data: clubs }, { data: districts }, { data: members }] = await Promise.all([
     supa.from('clubs').select('id, name, district, city, state, charter_date, club_number, district_id')
       .is('deleted_at', null).order('name'),

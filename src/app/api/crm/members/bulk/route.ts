@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { enterpriseMemberSchema } from '@/lib/validation/schemas';
+import { resolveOrBootstrapDefaultDistrict } from '@/lib/default-district';
 import { writeAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
@@ -13,12 +14,51 @@ const MAX_ROWS = 2000;
 
 const bulkSchema = z.object({
   dry_run: z.boolean().optional().default(false),
+  // Optional federation placement applied to every club created/linked in this
+  // upload, so the roster is organized region/zone-wise (e.g. "Region 5",
+  // "Zone 1"). Left blank, the club is created without a zone/region.
+  region: z.string().max(120).optional(),
+  zone: z.string().max(120).optional(),
   // Each row is passed through the same enterprise member validation as the
   // single-add form, but partial — invalid rows are reported per-row rather
   // than failing the whole request. Rows may also carry club_name/district_name
   // (raw strings from the upload) so we can find-or-create the club.
   members: z.array(z.record(z.unknown())).min(1).max(MAX_ROWS),
 });
+
+/** "Region 5" / "5" → { code: "5", name: "Region 5" }. */
+function codeAndName(raw: string, kind: 'Region' | 'Zone'): { code: string; name: string } {
+  const name = raw.trim();
+  const num = name.match(/\d+/)?.[0];
+  const code = num ?? (name.toUpperCase().replace(/[^A-Z0-9]+/g, '').slice(0, 12) || kind.toUpperCase());
+  const display = /^\d+$/.test(name) ? `${kind} ${name}` : name;
+  return { code, name: display };
+}
+
+type Db = ReturnType<typeof createAdminClient>;
+
+async function findOrCreateRegion(db: Db, districtId: string, raw: string): Promise<string | null> {
+  const { code, name } = codeAndName(raw, 'Region');
+  const { data: existing } = await db.from('regions').select('id')
+    .eq('district_id', districtId).eq('code', code).is('deleted_at', null).maybeSingle();
+  if (existing?.id) return existing.id as string;
+  const { data: created } = await db.from('regions')
+    .insert({ district_id: districtId, code, name }).select('id').single();
+  return (created?.id as string) ?? null;
+}
+
+async function findOrCreateZone(db: Db, districtId: string, regionId: string | null, raw: string): Promise<string | null> {
+  const { code, name } = codeAndName(raw, 'Zone');
+  const { data: existing } = await db.from('zones').select('id')
+    .eq('district_id', districtId).eq('code', code).is('deleted_at', null).maybeSingle();
+  if (existing?.id) {
+    if (regionId) await db.from('zones').update({ region_id: regionId }).eq('id', existing.id);
+    return existing.id as string;
+  }
+  const { data: created } = await db.from('zones')
+    .insert({ district_id: districtId, region_id: regionId, code, name }).select('id').single();
+  return (created?.id as string) ?? null;
+}
 
 type RowResult = {
   row: number;
@@ -42,7 +82,7 @@ export async function POST(req: NextRequest) {
   const actor = await requirePermission('member.create');
   if (isGuardFailure(actor)) return actor;
 
-  const { members, dry_run } = parsed.data;
+  const { members, dry_run, region, zone } = parsed.data;
 
   // Trusted admin write (gated by requirePermission). Service-role client so
   // reads/writes bypass RLS and avoid the members-policy recursion.
@@ -51,10 +91,13 @@ export async function POST(req: NextRequest) {
   // ---- Resolve clubs: match by name, creating any that don't exist yet, then
   // stamp club_id onto rows that only carried a club name. This is what makes
   // the roster group club-wise after a Lions import (whose "Account Name" is a
-  // club that may not be in the CRM yet).
+  // club that may not be in the CRM yet). When a Region/Zone is supplied, build
+  // the District → Region → Zone hierarchy and place the club(s) under it.
   let clubsCreated = 0;
+  let hierarchy: { district_id: string | null; region_id: string | null; zone_id: string | null; region?: string; zone?: string } | null = null;
   const needed = new Map<string, string>();      // lowerName -> display name
-  const districtFor = new Map<string, string>(); // lowerName -> district
+  const districtFor = new Map<string, string>(); // lowerName -> district text
+  let districtText = '';
   for (const raw of members) {
     const cid = str(raw.club_id);
     const cname = str(raw.club_name);
@@ -63,21 +106,48 @@ export async function POST(req: NextRequest) {
       if (!needed.has(key)) needed.set(key, cname);
       const dname = str(raw.district_name);
       if (dname && !districtFor.has(key)) districtFor.set(key, dname);
+      if (dname && !districtText) districtText = dname;
     }
   }
+
+  if ((needed.size || region || zone) && !dry_run) {
+    // Resolve/bootstrap the district, then the region and zone under it.
+    const dres = await resolveOrBootstrapDefaultDistrict();
+    const districtId = dres.id;
+    let regionId: string | null = null;
+    let zoneId: string | null = null;
+    if (districtId && region) regionId = await findOrCreateRegion(db, districtId, region);
+    if (districtId && zone) zoneId = await findOrCreateZone(db, districtId, regionId, zone);
+    hierarchy = { district_id: districtId, region_id: regionId, zone_id: zoneId, region, zone };
+  }
+
   if (needed.size) {
     const { data: existingClubs } = await db.from('clubs').select('id, name');
     const idByName = new Map<string, string>();
     for (const c of existingClubs ?? []) idByName.set(String(c.name).toLowerCase().trim(), c.id as string);
 
+    const clubInsertExtra: Record<string, unknown> = {};
+    if (hierarchy?.district_id) clubInsertExtra.district_id = hierarchy.district_id;
+    if (hierarchy?.region_id) clubInsertExtra.region_id = hierarchy.region_id;
+    if (hierarchy?.zone_id) clubInsertExtra.zone_id = hierarchy.zone_id;
+
+    const clubIdsUsed = new Set<string>();
     for (const [key, display] of needed) {
-      if (idByName.has(key) || dry_run) continue;
+      if (idByName.has(key)) { clubIdsUsed.add(idByName.get(key)!); continue; }
+      if (dry_run) continue;
       const { data: created, error } = await db
         .from('clubs')
-        .insert({ name: display, district: districtFor.get(key) ?? '' })
+        .insert({ name: display, district: districtFor.get(key) || districtText || '', ...clubInsertExtra })
         .select('id')
         .single();
-      if (!error && created) { idByName.set(key, created.id as string); clubsCreated++; }
+      if (!error && created) { idByName.set(key, created.id as string); clubIdsUsed.add(created.id as string); clubsCreated++; }
+    }
+
+    // Place existing clubs under the supplied district/region/zone too, so a
+    // re-upload organizes the club(s) that were created before Region/Zone was
+    // provided.
+    if (!dry_run && clubIdsUsed.size && Object.keys(clubInsertExtra).length) {
+      await db.from('clubs').update(clubInsertExtra).in('id', Array.from(clubIdsUsed));
     }
 
     for (const raw of members) {
@@ -195,12 +265,16 @@ export async function POST(req: NextRequest) {
   const skipped = results.filter((r) => r.status === 'skipped').length;
   const failed = results.filter((r) => r.status === 'failed').length;
 
+  const placement = hierarchy && (hierarchy.region || hierarchy.zone)
+    ? { region: hierarchy.region ?? null, zone: hierarchy.zone ?? null }
+    : null;
+
   await writeAudit({
     action: 'member.bulk_create',
     entity: 'member',
     actor_user_id: actor.user_id,
     actor_member_id: actor.member_id ?? null,
-    payload: { total: members.length, inserted, updated, skipped, failed, clubs_created: clubsCreated },
+    payload: { total: members.length, inserted, updated, skipped, failed, clubs_created: clubsCreated, placement },
   });
 
   return NextResponse.json({
@@ -210,6 +284,7 @@ export async function POST(req: NextRequest) {
     skipped,
     failed,
     clubs_created: clubsCreated,
+    placement,
     rows: results,
   });
 }
