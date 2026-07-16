@@ -38,7 +38,7 @@ function cell(v: unknown): string {
   return String(v).trim();
 }
 
-export function DistrictPortalUpload() {
+export function DistrictPortalUpload({ districtId }: { districtId?: string } = {}) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -118,7 +118,7 @@ export function DistrictPortalUpload() {
       const res = await fetch('/api/sync/districts/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ districts, filename: fileName ?? undefined }),
+        body: JSON.stringify({ districts, filename: fileName ?? undefined, district_id: districtId }),
       });
       const j = (await res.json().catch(() => ({}))) as UploadResult;
       if (!res.ok) { setResult({ error: j.message ?? j.error ?? `Upload failed (${res.status})` }); return; }

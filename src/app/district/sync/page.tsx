@@ -68,7 +68,7 @@ export default async function DistrictSyncPage() {
           <a href="https://lionsinternational.my.site.com/s/" target="_blank" rel="noopener noreferrer" className="text-amber-700 hover:underline">Lions Member Portal</a>{' '}
           as Excel / CSV and upload it here to sync your district&apos;s data.
         </p>
-        <DistrictPortalUpload />
+        <DistrictPortalUpload districtId={ctx.district.id} />
       </div>
 
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
