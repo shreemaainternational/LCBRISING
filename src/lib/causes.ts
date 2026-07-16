@@ -143,9 +143,24 @@ const CAUSE_BY_SLUG: Record<string, Cause> = Object.fromEntries(
   CAUSES.map((c) => [c.slug, c]),
 );
 
+const CAUSE_BY_CATEGORY: Record<string, Cause> = Object.fromEntries(
+  CAUSES.flatMap((c) => c.categories.map((cat) => [cat, c])),
+);
+
 /** Look up a cause by its URL slug. Returns undefined for unknown slugs. */
 export function getCause(slug: string): Cause | undefined {
   return CAUSE_BY_SLUG[slug];
+}
+
+/**
+ * Map an `activities.category` value to its cause. Unknown or null
+ * categories fall back to Humanitarian, the catch-all community cause.
+ */
+export function causeForCategory(category: string | null | undefined): Cause {
+  return (
+    (category ? CAUSE_BY_CATEGORY[category] : undefined) ??
+    CAUSE_BY_SLUG.humanitarian
+  );
 }
 
 /** All valid cause slugs — used for static params and validation. */
