@@ -47,6 +47,7 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
   const [editing, setEditing] = useState<MemberRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [clubFilter, setClubFilter] = useState<string>('all');
   const [pending, start] = useTransition();
 
   // Group the roster club-wise: one section per club (alphabetical), with
@@ -63,6 +64,16 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
     if (b[0] === 'Unassigned') return -1;
     return a[0].localeCompare(b[0]);
   });
+  const visibleGroups = clubFilter === 'all' ? groups : groups.filter(([name]) => name === clubFilter);
+  const shownCount = visibleGroups.reduce((n, [, rows]) => n + rows.length, 0);
+
+  // Dropdown lists every club alphabetically (from the clubs table), even those
+  // with no members yet, plus an "Unassigned" bucket when relevant.
+  const countByClubName = new Map(groups.map(([name, rows]) => [name, rows.length]));
+  const clubOptions = [...clubs]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((c) => ({ name: c.name, count: countByClubName.get(c.name) ?? 0 }));
+  const unassignedCount = countByClubName.get('Unassigned') ?? 0;
 
   function remove(m: MemberRow) {
     if (!window.confirm(`Remove "${m.name ?? m.email ?? 'this member'}" from the roster? This can be restored by an admin.`)) return;
@@ -92,6 +103,25 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
           <AlertCircle size={14} /> {error}
         </p>
       )}
+
+      <div className="flex flex-wrap items-center gap-2 px-3 py-3 border-b bg-gray-50/50">
+        <label className="text-xs font-semibold text-gray-600">Filter by club</label>
+        <select
+          value={clubFilter}
+          onChange={(e) => setClubFilter(e.target.value)}
+          className="px-3 py-1.5 border rounded-md text-sm bg-white"
+        >
+          <option value="all">All clubs ({members.length})</option>
+          {clubOptions.map((c) => (
+            <option key={c.name} value={c.name}>{c.name} ({c.count})</option>
+          ))}
+          {unassignedCount > 0 && <option value="Unassigned">Unassigned ({unassignedCount})</option>}
+        </select>
+        {clubFilter !== 'all' && (
+          <span className="text-xs text-gray-500">Showing {shownCount} member{shownCount === 1 ? '' : 's'}</span>
+        )}
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
@@ -107,7 +137,7 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
             </tr>
           </thead>
           <tbody>
-            {groups.map(([clubName, rows]) => (
+            {visibleGroups.map(([clubName, rows]) => (
               <Fragment key={clubName}>
                 <tr className="bg-navy-50/70 border-t">
                   <td colSpan={8} className="px-3 py-2 text-xs font-semibold text-navy-800 uppercase tracking-wide">

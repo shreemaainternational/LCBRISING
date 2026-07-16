@@ -93,9 +93,13 @@ export async function POST(req: Request) {
     }
   }
 
-  // 1) Try the user's authenticated session first — RLS lets admin
-  //    members write (migration 0037). No service-role key required.
-  const supa = await createClient();
+  // 1) Prefer the service-role client when configured (admin-gated route): the
+  //    insert reads back via .select() and the zones/members policies
+  //    sub-select public.members, tripping "infinite recursion detected in
+  //    policy for relation members" where migration 0059 is unapplied. Without
+  //    a key, fall back to the SSR session (RLS lets admin members write via
+  //    migration 0037).
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
   const first = await supa.from('zones').insert(payload).select().single();
   if (!first.error && first.data) return NextResponse.json({ zone: first.data }, { status: 201 });
 

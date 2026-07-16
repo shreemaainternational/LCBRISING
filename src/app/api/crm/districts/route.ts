@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { districtSchema } from '@/lib/validation/schemas';
 import { writeAudit } from '@/lib/audit';
@@ -9,13 +10,13 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const actor = await requirePermission('district.read');
   if (isGuardFailure(actor)) return actor;
-  const supa = await createClient();
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
   const { data, error } = await supa
     .from('districts')
     .select('id, code, name, governor_name, lions_year, multiple_district_id, created_at')
     .is('deleted_at', null)
     .order('code');
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
   return NextResponse.json({ districts: data ?? [] });
 }
 
@@ -29,9 +30,13 @@ export async function POST(req: NextRequest) {
   const actor = await requirePermission('district.update');
   if (isGuardFailure(actor)) return actor;
 
-  const supa = await createClient();
+  // Trusted admin write (gated by requirePermission). Service-role client so
+  // the insert + read-back bypass RLS: the districts policies sub-select
+  // public.members, which trips "infinite recursion detected in policy for
+  // relation members" on databases where migration 0059 is unapplied.
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
   const { data, error } = await supa.from('districts').insert(parsed.data).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
 
   await writeAudit({
     action: 'district.create',

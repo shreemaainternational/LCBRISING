@@ -19,6 +19,8 @@ type ParsedRow = {
   status: string;
   club_id: string | null;
   club_label: string | null;
+  club_name: string | null;
+  district_name: string | null;
   birthday: string | null;
   lions_member_id: string | null;
   error?: string;
@@ -26,7 +28,7 @@ type ParsedRow = {
 
 type RowResult = {
   row: number;
-  status: 'inserted' | 'skipped' | 'failed' | 'valid';
+  status: 'inserted' | 'updated' | 'skipped' | 'failed' | 'valid';
   name?: string;
   email?: string;
   reason?: string;
@@ -35,8 +37,11 @@ type RowResult = {
 type BulkResponse = {
   total?: number;
   inserted?: number;
+  updated?: number;
   skipped?: number;
   failed?: number;
+  clubs_created?: number;
+  placement?: { region: string | null; zone: string | null } | null;
   to_insert?: number;
   dry_run?: boolean;
   rows?: RowResult[];
@@ -45,6 +50,11 @@ type BulkResponse = {
 
 const ROLES = ['admin', 'president', 'secretary', 'treasurer', 'officer', 'member'];
 const STATUSES = ['active', 'lapsed', 'suspended', 'pending'];
+// Many Lions exports have members without an email, but members.email is
+// NOT NULL UNIQUE. Synthesize a guaranteed-undeliverable placeholder from the
+// (unique) membership number so every member imports; admins edit it later.
+const NO_EMAIL_DOMAIN = 'noemail.invalid';
+const isPlaceholderEmail = (e: string | null | undefined) => !!e && e.endsWith(`@${NO_EMAIL_DOMAIN}`);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -134,6 +144,8 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
   const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [source, setSource] = useState<'lions' | 'template' | null>(null);
+  const [region, setRegion] = useState('');
+  const [zone, setZone] = useState('');
   const [rows, setRows] = useState<ParsedRow[] | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [result, setResult] = useState<BulkResponse | null>(null);
@@ -170,6 +182,7 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
 
     const out: ParsedRow[] = [];
     let lastClub = '';
+    let lastDistrict = '';
     for (let i = hIdx + 1; i < matrix.length; i++) {
       const r = matrix[i] ?? [];
       const g = (f: string) => (col[f] === undefined ? '' : cell(r[col[f]]));
@@ -181,6 +194,8 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       // Club/District only appear on the first row of each group → carry down.
       const clubCell = g('club');
       if (clubCell) lastClub = clubCell;
+      const districtCell = g('district');
+      if (districtCell) lastDistrict = districtCell;
 
       const memberId = g('member_id');
       const name = [g('first'), g('last')].filter(Boolean).join(' ').trim();
@@ -194,7 +209,10 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
         : prefLabel === 'work' ? g('work_email')
         : prefLabel.startsWith('alt') ? g('alt_email')
         : '';
-      const email = (preferred || g('personal_email') || g('work_email') || g('alt_email')).toLowerCase();
+      let email = (preferred || g('personal_email') || g('work_email') || g('alt_email')).toLowerCase();
+      // No email in the export → synthesize a placeholder from the membership
+      // number so the member still imports (members.email is NOT NULL UNIQUE).
+      if (!email && memberId) email = `lci-${memberId}@${NO_EMAIL_DOMAIN}`;
       const phone = cleanPhone(g('mobile') || g('home_phone') || g('work_phone'));
       const whatsapp = cleanPhone(g('mobile'));
       const status = /\[\s*active\s*\]/i.test(g('membership_type')) ? 'active' : 'pending';
@@ -207,7 +225,8 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
 
       out.push({
         row: i + 1, name, email, phone, whatsapp, role: 'member', status,
-        club_id, club_label, birthday: null, lions_member_id: memberId || null, error,
+        club_id, club_label, club_name: lastClub || null, district_name: lastDistrict || null,
+        birthday: null, lions_member_id: memberId || null, error,
       });
     }
     return out;
@@ -240,7 +259,8 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       const role = ROLES.includes(rawRole) ? rawRole : 'member';
       const rawStatus = norm(get('status'));
       const status = STATUSES.includes(rawStatus) ? rawStatus : 'active';
-      const { club_id, club_label } = resolveClub(get('club'));
+      const clubCell = get('club');
+      const { club_id, club_label } = resolveClub(clubCell);
       const birthday = toDateString(cm.birthday === undefined ? '' : (r[cm.birthday] ?? ''));
       const lionsMemberId = get('lions_member_id');
 
@@ -253,7 +273,8 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
         row: i + 1, name, email,
         phone: get('phone') || null,
         whatsapp: get('whatsapp') || null,
-        role, status, club_id, club_label, birthday,
+        role, status, club_id, club_label,
+        club_name: clubCell || null, district_name: null, birthday,
         lions_member_id: lionsMemberId || null, error,
       });
     }
@@ -323,6 +344,10 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       role: r.role,
       status: r.status,
       club_id: r.club_id,
+      // Raw club/district names so the server can find-or-create the club and
+      // link the member even when it did not exist in the CRM yet.
+      club_name: r.club_name,
+      district_name: r.district_name,
       birthday: r.birthday,
       lions_member_id: r.lions_member_id,
     }));
@@ -341,7 +366,11 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       const res = await fetch('/api/crm/members/bulk', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ members: payloadRows() }),
+        body: JSON.stringify({
+          members: payloadRows(),
+          region: region.trim() || undefined,
+          zone: zone.trim() || undefined,
+        }),
       });
       const j = (await res.json().catch(() => ({}))) as BulkResponse;
       if (!res.ok) {
@@ -421,6 +450,31 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
         )}
       </div>
 
+      <div className="mt-3 flex flex-wrap items-end gap-3">
+        <label className="block">
+          <span className="block text-xs font-semibold text-gray-700 mb-1">Region</span>
+          <input
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            placeholder="e.g. Region 5"
+            className="px-3 py-2 border rounded-md text-sm bg-white w-40"
+          />
+        </label>
+        <label className="block">
+          <span className="block text-xs font-semibold text-gray-700 mb-1">Zone</span>
+          <input
+            value={zone}
+            onChange={(e) => setZone(e.target.value)}
+            placeholder="e.g. Zone 1"
+            className="px-3 py-2 border rounded-md text-sm bg-white w-40"
+          />
+        </label>
+        <span className="text-xs text-gray-500 pb-2 max-w-md">
+          Optional. When set, the club(s) in this file are created/placed under this Region &amp; Zone
+          (in District 3232 F1), so the roster organizes zone-wise. Leave blank to import without a zone.
+        </span>
+      </div>
+
       {parseError && (
         <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-red-700">
           <AlertCircle size={14} /> {parseError}
@@ -437,6 +491,9 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
             )}
             Parsed <strong>{rows.length}</strong> row(s): {validRows.length} ready
             {invalidRows.length > 0 && <span className="text-red-700"> · {invalidRows.length} with errors (skipped)</span>}
+            {validRows.filter((r) => isPlaceholderEmail(r.email)).length > 0 && (
+              <span className="text-amber-700"> · {validRows.filter((r) => isPlaceholderEmail(r.email)).length} without email (placeholder generated — edit later)</span>
+            )}
           </div>
           <div className="border rounded-md overflow-auto max-h-72 bg-white">
             <table className="w-full text-xs">
@@ -463,7 +520,7 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
                     ) : (
                       <>
                         <td className="px-2 py-1 font-medium">{r.name}</td>
-                        <td className="px-2 py-1">{r.email}</td>
+                        <td className={`px-2 py-1 ${isPlaceholderEmail(r.email) ? 'text-amber-700 italic' : ''}`} title={isPlaceholderEmail(r.email) ? 'No email in export — placeholder generated; edit to add a real email' : undefined}>{isPlaceholderEmail(r.email) ? 'no email — placeholder' : r.email}</td>
                         <td className="px-2 py-1">{r.lions_member_id ?? '—'}</td>
                         <td className="px-2 py-1">{r.phone ?? '—'}</td>
                         <td className="px-2 py-1 capitalize">{r.role}</td>
@@ -496,11 +553,20 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
           <div className="inline-flex items-center gap-1.5 text-green-800 font-medium">
             <CheckCircle2 size={15} /> Imported {result.inserted ?? 0} member(s)
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-gray-700">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs text-gray-700">
             <div>Inserted: <strong>{result.inserted ?? 0}</strong></div>
+            <div>Club linked: <strong>{result.updated ?? 0}</strong></div>
             <div>Skipped: <strong>{result.skipped ?? 0}</strong></div>
             <div>Failed: <strong>{result.failed ?? 0}</strong></div>
           </div>
+          {(result.clubs_created ?? 0) > 0 && (
+            <div className="mt-1 text-xs text-emerald-700">{result.clubs_created} club(s) created from the upload.</div>
+          )}
+          {result.placement && (result.placement.region || result.placement.zone) && (
+            <div className="mt-1 text-xs text-emerald-700">
+              Club placed under {[result.placement.region, result.placement.zone].filter(Boolean).join(' · ')}.
+            </div>
+          )}
           {(result.rows?.some((r) => r.status === 'skipped' || r.status === 'failed')) && (
             <details className="mt-2">
               <summary className="cursor-pointer text-gray-700">Show skipped / failed rows</summary>
