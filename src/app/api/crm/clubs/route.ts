@@ -119,8 +119,12 @@ export async function POST(req: NextRequest) {
     payload.district = await resolveDefaultDistrictCode(payload.district_id as string | undefined);
   }
 
-  // 1) Try the user's SSR session first — RLS gates the insert.
-  const supa = await createClient();
+  // 1) Prefer the service-role client when configured (this route is admin-
+  //    gated): the clubs insert reads back via .select(), and the clubs/members
+  //    policies sub-select public.members, which trips "infinite recursion
+  //    detected in policy for relation members" where migration 0059 is
+  //    unapplied. Fall back to the SSR session (RLS) when there is no key.
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
   const first = await supa.from('clubs').insert(payload).select().single();
   if (!first.error && first.data) {
