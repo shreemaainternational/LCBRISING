@@ -19,6 +19,8 @@ type ParsedRow = {
   status: string;
   club_id: string | null;
   club_label: string | null;
+  club_name: string | null;
+  district_name: string | null;
   birthday: string | null;
   lions_member_id: string | null;
   error?: string;
@@ -26,7 +28,7 @@ type ParsedRow = {
 
 type RowResult = {
   row: number;
-  status: 'inserted' | 'skipped' | 'failed' | 'valid';
+  status: 'inserted' | 'updated' | 'skipped' | 'failed' | 'valid';
   name?: string;
   email?: string;
   reason?: string;
@@ -35,8 +37,10 @@ type RowResult = {
 type BulkResponse = {
   total?: number;
   inserted?: number;
+  updated?: number;
   skipped?: number;
   failed?: number;
+  clubs_created?: number;
   to_insert?: number;
   dry_run?: boolean;
   rows?: RowResult[];
@@ -170,6 +174,7 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
 
     const out: ParsedRow[] = [];
     let lastClub = '';
+    let lastDistrict = '';
     for (let i = hIdx + 1; i < matrix.length; i++) {
       const r = matrix[i] ?? [];
       const g = (f: string) => (col[f] === undefined ? '' : cell(r[col[f]]));
@@ -181,6 +186,8 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       // Club/District only appear on the first row of each group → carry down.
       const clubCell = g('club');
       if (clubCell) lastClub = clubCell;
+      const districtCell = g('district');
+      if (districtCell) lastDistrict = districtCell;
 
       const memberId = g('member_id');
       const name = [g('first'), g('last')].filter(Boolean).join(' ').trim();
@@ -207,7 +214,8 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
 
       out.push({
         row: i + 1, name, email, phone, whatsapp, role: 'member', status,
-        club_id, club_label, birthday: null, lions_member_id: memberId || null, error,
+        club_id, club_label, club_name: lastClub || null, district_name: lastDistrict || null,
+        birthday: null, lions_member_id: memberId || null, error,
       });
     }
     return out;
@@ -240,7 +248,8 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       const role = ROLES.includes(rawRole) ? rawRole : 'member';
       const rawStatus = norm(get('status'));
       const status = STATUSES.includes(rawStatus) ? rawStatus : 'active';
-      const { club_id, club_label } = resolveClub(get('club'));
+      const clubCell = get('club');
+      const { club_id, club_label } = resolveClub(clubCell);
       const birthday = toDateString(cm.birthday === undefined ? '' : (r[cm.birthday] ?? ''));
       const lionsMemberId = get('lions_member_id');
 
@@ -253,7 +262,8 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
         row: i + 1, name, email,
         phone: get('phone') || null,
         whatsapp: get('whatsapp') || null,
-        role, status, club_id, club_label, birthday,
+        role, status, club_id, club_label,
+        club_name: clubCell || null, district_name: null, birthday,
         lions_member_id: lionsMemberId || null, error,
       });
     }
@@ -323,6 +333,10 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       role: r.role,
       status: r.status,
       club_id: r.club_id,
+      // Raw club/district names so the server can find-or-create the club and
+      // link the member even when it did not exist in the CRM yet.
+      club_name: r.club_name,
+      district_name: r.district_name,
       birthday: r.birthday,
       lions_member_id: r.lions_member_id,
     }));
@@ -496,11 +510,15 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
           <div className="inline-flex items-center gap-1.5 text-green-800 font-medium">
             <CheckCircle2 size={15} /> Imported {result.inserted ?? 0} member(s)
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-gray-700">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs text-gray-700">
             <div>Inserted: <strong>{result.inserted ?? 0}</strong></div>
+            <div>Club linked: <strong>{result.updated ?? 0}</strong></div>
             <div>Skipped: <strong>{result.skipped ?? 0}</strong></div>
             <div>Failed: <strong>{result.failed ?? 0}</strong></div>
           </div>
+          {(result.clubs_created ?? 0) > 0 && (
+            <div className="mt-1 text-xs text-emerald-700">{result.clubs_created} club(s) created from the upload.</div>
+          )}
           {(result.rows?.some((r) => r.status === 'skipped' || r.status === 'failed')) && (
             <details className="mt-2">
               <summary className="cursor-pointer text-gray-700">Show skipped / failed rows</summary>
