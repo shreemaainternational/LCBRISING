@@ -11,6 +11,9 @@ import {
   isLionsApiConfigured, isLionsApiSandboxActive,
   type LionsSyncReport,
 } from '@/lib/oidc/lions';
+import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
+import { loadLionsPortalSettings } from '@/lib/oidc/lions-portal-runtime';
+import { isLionsPortalConfigured, syncLionsPortalDistricts } from '@/lib/oidc/lions-portal';
 
 export type DistrictSyncTrigger = 'manual' | 'scheduled' | 'webhook' | 'api';
 
@@ -30,8 +33,12 @@ export async function runDistrictMasterSync(opts: {
   triggeredBy?: string | null;
 } = {}): Promise<DistrictSyncResult> {
   const db = createAdminClient();
+  // Refresh the runtime credential caches so the peek-based config checks
+  // below (REST adapter + DG portal login) reflect the latest DB settings.
+  await Promise.all([loadLionsApiSettings(true), loadLionsPortalSettings(true)]);
+  const portalConfigured = isLionsPortalConfigured();
   const sandbox = isLionsApiSandboxActive();
-  const configured = isLionsApiConfigured();
+  const configured = isLionsApiConfigured() || portalConfigured;
 
   // Create a "running" row up front so the UI can show progress.
   const { data: run } = await db.from('district_sync_runs').insert({
@@ -47,7 +54,9 @@ export async function runDistrictMasterSync(opts: {
   let errorMsg: string | null = null;
 
   try {
-    reports.push(await syncLionsDistricts());
+    // District data comes from the DG portal login when configured
+    // (credential → token endpoint), otherwise from the REST adapter.
+    reports.push(portalConfigured ? await syncLionsPortalDistricts() : await syncLionsDistricts());
     reports.push(await syncLionsClubs());
     reports.push(await syncLionsMembers());
   } catch (e) {

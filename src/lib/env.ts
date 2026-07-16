@@ -149,6 +149,13 @@ const schema = z.object({
   LIONS_API_MULTI_DISTRICT_CODE: z.string().optional(),
   LIONS_WEBHOOK_SECRET: z.string().optional(),
 
+  // --- Lions Portal (District Governor login) sync (optional) ---
+  LIONS_PORTAL_LOGIN_URL: z.string().url().optional(),
+  LIONS_PORTAL_DATA_URL: z.string().url().optional(),
+  LIONS_PORTAL_USERNAME: z.string().optional(),
+  LIONS_PORTAL_PASSWORD: z.string().optional(),
+  LIONS_PORTAL_DISTRICT_CODE: z.string().optional(),
+
   // --- Secret encryption at rest (AES-256-GCM wrapper) ---
   SECRET_ENCRYPTION_KEY: z.string().optional(),
 
@@ -227,6 +234,11 @@ const parsed = schema.parse({
   LIONS_API_DISTRICT_CODE: process.env.LIONS_API_DISTRICT_CODE,
   LIONS_API_MULTI_DISTRICT_CODE: process.env.LIONS_API_MULTI_DISTRICT_CODE,
   LIONS_WEBHOOK_SECRET: process.env.LIONS_WEBHOOK_SECRET,
+  LIONS_PORTAL_LOGIN_URL: process.env.LIONS_PORTAL_LOGIN_URL,
+  LIONS_PORTAL_DATA_URL: process.env.LIONS_PORTAL_DATA_URL,
+  LIONS_PORTAL_USERNAME: process.env.LIONS_PORTAL_USERNAME,
+  LIONS_PORTAL_PASSWORD: process.env.LIONS_PORTAL_PASSWORD,
+  LIONS_PORTAL_DISTRICT_CODE: process.env.LIONS_PORTAL_DISTRICT_CODE,
   SECRET_ENCRYPTION_KEY: process.env.SECRET_ENCRYPTION_KEY,
   VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
