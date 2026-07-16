@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
@@ -9,7 +10,10 @@ import { Calendar } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminEventsPage() {
-  const supabase = await createClient();
+  await requireAdminPage();
+  // Service-role read: the events select policy sub-selects members, which
+  // trips RLS recursion under the user session on DBs missing migration 0059.
+  const supabase = createAdminClient();
   const { data: events } = await supabase.from('events').select('*').order('date', { ascending: false });
   const preset = eventsPreset();
 

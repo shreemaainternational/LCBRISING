@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { membersPreset } from '@/components/admin/quick-add-presets';
@@ -9,7 +10,10 @@ import { Users } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function MembersPage() {
-  const supabase = await createClient();
+  await requireAdminPage();
+  // Service-role read: the members self-read policy is self-referential and
+  // trips RLS recursion under the user session on DBs missing migration 0059.
+  const supabase = createAdminClient();
   const [{ data: members }, { data: clubs }] = await Promise.all([
     supabase.from('members').select('*').order('created_at', { ascending: false }),
     supabase.from('clubs').select('id, name').is('deleted_at', null).order('name'),

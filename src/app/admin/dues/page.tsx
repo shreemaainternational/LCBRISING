@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { formatINR, formatINRShort, formatDate } from '@/lib/utils';
 import { getDuesKpis, getClubCompliance, getDuesAgeing } from '@/lib/dues/compliance';
 import {
@@ -26,6 +27,7 @@ export default async function DuesPage({ searchParams }: Props) {
   const sp = await searchParams;
   const tier = (sp.tier as Tier) ?? 'club';
 
+  await requireAdminPage();
   const db = createAdminClient();
   const [
     duesAgg,

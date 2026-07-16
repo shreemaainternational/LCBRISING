@@ -3,12 +3,14 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, Users, Activity, Banknote, ShieldCheck, MapPin, Calendar, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { formatINRShort } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ClubDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  await requireAdminPage();
   const db = createAdminClient();
 
   const { data: club } = await db.from('clubs')

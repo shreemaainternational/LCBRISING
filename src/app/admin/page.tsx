@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { formatINR } from '@/lib/utils';
 import { Users, Banknote, HeartHandshake, Activity as ActivityIcon } from 'lucide-react';
 import {
@@ -12,7 +13,11 @@ import { QuickActionsBar } from '@/components/admin/QuickActionsBar';
 export const dynamic = 'force-dynamic';
 
 async function getDashboardData() {
-  const supabase = await createClient();
+  // Admin-only reads via the service-role client. Several of these tables
+  // (members, dues) have self-referential RLS policies that trip "infinite
+  // recursion detected in policy for relation members" under the user session
+  // on databases missing migration 0059; the service role bypasses RLS.
+  const supabase = createAdminClient();
   const [
     { count: totalMembers },
     { count: activeMembers },
@@ -79,6 +84,7 @@ async function getDashboardData() {
 }
 
 export default async function AdminDashboard() {
+  await requireAdminPage();
   const d = await getDashboardData();
 
   return (

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
 import { isOidcConfigured } from '@/lib/oidc';
@@ -50,6 +51,7 @@ const LOG_VARIANT: Record<SyncLogRow['status'], 'success' | 'warning' | 'danger'
 };
 
 export default async function LionsHubPage() {
+  await requireAdminPage();
   await Promise.all([loadOidcSettings(true), loadLionsApiSettings(true)]);
   const oidcOn = isOidcConfigured();
   const restOn = isLionsApiConfigured();
