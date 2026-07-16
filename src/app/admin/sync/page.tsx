@@ -66,7 +66,7 @@ export default async function SyncPage() {
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Sync</h1>
       <p className="text-gray-600 mb-8">
-        Import member/club/officer/attendance data from CSV exports, and audit every sync run.
+        Import member/club/officer/attendance/activity data from CSV or Excel exports, and audit every sync run.
       </p>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
@@ -149,12 +149,12 @@ export default async function SyncPage() {
 
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>CSV import</CardTitle>
+          <CardTitle>CSV / Excel import</CardTitle>
         </CardHeader>
         <CardContent>
           <SyncUploader />
           <details className="mt-6 text-xs text-gray-600">
-            <summary className="cursor-pointer">Expected CSV columns</summary>
+            <summary className="cursor-pointer">Expected columns</summary>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <div>
                 <strong>members</strong>
@@ -171,6 +171,18 @@ export default async function SyncPage() {
               <div>
                 <strong>attendance</strong>
                 <code className="block mt-1 bg-gray-50 p-2 rounded">member_email|member_id,event_id,club_id,occurred_at,status,check_in_method,notes</code>
+              </div>
+              <div className="md:col-span-2">
+                <strong>activities</strong>
+                <code className="block mt-1 bg-gray-50 p-2 rounded">title,description,category,beneficiaries,service_hours,amount_raised,date,location,club_id</code>
+                <p className="mt-1">
+                  The Lion Portal <em>&ldquo;Service Activities Information&rdquo;</em> export (.xlsx or .csv)
+                  is auto-detected and imported as-is — the banner, filter block and subtotal rows are
+                  skipped. Every column is preserved in <code>service_activities</code> and mapped down to
+                  an <code>activities</code> row (Title → Project, Cause/Project Type → Category,
+                  People Served → Beneficiaries, Total Volunteers → Lion Members, Volunteer Hours → Service
+                  Hours, Funds Raised → Amount Raised, End Date → Date).
+                </p>
               </div>
             </div>
           </details>

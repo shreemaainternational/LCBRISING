@@ -3,33 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import {
-  ChevronDown,
-  Menu,
-  Phone,
-  X,
-  Leaf,
-  Eye,
-  Utensils,
-  Shield,
-  Ribbon,
-  Droplet,
-  Users,
-  Heart,
-  ArrowRight,
-} from 'lucide-react';
+import { ChevronDown, Menu, Phone, X, ArrowRight } from 'lucide-react';
 import { env } from '@/lib/env';
+import { CAUSES } from '@/lib/causes';
 
 type NavItem = {
   href: string;
   label: string;
   hasDropdown?: boolean;
-};
-
-type Cause = {
-  href: string;
-  label: string;
-  icon: typeof Leaf;
 };
 
 const NAV: NavItem[] = [
@@ -43,17 +24,6 @@ const NAV: NavItem[] = [
   { href: '/events', label: 'Events' },
   { href: '/media', label: 'Media' },
   { href: '/contact', label: 'Contact' },
-];
-
-const CAUSES: Cause[] = [
-  { href: '/activities#environment', label: 'Environment', icon: Leaf },
-  { href: '/activities#vision', label: 'Vision', icon: Eye },
-  { href: '/activities#hunger', label: 'Hunger Relief', icon: Utensils },
-  { href: '/activities#relief', label: 'Disaster Relief', icon: Shield },
-  { href: '/activities#cancer', label: 'Childhood Cancer', icon: Ribbon },
-  { href: '/activities#diabetes', label: 'Diabetes', icon: Droplet },
-  { href: '/activities#youth', label: 'Youth', icon: Users },
-  { href: '/activities#humanitarian', label: 'Humanitarian', icon: Heart },
 ];
 
 const DISTRICT_LINE = 'District 3232 F1  |  Region V  |  Zone I';
@@ -176,13 +146,13 @@ export function PublicNav() {
                   <div className="ml-3 mb-2 grid grid-cols-2 gap-1">
                     {CAUSES.map((c) => (
                       <Link
-                        key={c.href}
-                        href={c.href}
+                        key={c.slug}
+                        href={`/activities/${c.slug}`}
                         className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
                         onClick={() => setOpen(false)}
                       >
                         <c.icon size={14} className="text-brand-400" aria-hidden />
-                        {c.label}
+                        {c.title}
                       </Link>
                     ))}
                   </div>
@@ -234,12 +204,12 @@ function ServiceActivitiesDropdown({
           <div className="pb-2">
             {CAUSES.map((c) => (
               <Link
-                key={c.href}
-                href={c.href}
+                key={c.slug}
+                href={`/activities/${c.slug}`}
                 className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
               >
                 <c.icon size={16} className="text-brand-400" aria-hidden />
-                {c.label}
+                {c.title}
               </Link>
             ))}
           </div>

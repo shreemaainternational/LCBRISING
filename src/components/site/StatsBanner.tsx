@@ -10,7 +10,9 @@ import { formatINRShort } from '@/lib/utils';
  * onboarding catches up.
  */
 const FLOOR = {
-  members: 92,
+  // Members shows the real, live roster count (no promotional floor) so the
+  // public site reflects actual membership as it is onboarded.
+  members: 0,
   activities: 48,
   beneficiaries: 6_400,
   funds: 9_30_000, // ₹9.3 lakhs

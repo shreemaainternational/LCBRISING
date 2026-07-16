@@ -2,25 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
-import { enterpriseMemberSchema } from '@/lib/validation/schemas';
+import { clubSchema } from '@/lib/validation/schemas';
 import { writeAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 // Trusted admin reads/writes (gated by requirePermission at each call site).
-// Use the service-role client so queries against public.members bypass RLS and
-// avoid "infinite recursion detected in policy for relation members" on
-// databases where migration 0059 has not been applied.
-function memberDb() {
+// Prefer the service-role client so queries bypass RLS on databases where the
+// federation RLS migration has not been applied; fall back to the SSR session.
+function clubDb() {
   return process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : null;
 }
 
-async function fetchMember(id: string) {
-  const supa = memberDb() ?? await createClient();
+async function fetchClub(id: string) {
+  const supa = clubDb() ?? await createClient();
   const { data } = await supa
-    .from('members')
-    .select('id, name, email, phone, whatsapp, club_id, district_id, lions_role, lions_member_id, status, joined_at, birthday, avatar_url')
+    .from('clubs')
+    .select('id, name, club_number, district_id, zone_id, region_id, district, city, state, country, charter_date')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle();
@@ -29,76 +28,79 @@ async function fetchMember(id: string) {
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const actor = await requirePermission('member.read');
+  const actor = await requirePermission('club.read');
   if (isGuardFailure(actor)) return actor;
-  const m = await fetchMember(id);
-  if (!m) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-  return NextResponse.json({ member: m });
+  const club = await fetchClub(id);
+  if (!club) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  return NextResponse.json({ club });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = await req.json().catch(() => null);
-  const parsed = enterpriseMemberSchema.partial().safeParse(body);
+  const parsed = clubSchema.partial().safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json({ error: 'invalid_input', detail: parsed.error.flatten() }, { status: 400 });
   }
 
-  const before = await fetchMember(id);
+  const before = await fetchClub(id);
   if (!before) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-  const actor = await requirePermission('member.update', {
-    club_id: before.club_id ?? null,
-    district_id: before.district_id ?? null,
+  const actor = await requirePermission('club.update', {
+    district_id: (parsed.data.district_id ?? before.district_id) ?? null,
   });
   if (isGuardFailure(actor)) return actor;
 
-  const supa = memberDb() ?? await createClient();
+  // Only patch fields the caller actually sent — blank optional fields become
+  // NULL, but never overwrite the required text `district` column with ''.
+  const updates: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(parsed.data)) {
+    if (k === 'district' && (v === '' || v == null)) continue;
+    updates[k] = v === '' ? null : v;
+  }
+
+  const supa = clubDb() ?? await createClient();
   const { data, error } = await supa
-    .from('members')
-    .update(parsed.data)
+    .from('clubs')
+    .update(updates)
     .eq('id', id)
     .select()
     .single();
   if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
 
   await writeAudit({
-    action: 'member.update',
-    entity: 'member',
+    action: 'club.update',
+    entity: 'club',
     entity_id: id,
     actor_user_id: actor.user_id,
     actor_member_id: actor.member_id ?? null,
-    diff: { before, after: parsed.data as Record<string, unknown> },
+    diff: { before, after: updates },
   });
 
-  return NextResponse.json({ member: data });
+  return NextResponse.json({ club: data });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const before = await fetchMember(id);
+  const before = await fetchClub(id);
   if (!before) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-  const actor = await requirePermission('member.delete', {
-    club_id: before.club_id ?? null,
-    district_id: before.district_id ?? null,
-  });
+  const actor = await requirePermission('club.delete', { district_id: before.district_id ?? null });
   if (isGuardFailure(actor)) return actor;
 
-  const supa = memberDb() ?? await createClient();
+  const supa = clubDb() ?? await createClient();
   const { error } = await supa
-    .from('members')
+    .from('clubs')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id);
   if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
 
   await writeAudit({
-    action: 'member.delete',
-    entity: 'member',
+    action: 'club.delete',
+    entity: 'club',
     entity_id: id,
     actor_user_id: actor.user_id,
     actor_member_id: actor.member_id ?? null,
-    payload: { soft_delete: true },
+    payload: { soft_delete: true, name: before.name },
   });
 
   return NextResponse.json({ ok: true });

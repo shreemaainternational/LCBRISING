@@ -1,189 +1,137 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Calendar, MapPin, Users, CalendarDays } from 'lucide-react';
+import { ArrowRight, Calendar, MapPin } from 'lucide-react';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
-import { getPublicActivities } from '@/lib/activities';
+import { CAUSES } from '@/lib/causes';
 import { getAllPublicEvents } from '@/lib/events';
 import { formatDate } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'Service Activities',
   description:
-    'Browse every service project and event from Lions Club of Baroda Rising Star — filter by cause and see the photos, beneficiaries and impact.',
+    'The eight global cause areas Lions Club of Baroda Rising Star serves, as identified by Lions Clubs International.',
   alternates: { canonical: '/activities' },
 };
 
-// searchParams makes this route dynamic; always render the latest content.
-export const dynamic = 'force-dynamic';
-
-// Human-readable labels for the activity `category` slugs (mirrors the
-// admin quick-add preset options), plus the synthetic "event" bucket.
-const CATEGORY_LABELS: Record<string, string> = {
-  event: 'Events',
-  vision: 'Vision',
-  hunger: 'Hunger Relief',
-  environment: 'Environment',
-  diabetes: 'Diabetes',
-  childhood_cancer: 'Childhood Cancer',
-  humanitarian: 'Humanitarian',
-  youth: 'Youth',
-  education: 'Education',
-  healthcare: 'Healthcare',
-  women: 'Women Empowerment',
-  senior: 'Senior Citizens',
-  other: 'Other',
-};
-
-// Tolerate slug variants used by older links (e.g. the homepage "Our Work"
-// cards deep-link to ?category=health) so they resolve to a real bucket.
-const CATEGORY_ALIASES: Record<string, string> = {
-  health: 'healthcare',
-  medical: 'healthcare',
-  sight: 'vision',
-  cancer: 'childhood_cancer',
-};
-
-const FALLBACK_IMAGES = [
-  'https://images.unsplash.com/photo-1497486751825-1233686d5d80?auto=format&fit=crop&w=900&q=70',
-  'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&q=70',
-  'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=900&q=70',
+const EVENT_FALLBACK_IMAGES = [
+  'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=900&q=70',
+  'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=900&q=70',
+  'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=900&q=70',
 ];
 
-type Item = {
-  id: string;
-  kind: 'event' | 'activity';
-  title: string;
-  description: string | null;
-  date: string;
-  location: string | null;
-  category: string;
-  categoryLabel: string;
-  image: string | null;
-  beneficiaries: number | null;
-};
-
-function normalizeCategory(raw: string | null | undefined): string {
-  const slug = (raw ?? 'other').toLowerCase().trim();
-  return CATEGORY_ALIASES[slug] ?? slug;
-}
-
-function labelFor(slug: string): string {
-  return CATEGORY_LABELS[slug] ?? slug.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-export default async function ActivitiesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ category?: string }>;
-}) {
-  const { category } = await searchParams;
-  const selected = category ? normalizeCategory(category) : 'all';
-
-  const [events, activities] = await Promise.all([
-    getAllPublicEvents(),
-    getPublicActivities(),
-  ]);
-
-  const items: Item[] = [
-    ...events.map((e): Item => ({
-      id: `event-${e.id}`,
-      kind: 'event',
-      title: e.title,
-      description: e.description,
-      date: e.date,
-      location: e.location,
-      category: 'event',
-      categoryLabel: 'Event',
-      image: e.cover_url,
-      beneficiaries: null,
-    })),
-    ...activities.map((a): Item => {
-      const slug = normalizeCategory(a.category);
-      return {
-        id: `activity-${a.id}`,
-        kind: 'activity',
-        title: a.title,
-        description: a.description,
-        date: a.date,
-        location: a.location,
-        category: slug,
-        categoryLabel: labelFor(slug),
-        image: a.photos?.find(Boolean) ?? null,
-        beneficiaries: a.beneficiaries,
-      };
-    }),
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  // Build the filter chips from the categories actually present in the data,
-  // so we never show an empty bucket. "Events" is pinned first when present.
-  const counts = new Map<string, number>();
-  for (const it of items) counts.set(it.category, (counts.get(it.category) ?? 0) + 1);
-
-  const presentCategories = Array.from(counts.keys()).filter((c) => c !== 'event');
-  presentCategories.sort((a, b) => labelFor(a).localeCompare(labelFor(b)));
-
-  const chips: { slug: string; label: string; count: number }[] = [
-    { slug: 'all', label: 'All', count: items.length },
-    ...(counts.has('event')
-      ? [{ slug: 'event', label: 'Events', count: counts.get('event')! }]
-      : []),
-    ...presentCategories.map((c) => ({ slug: c, label: labelFor(c), count: counts.get(c)! })),
-  ];
-
-  const visible = selected === 'all' ? items : items.filter((it) => it.category === selected);
+export default async function ActivitiesPage() {
+  const events = await getAllPublicEvents();
 
   return (
     <>
       <PageHero
-        pillText="Our Work in Action"
-        headline="Service Activities & Events"
-        subtitle="Every project and event we run — filter by cause to see the photos, people reached and impact across Vadodara."
+        pillText="Lions International Global Causes"
+        headline="Our Service Activities"
+        subtitle="Lions Club of Baroda Rising Star serves the community through these 8 global cause areas identified by Lions Clubs International. Select a cause to see its activities and photos."
         backgroundImage={PAGE_HERO_BG.activities}
       />
 
-      <section className="container-page py-14 md:py-20">
-        {/* Filter chips */}
-        {chips.length > 1 && (
-          <div className="flex flex-wrap gap-2.5 justify-center mb-10">
-            {chips.map((chip) => {
-              const active = chip.slug === selected;
-              const href = chip.slug === 'all' ? '/activities' : `/activities?category=${chip.slug}`;
-              return (
-                <Link
-                  key={chip.slug}
-                  href={href}
-                  scroll={false}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold border transition-colors ${
-                    active
-                      ? 'bg-navy-800 text-white border-navy-800'
-                      : 'bg-white text-navy-700 border-gray-200 hover:border-brand-300 hover:text-brand-600'
-                  }`}
-                >
-                  {chip.label}
-                  <span
-                    className={`text-xs tabular-nums ${active ? 'text-white/70' : 'text-gray-400'}`}
-                  >
-                    {chip.count}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-
-        {visible.length === 0 ? (
-          <p className="text-center text-gray-500 py-10">
-            No {selected === 'all' ? 'activities or events' : labelFor(selected).toLowerCase()} to
-            show yet. Check back soon!
-          </p>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-7">
-            {visible.map((it, i) => (
-              <ItemCard key={it.id} item={it} fallbackIndex={i} />
-            ))}
-          </div>
-        )}
+      {/* Cause cards — each links to that cause's activities */}
+      <section className="container-page py-16 md:py-20">
+        <div className="grid md:grid-cols-2 gap-7">
+          {CAUSES.map((c) => (
+            <article
+              key={c.slug}
+              id={c.slug}
+              className="scroll-mt-28 flex flex-col bg-white border border-gray-200 rounded-2xl p-8 target:ring-2 target:ring-brand-400"
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className="h-12 w-12 flex-shrink-0 rounded-xl bg-gray-100 flex items-center justify-center">
+                  <c.icon size={24} className="text-navy-700" aria-hidden />
+                </div>
+                <h2 className="text-2xl font-bold text-navy-800 pt-1.5">
+                  {c.title}
+                </h2>
+              </div>
+              <p className="text-gray-600 leading-relaxed mb-5">{c.body}</p>
+              <ul className="space-y-2 mb-6">
+                {c.points.map((p) => (
+                  <li key={p} className="flex items-start gap-2.5 text-sm">
+                    <span
+                      className="mt-1.5 h-1.5 w-1.5 rounded-full bg-brand-500 flex-shrink-0"
+                      aria-hidden
+                    />
+                    <span className="text-navy-800">{p}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href={`/activities/${c.slug}`}
+                className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 hover:text-brand-600"
+              >
+                View {c.title} activities
+                <ArrowRight size={15} aria-hidden />
+              </Link>
+            </article>
+          ))}
+        </div>
       </section>
+
+      {/* Events — public events with their posters/photos */}
+      {events.length > 0 && (
+        <section id="events" className="scroll-mt-28 bg-gray-50 border-t border-gray-200 py-16 md:py-20">
+          <div className="container-page">
+            <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
+              <div>
+                <span className="inline-block bg-blue-50 text-navy-700 px-3 py-1 rounded-full text-xs font-semibold mb-3">
+                  Events
+                </span>
+                <h2 className="text-3xl md:text-4xl font-bold text-navy-800">
+                  Installations, Meetings &amp; Celebrations
+                </h2>
+              </div>
+              <Link
+                href="/events"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 hover:text-brand-600"
+              >
+                View all events
+                <ArrowRight size={15} aria-hidden />
+              </Link>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-7">
+              {events.map((e, i) => {
+                const image = e.cover_url || EVENT_FALLBACK_IMAGES[i % EVENT_FALLBACK_IMAGES.length];
+                return (
+                  <article
+                    key={e.id}
+                    className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition-shadow"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={image}
+                      alt={e.title}
+                      loading="lazy"
+                      className="h-48 w-full object-cover"
+                    />
+                    <div className="p-6 flex flex-col flex-1">
+                      <div className="text-xs text-brand-600 font-medium mb-1.5 flex items-center gap-1.5">
+                        <Calendar size={13} aria-hidden />
+                        {formatDate(e.date)}
+                      </div>
+                      <h3 className="font-bold text-lg text-navy-800 mb-2">{e.title}</h3>
+                      {e.description && (
+                        <p className="text-sm text-gray-600 line-clamp-3 mb-4">{e.description}</p>
+                      )}
+                      {e.location && (
+                        <div className="mt-auto text-xs text-gray-500 flex items-center gap-1.5">
+                          <MapPin size={13} className="text-brand-500 flex-shrink-0" aria-hidden />
+                          <span>{e.location}</span>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Get involved CTA */}
       <section className="bg-gray-50 py-16 md:py-20">
@@ -192,8 +140,8 @@ export default async function ActivitiesPage({
             Want to Get Involved?
           </h2>
           <p className="text-gray-600 mb-8">
-            We are always looking for dedicated volunteers to help deliver our programs. No
-            experience necessary — just a willingness to serve.
+            We are always looking for dedicated volunteers to help deliver our
+            programs. No experience necessary — just a willingness to serve.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
@@ -212,53 +160,5 @@ export default async function ActivitiesPage({
         </div>
       </section>
     </>
-  );
-}
-
-function ItemCard({ item, fallbackIndex }: { item: Item; fallbackIndex: number }) {
-  const image = item.image || FALLBACK_IMAGES[fallbackIndex % FALLBACK_IMAGES.length];
-  const isEvent = item.kind === 'event';
-
-  return (
-    <article className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition-shadow">
-      <div className="relative">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image} alt={item.title} loading="lazy" className="h-48 w-full object-cover" />
-        <span
-          className={`absolute top-3 left-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-            isEvent ? 'bg-brand-500 text-white' : 'bg-white/90 text-navy-700'
-          }`}
-        >
-          {isEvent ? <CalendarDays size={12} aria-hidden /> : null}
-          {isEvent ? 'Event' : item.categoryLabel}
-        </span>
-      </div>
-      <div className="p-6 flex flex-col flex-1">
-        <div className="text-xs text-brand-600 font-medium mb-1.5 flex items-center gap-1.5">
-          <Calendar size={13} aria-hidden />
-          {formatDate(item.date)}
-        </div>
-        <h3 className="font-bold text-lg text-navy-800 mb-2">{item.title}</h3>
-        {item.description && (
-          <p className="text-sm text-gray-600 line-clamp-3 mb-4">{item.description}</p>
-        )}
-        <div className="mt-auto space-y-1.5 text-xs text-gray-500">
-          {!isEvent && item.beneficiaries != null && (
-            <div className="flex items-center gap-1.5">
-              <Users size={13} className="text-brand-500 flex-shrink-0" aria-hidden />
-              <span>
-                {item.beneficiaries.toLocaleString('en-IN')} beneficiaries
-              </span>
-            </div>
-          )}
-          {item.location && (
-            <div className="flex items-center gap-1.5">
-              <MapPin size={13} className="text-brand-500 flex-shrink-0" aria-hidden />
-              <span>{item.location}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </article>
   );
 }

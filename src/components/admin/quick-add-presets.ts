@@ -39,7 +39,7 @@ export function membersPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 't
       { name: 'club_id', label: 'Club', type: 'select',
         options: (o.clubs ?? []).map((c) => ({ value: c.id, label: c.name })) },
       { name: 'birthday', label: 'Birthday', type: 'date' },
-      { name: 'lions_member_id', label: 'Lions Member ID', type: 'text', hint: 'Optional LCI ID' },
+      { name: 'lions_member_id', label: 'Membership Number', type: 'text', required: true, hint: 'LCI membership number (required)' },
     ],
   };
 }
@@ -184,6 +184,7 @@ export function activitiesPreset(): Omit<QuickAddCardProps, 'title'> {
         { value: 'vision', label: 'Vision' },
         { value: 'hunger', label: 'Hunger Relief' },
         { value: 'environment', label: 'Environment' },
+        { value: 'relief', label: 'Disaster Relief' },
         { value: 'diabetes', label: 'Diabetes Awareness' },
         { value: 'childhood_cancer', label: 'Childhood Cancer' },
         { value: 'humanitarian', label: 'Humanitarian' },
