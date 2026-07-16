@@ -8,7 +8,7 @@ import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
 import { loadLionsPortalSettings } from '@/lib/oidc/lions-portal-runtime';
 import { LionsSyncPanel } from './LionsSyncPanel';
-import { DistrictPortalUpload } from './DistrictPortalUpload';
+import { DistrictPortalUpload } from '@/components/admin/DistrictPortalUpload';
 
 export const dynamic = 'force-dynamic';
 

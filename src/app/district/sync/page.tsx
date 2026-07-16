@@ -2,8 +2,9 @@ import { requireDistrictGovernor } from '@/lib/district-portal';
 import { DistrictTabs } from '../DistrictTabs';
 import { createAdminClient } from '@/lib/supabase/server';
 import { isLionsApiConfigured, isLionsApiSandboxActive } from '@/lib/oidc/lions';
-import { CheckCircle2, AlertTriangle, RefreshCw, Globe2 } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, RefreshCw, Globe2, MapPin } from 'lucide-react';
 import { MasterSyncPanel } from './MasterSyncPanel';
+import { DistrictPortalUpload } from '@/components/admin/DistrictPortalUpload';
 import type { LionsSyncReport } from '@/lib/oidc/lions';
 
 export const dynamic = 'force-dynamic';
@@ -57,6 +58,18 @@ export default async function DistrictSyncPage() {
       <DistrictTabs />
 
       <MasterSyncPanel sandbox={sandbox} apiConfigured={apiConfigured} />
+
+      <div className="rounded-xl border bg-white shadow-sm p-4">
+        <h3 className="font-semibold text-navy-800 inline-flex items-center gap-2 mb-1">
+          <MapPin size={15} className="text-amber-500" /> Upload district data (portal export)
+        </h3>
+        <p className="text-sm text-gray-600 mb-3 max-w-3xl">
+          No live API? Download your district report from the{' '}
+          <a href="https://lionsinternational.my.site.com/s/" target="_blank" rel="noopener noreferrer" className="text-amber-700 hover:underline">Lions Member Portal</a>{' '}
+          as Excel / CSV and upload it here to sync your district&apos;s data.
+        </p>
+        <DistrictPortalUpload />
+      </div>
 
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b flex items-center justify-between">
