@@ -273,18 +273,29 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       if (!matrix.length) { setParseError('The file is empty.'); return; }
 
       // Auto-detect the Lions International export: its header row (with a
-      // "Contact Member ID" column) sits a few rows below a title banner.
+      // "Contact Member ID" column) sits a few rows below a title banner. Scan
+      // generously and match on the member-id column alone so a slightly
+      // different export (extra/missing columns, reordered) is still recognized.
       let lionsHeaderIdx = -1;
-      for (let i = 0; i < Math.min(matrix.length, 25); i++) {
+      let sawLionsBanner = false;
+      const scan = Math.min(matrix.length, 40);
+      for (let i = 0; i < scan; i++) {
         const cells = (matrix[i] ?? []).map((c) => norm(cell(c)));
-        if (cells.includes('contactmemberid') && (cells.includes('contactfirstname') || cells.includes('contactlastname'))) {
-          lionsHeaderIdx = i; break;
-        }
+        if (cells.some((c) => c === 'membercontactinformation')) sawLionsBanner = true;
+        if (lionsHeaderIdx < 0 && cells.includes('contactmemberid')) lionsHeaderIdx = i;
       }
 
       const isLions = lionsHeaderIdx >= 0;
       const parsed = isLions ? parseLions(matrix, lionsHeaderIdx) : parseSimple(matrix);
-      if (typeof parsed === 'string') { setParseError(parsed); return; }
+      if (typeof parsed === 'string') {
+        // A Lions banner but no usable header row → point the admin at the right export.
+        if (sawLionsBanner && lionsHeaderIdx < 0) {
+          setParseError('This looks like a Lions International export, but the "Contact Member ID" header row could not be located. Re-download it from MyLion as "Member Contact Information" (Excel) without editing the layout.');
+        } else {
+          setParseError(parsed);
+        }
+        return;
+      }
       if (!parsed.length) { setParseError('No member rows found in the file.'); return; }
       setSource(isLions ? 'lions' : 'template');
       setRows(parsed);
