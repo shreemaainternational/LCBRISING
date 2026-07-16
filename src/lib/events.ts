@@ -58,6 +58,27 @@ export async function getUpcomingPublicEvents(limit?: number): Promise<PublicEve
   }
 }
 
+/** All public events (past and upcoming), newest first. */
+export async function getAllPublicEvents(): Promise<PublicEventRow[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = await publicEventReader();
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('is_public', true)
+      .order('date', { ascending: false });
+    if (error) {
+      console.error('[events] all read failed:', error.message);
+      return [];
+    }
+    return (data ?? []) as PublicEventRow[];
+  } catch (err) {
+    console.error('[events] all read threw:', err);
+    return [];
+  }
+}
+
 /** Most recent past public events, newest first. */
 export async function getPastPublicEvents(limit = 6): Promise<PublicEventRow[]> {
   if (!isSupabaseConfigured()) return [];
