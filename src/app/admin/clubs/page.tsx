@@ -3,15 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
+import { ClubsTable, type ClubRow } from '@/components/admin/ClubsTable';
 import { clubsPreset } from '@/components/admin/quick-add-presets';
-import { Users, MapPin, Calendar, Building2 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ClubsPage() {
   const supa = await createClient();
   const [{ data: clubs }, { data: districts }, { data: members }] = await Promise.all([
-    supa.from('clubs').select('id, name, district, city, state, charter_date, club_number, district_id')
+    supa.from('clubs').select('id, name, district, city, state, country, charter_date, club_number, district_id')
       .is('deleted_at', null).order('name'),
     supa.from('districts').select('id, code, name').is('deleted_at', null).order('code'),
     supa.from('members').select('club_id').is('deleted_at', null),
@@ -22,7 +23,21 @@ export default async function ClubsPage() {
     if (m.club_id) memberCount.set(m.club_id, (memberCount.get(m.club_id) ?? 0) + 1);
   }
 
-  const preset = clubsPreset({ districts: districts ?? [] });
+  const districtOptions = districts ?? [];
+  const clubRows: ClubRow[] = (clubs ?? []).map((c) => ({
+    id: c.id,
+    name: c.name,
+    club_number: c.club_number ?? null,
+    district: c.district ?? null,
+    district_id: c.district_id ?? null,
+    city: c.city ?? null,
+    state: c.state ?? null,
+    country: c.country ?? null,
+    charter_date: c.charter_date ?? null,
+    member_count: memberCount.get(c.id) ?? 0,
+  }));
+
+  const preset = clubsPreset({ districts: districtOptions });
 
   return (
     <div>
@@ -44,45 +59,9 @@ export default async function ClubsPage() {
         />
       ) : (
         <Card>
-          <CardHeader><CardTitle>{clubs.length} clubs</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{clubRows.length} clubs</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-3">Name</th>
-                  <th className="text-left p-3">District</th>
-                  <th className="text-left p-3">City</th>
-                  <th className="text-right p-3">Members</th>
-                  <th className="text-left p-3">Chartered</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {clubs.map((c) => (
-                  <tr key={c.id} className="border-t hover:bg-gray-50">
-                    <td className="p-3 font-medium">
-                      <Link href={`/admin/clubs/${c.id}`} className="text-navy-800 hover:underline">{c.name}</Link>
-                      {c.club_number && <div className="text-xs text-gray-500">LCI #{c.club_number}</div>}
-                    </td>
-                    <td className="p-3 text-gray-600">{c.district ?? '—'}</td>
-                    <td className="p-3 text-gray-600">
-                      {c.city
-                        ? <span className="inline-flex items-center gap-1"><MapPin size={11} />{c.city}{c.state ? `, ${c.state}` : ''}</span>
-                        : '—'}
-                    </td>
-                    <td className="p-3 text-right">
-                      <span className="inline-flex items-center gap-1 text-xs"><Users size={11} />{memberCount.get(c.id) ?? 0}</span>
-                    </td>
-                    <td className="p-3 text-xs text-gray-600">
-                      {c.charter_date ? <span className="inline-flex items-center gap-1"><Calendar size={11} />{new Date(c.charter_date).toLocaleDateString('en-IN')}</span> : '—'}
-                    </td>
-                    <td className="p-3 text-right">
-                      <Link href={`/admin/clubs/${c.id}`} className="text-xs text-amber-600 hover:text-amber-800">View →</Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ClubsTable clubs={clubRows} districts={districtOptions} />
           </CardContent>
         </Card>
       )}
