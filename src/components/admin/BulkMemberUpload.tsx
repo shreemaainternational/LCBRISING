@@ -50,6 +50,11 @@ type BulkResponse = {
 
 const ROLES = ['admin', 'president', 'secretary', 'treasurer', 'officer', 'member'];
 const STATUSES = ['active', 'lapsed', 'suspended', 'pending'];
+// Many Lions exports have members without an email, but members.email is
+// NOT NULL UNIQUE. Synthesize a guaranteed-undeliverable placeholder from the
+// (unique) membership number so every member imports; admins edit it later.
+const NO_EMAIL_DOMAIN = 'noemail.invalid';
+const isPlaceholderEmail = (e: string | null | undefined) => !!e && e.endsWith(`@${NO_EMAIL_DOMAIN}`);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -204,7 +209,10 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
         : prefLabel === 'work' ? g('work_email')
         : prefLabel.startsWith('alt') ? g('alt_email')
         : '';
-      const email = (preferred || g('personal_email') || g('work_email') || g('alt_email')).toLowerCase();
+      let email = (preferred || g('personal_email') || g('work_email') || g('alt_email')).toLowerCase();
+      // No email in the export → synthesize a placeholder from the membership
+      // number so the member still imports (members.email is NOT NULL UNIQUE).
+      if (!email && memberId) email = `lci-${memberId}@${NO_EMAIL_DOMAIN}`;
       const phone = cleanPhone(g('mobile') || g('home_phone') || g('work_phone'));
       const whatsapp = cleanPhone(g('mobile'));
       const status = /\[\s*active\s*\]/i.test(g('membership_type')) ? 'active' : 'pending';
@@ -483,6 +491,9 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
             )}
             Parsed <strong>{rows.length}</strong> row(s): {validRows.length} ready
             {invalidRows.length > 0 && <span className="text-red-700"> · {invalidRows.length} with errors (skipped)</span>}
+            {validRows.filter((r) => isPlaceholderEmail(r.email)).length > 0 && (
+              <span className="text-amber-700"> · {validRows.filter((r) => isPlaceholderEmail(r.email)).length} without email (placeholder generated — edit later)</span>
+            )}
           </div>
           <div className="border rounded-md overflow-auto max-h-72 bg-white">
             <table className="w-full text-xs">
@@ -509,7 +520,7 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
                     ) : (
                       <>
                         <td className="px-2 py-1 font-medium">{r.name}</td>
-                        <td className="px-2 py-1">{r.email}</td>
+                        <td className={`px-2 py-1 ${isPlaceholderEmail(r.email) ? 'text-amber-700 italic' : ''}`} title={isPlaceholderEmail(r.email) ? 'No email in export — placeholder generated; edit to add a real email' : undefined}>{isPlaceholderEmail(r.email) ? 'no email — placeholder' : r.email}</td>
                         <td className="px-2 py-1">{r.lions_member_id ?? '—'}</td>
                         <td className="px-2 py-1">{r.phone ?? '—'}</td>
                         <td className="px-2 py-1 capitalize">{r.role}</td>
