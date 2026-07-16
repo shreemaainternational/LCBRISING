@@ -67,6 +67,14 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
   const visibleGroups = clubFilter === 'all' ? groups : groups.filter(([name]) => name === clubFilter);
   const shownCount = visibleGroups.reduce((n, [, rows]) => n + rows.length, 0);
 
+  // Dropdown lists every club alphabetically (from the clubs table), even those
+  // with no members yet, plus an "Unassigned" bucket when relevant.
+  const countByClubName = new Map(groups.map(([name, rows]) => [name, rows.length]));
+  const clubOptions = [...clubs]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((c) => ({ name: c.name, count: countByClubName.get(c.name) ?? 0 }));
+  const unassignedCount = countByClubName.get('Unassigned') ?? 0;
+
   function remove(m: MemberRow) {
     if (!window.confirm(`Remove "${m.name ?? m.email ?? 'this member'}" from the roster? This can be restored by an admin.`)) return;
     setError(null);
@@ -104,9 +112,10 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
           className="px-3 py-1.5 border rounded-md text-sm bg-white"
         >
           <option value="all">All clubs ({members.length})</option>
-          {groups.map(([name, rows]) => (
-            <option key={name} value={name}>{name} ({rows.length})</option>
+          {clubOptions.map((c) => (
+            <option key={c.name} value={c.name}>{c.name} ({c.count})</option>
           ))}
+          {unassignedCount > 0 && <option value="Unassigned">Unassigned ({unassignedCount})</option>}
         </select>
         {clubFilter !== 'all' && (
           <span className="text-xs text-gray-500">Showing {shownCount} member{shownCount === 1 ? '' : 's'}</span>

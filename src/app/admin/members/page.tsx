@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { BulkMemberUpload } from '@/components/admin/BulkMemberUpload';
+import { BulkOfficerUpload } from '@/components/admin/BulkOfficerUpload';
 import { MembersTable, type MemberRow } from '@/components/admin/MembersTable';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { membersPreset } from '@/components/admin/quick-add-presets';
@@ -34,8 +35,9 @@ export default async function MembersPage() {
         <QuickAddCard title="Member" {...preset} />
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 space-y-2">
         <BulkMemberUpload clubs={clubOptions} />
+        <BulkOfficerUpload />
       </div>
 
       {!members?.length ? (
