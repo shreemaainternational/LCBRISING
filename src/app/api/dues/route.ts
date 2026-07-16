@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { duesSchema } from '@/lib/validation/schemas';
-import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { createClient, createAuthorizedWriteClient } from '@/lib/supabase/server';
 import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requireAdmin } from '@/lib/auth';
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   // sub-selects public.members, which trips "infinite recursion detected in
   // policy for relation members" on a database where migration 0059 has not
   // been applied.
-  const db = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
+  const db = await createAuthorizedWriteClient();
   const { data, error } = await db.from('dues').insert(parsed.data).select().single();
   if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
   return NextResponse.json({ dues: data }, { status: 201 });

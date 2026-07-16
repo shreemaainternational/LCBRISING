@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAuthorizedWriteClient } from '@/lib/supabase/server';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { enterpriseMemberSchema } from '@/lib/validation/schemas';
+import { describeSupabaseError } from '@/lib/supabase/errors';
 import { writeAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
@@ -47,9 +48,14 @@ export async function POST(req: NextRequest) {
   });
   if (isGuardFailure(actor)) return actor;
 
-  const supa = await createClient();
+  // Trusted write (already gated by requirePermission). Prefer the
+  // service-role client so the INSERT and its `.select()` read-back bypass
+  // RLS: reading the row back applies the self-referential members SELECT
+  // policy, which trips the infinite recursion on databases missing
+  // migration 0059.
+  const supa = await createAuthorizedWriteClient();
   const { data, error } = await supa.from('members').insert(parsed.data).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
 
   await writeAudit({
     action: 'member.create',

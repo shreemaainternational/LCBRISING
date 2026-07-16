@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAuthorizedWriteClient } from '@/lib/supabase/server';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { districtSchema } from '@/lib/validation/schemas';
+import { describeSupabaseError } from '@/lib/supabase/errors';
 import { writeAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
@@ -29,9 +30,13 @@ export async function POST(req: NextRequest) {
   const actor = await requirePermission('district.update');
   if (isGuardFailure(actor)) return actor;
 
-  const supa = await createClient();
+  // Trusted write (already gated by requirePermission). Prefer the
+  // service-role client so the INSERT and its read-back bypass RLS: the
+  // districts_admin_write policy sub-selects public.members, which trips the
+  // members-policy infinite recursion on databases missing migration 0059.
+  const supa = await createAuthorizedWriteClient();
   const { data, error } = await supa.from('districts').insert(parsed.data).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
 
   await writeAudit({
     action: 'district.create',

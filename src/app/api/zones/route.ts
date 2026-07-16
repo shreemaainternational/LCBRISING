@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { cookies } from 'next/headers';
-import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { createClient, createAuthorizedWriteClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { resolveOrBootstrapDefaultDistrict, explainBootstrapFailure } from '@/lib/default-district';
 
@@ -20,6 +20,9 @@ const schema = z.object({
 function friendlyError(message: string): string {
   if (/invalid api key/i.test(message)) {
     return 'Database auth failed. Set SUPABASE_SERVICE_ROLE_KEY for your project — or apply migration 0037_federation_rls.sql so admin members can write via their own session.';
+  }
+  if (/infinite recursion detected in policy/i.test(message)) {
+    return 'Row-level security hit infinite recursion in the members policy. Set SUPABASE_SERVICE_ROLE_KEY, or apply migration 0059_fix_members_rls_recursion.sql in the Supabase SQL Editor (idempotent).';
   }
   if (/row.level security|new row violates|permission denied/i.test(message)) {
     return 'Row-level security blocked the insert. Apply migration 0037_federation_rls.sql, or sign in as a member whose role is "admin", or set SUPABASE_SERVICE_ROLE_KEY.';
@@ -93,27 +96,15 @@ export async function POST(req: Request) {
     }
   }
 
-  // 1) Try the user's authenticated session first — RLS lets admin
-  //    members write (migration 0037). No service-role key required.
-  const supa = await createClient();
-  const first = await supa.from('zones').insert(payload).select().single();
-  if (!first.error && first.data) return NextResponse.json({ zone: first.data }, { status: 201 });
-
-  const firstMsg = first.error?.message ?? '';
-  const isAuthFail = /invalid api key|jwt/i.test(firstMsg) || /row.level security|new row violates|permission denied/i.test(firstMsg);
-
-  // 2) Fall back to the admin client only when RLS/auth blocked us
-  //    and a service role is configured.
-  if (isAuthFail && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      const admin = createAdminClient();
-      const second = await admin.from('zones').insert(payload).select().single();
-      if (!second.error && second.data) return NextResponse.json({ zone: second.data }, { status: 201 });
-      return NextResponse.json({ error: friendlyError(second.error?.message ?? 'unknown_error') }, { status: 500 });
-    } catch (e) {
-      return NextResponse.json({ error: friendlyError(String(e)) }, { status: 500 });
-    }
-  }
-
-  return NextResponse.json({ error: friendlyError(firstMsg || 'unknown_error') }, { status: 500 });
+  // Trusted admin write (already gated by requireAdmin). Prefer the
+  // service-role client so the INSERT and its read-back bypass RLS: the
+  // zones_admin_write policy (migration 0037) sub-selects public.members,
+  // whose self-referential policy trips "infinite recursion detected in
+  // policy for relation members" on databases where migration 0059 has not
+  // been applied. Falls back to the user session when no service-role key is
+  // configured (relies on migrations 0037 + 0059 being present).
+  const db = await createAuthorizedWriteClient();
+  const { data, error } = await db.from('zones').insert(payload).select().single();
+  if (error) return NextResponse.json({ error: friendlyError(error.message) }, { status: 500 });
+  return NextResponse.json({ zone: data }, { status: 201 });
 }
