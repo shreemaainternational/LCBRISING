@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { formatDate } from '@/lib/utils';
 import { HeroSlideshow } from '@/components/site/HeroSlideshow';
@@ -27,14 +27,20 @@ async function getStats() {
     return { members: 0, activities: 0, donations: 0, beneficiaries: 0 };
   }
   try {
-    const supabase = await createClient();
+    // Public homepage aggregates. Use the service-role client for these
+    // read-only counts so the active-member count bypasses RLS: the members
+    // SELECT policy is self-referential where migration 0059 is unapplied, so
+    // under the anon client this count errors and the banner falls back to its
+    // display floor (showing "92+" instead of the real roster). Only aggregate
+    // public stats are read here; no per-member data leaves the server.
+    const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
     const [
       { count: members },
       { count: activities },
       { data: donationsAgg },
       { data: activityAgg },
     ] = await Promise.all([
-      supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase.from('members').select('*', { count: 'exact', head: true }).is('deleted_at', null).eq('status', 'active'),
       supabase.from('activities').select('*', { count: 'exact', head: true }),
       supabase.from('donations').select('amount'),
       supabase.from('activities').select('beneficiaries'),

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { Fragment, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Trash2, X, Loader2, Save, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +49,21 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
+  // Group the roster club-wise: one section per club (alphabetical), with
+  // members who have no club last under "Unassigned".
+  const clubNameById = new Map(clubs.map((c) => [c.id, c.name]));
+  const groupMap = new Map<string, MemberRow[]>();
+  for (const m of members) {
+    const key = m.club_id && clubNameById.has(m.club_id) ? clubNameById.get(m.club_id)! : 'Unassigned';
+    if (!groupMap.has(key)) groupMap.set(key, []);
+    groupMap.get(key)!.push(m);
+  }
+  const groups = Array.from(groupMap.entries()).sort((a, b) => {
+    if (a[0] === 'Unassigned') return 1;
+    if (b[0] === 'Unassigned') return -1;
+    return a[0].localeCompare(b[0]);
+  });
+
   function remove(m: MemberRow) {
     if (!window.confirm(`Remove "${m.name ?? m.email ?? 'this member'}" from the roster? This can be restored by an admin.`)) return;
     setError(null);
@@ -92,38 +107,47 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
             </tr>
           </thead>
           <tbody>
-            {members.map((m) => (
-              <tr key={m.id} className="border-t">
-                <td className="p-3 font-medium">{m.name ?? '—'}</td>
-                <td className="p-3 text-gray-600">{m.lions_member_id ?? '—'}</td>
-                <td className="p-3">{m.email ?? '—'}</td>
-                <td className="p-3">{m.phone ?? '—'}</td>
-                <td className="p-3 capitalize">{m.role ?? '—'}</td>
-                <td className="p-3"><StatusBadge status={m.status} /></td>
-                <td className="p-3 text-gray-500">{m.joined_at ?? '—'}</td>
-                <td className="p-3">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => { setError(null); setEditing(m); }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-gray-200 text-gray-700 text-xs hover:bg-gray-50"
-                      title="Edit member"
-                    >
-                      <Pencil size={13} /> Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => remove(m)}
-                      disabled={pending && deletingId === m.id}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-red-200 text-red-700 text-xs hover:bg-red-50 disabled:opacity-60"
-                      title="Remove member"
-                    >
-                      {pending && deletingId === m.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
+            {groups.map(([clubName, rows]) => (
+              <Fragment key={clubName}>
+                <tr className="bg-navy-50/70 border-t">
+                  <td colSpan={8} className="px-3 py-2 text-xs font-semibold text-navy-800 uppercase tracking-wide">
+                    {clubName} · {rows.length} member{rows.length === 1 ? '' : 's'}
+                  </td>
+                </tr>
+                {rows.map((m) => (
+                  <tr key={m.id} className="border-t">
+                    <td className="p-3 font-medium">{m.name ?? '—'}</td>
+                    <td className="p-3 text-gray-600">{m.lions_member_id ?? '—'}</td>
+                    <td className="p-3">{m.email ?? '—'}</td>
+                    <td className="p-3">{m.phone ?? '—'}</td>
+                    <td className="p-3 capitalize">{m.role ?? '—'}</td>
+                    <td className="p-3"><StatusBadge status={m.status} /></td>
+                    <td className="p-3 text-gray-500">{m.joined_at ?? '—'}</td>
+                    <td className="p-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => { setError(null); setEditing(m); }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-gray-200 text-gray-700 text-xs hover:bg-gray-50"
+                          title="Edit member"
+                        >
+                          <Pencil size={13} /> Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => remove(m)}
+                          disabled={pending && deletingId === m.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-red-200 text-red-700 text-xs hover:bg-red-50 disabled:opacity-60"
+                          title="Remove member"
+                        >
+                          {pending && deletingId === m.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </Fragment>
             ))}
           </tbody>
         </table>
