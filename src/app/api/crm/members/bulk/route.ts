@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
   const valid: { row: number; data: z.infer<typeof enterpriseMemberSchema> }[] = [];
   const results: RowResult[] = [];
   const seenEmails = new Set<string>();
+  const seenLionsIds = new Set<string>();
 
   members.forEach((raw, i) => {
     const rowNum = i + 2;
@@ -59,7 +60,13 @@ export async function POST(req: NextRequest) {
       results.push({ row: rowNum, status: 'skipped', name: rowParsed.data.name, email, reason: 'duplicate email in file' });
       return;
     }
+    const lionsId = rowParsed.data.lions_member_id?.trim();
+    if (lionsId && seenLionsIds.has(lionsId)) {
+      results.push({ row: rowNum, status: 'skipped', name: rowParsed.data.name, email, reason: 'duplicate membership number in file' });
+      return;
+    }
     seenEmails.add(email);
+    if (lionsId) seenLionsIds.add(lionsId);
     valid.push({ row: rowNum, data: { ...rowParsed.data, email } });
   });
 
@@ -67,18 +74,32 @@ export async function POST(req: NextRequest) {
   // the insert + read-back bypass RLS and avoid the members-policy recursion.
   const db = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
-  // Skip rows whose email already exists so we don't trip the unique
-  // constraint mid-batch.
+  // Skip rows whose email OR membership number already exists so we don't trip
+  // the unique constraints mid-batch (both email and lions_member_id are
+  // UNIQUE). This makes re-uploading the same Lions export idempotent.
   if (valid.length) {
     const emails = valid.map((v) => v.data.email);
-    const { data: existing } = await db.from('members').select('email').in('email', emails);
-    const existingSet = new Set((existing ?? []).map((m) => String(m.email).toLowerCase().trim()));
-    if (existingSet.size) {
-      for (let i = valid.length - 1; i >= 0; i--) {
-        if (existingSet.has(valid[i].data.email)) {
-          results.push({ row: valid[i].row, status: 'skipped', name: valid[i].data.name, email: valid[i].data.email, reason: 'email already exists' });
-          valid.splice(i, 1);
-        }
+    const lionsIds = valid.map((v) => v.data.lions_member_id?.trim()).filter(Boolean) as string[];
+
+    const [{ data: byEmail }, byLions] = await Promise.all([
+      db.from('members').select('email').in('email', emails),
+      lionsIds.length
+        ? db.from('members').select('lions_member_id').in('lions_member_id', lionsIds)
+        : Promise.resolve({ data: [] as { lions_member_id: string | null }[] }),
+    ]);
+
+    const emailSet = new Set((byEmail ?? []).map((m) => String(m.email).toLowerCase().trim()));
+    const lionsSet = new Set((byLions.data ?? []).map((m) => String(m.lions_member_id).trim()).filter(Boolean));
+
+    for (let i = valid.length - 1; i >= 0; i--) {
+      const v = valid[i];
+      const lionsId = v.data.lions_member_id?.trim();
+      if (emailSet.has(v.data.email)) {
+        results.push({ row: v.row, status: 'skipped', name: v.data.name, email: v.data.email, reason: 'email already exists' });
+        valid.splice(i, 1);
+      } else if (lionsId && lionsSet.has(lionsId)) {
+        results.push({ row: v.row, status: 'skipped', name: v.data.name, email: v.data.email, reason: 'membership number already exists' });
+        valid.splice(i, 1);
       }
     }
   }

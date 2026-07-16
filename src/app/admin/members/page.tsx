@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { BulkMemberUpload } from '@/components/admin/BulkMemberUpload';
 import { EmptyState } from '@/components/admin/EmptyState';
@@ -10,9 +10,14 @@ import { Users } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function MembersPage() {
-  const supabase = await createClient();
+  // Read via the service-role client (this page is inside the admin-gated
+  // layout) so the roster query bypasses RLS. The members SELECT policy is
+  // self-referential on databases where migration 0059 has not been applied,
+  // and once any member row exists that read trips "infinite recursion detected
+  // in policy for relation members". Bypassing RLS here keeps the page working.
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
   const [{ data: members }, { data: clubs }] = await Promise.all([
-    supabase.from('members').select('*').order('created_at', { ascending: false }),
+    supabase.from('members').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
     supabase.from('clubs').select('id, name').is('deleted_at', null).order('name'),
   ]);
 
@@ -47,6 +52,7 @@ export default async function MembersPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left p-3">Name</th>
+                  <th className="text-left p-3">Member #</th>
                   <th className="text-left p-3">Email</th>
                   <th className="text-left p-3">Phone</th>
                   <th className="text-left p-3">Role</th>
@@ -58,6 +64,7 @@ export default async function MembersPage() {
                 {members.map((m) => (
                   <tr key={m.id} className="border-t">
                     <td className="p-3 font-medium">{m.name}</td>
+                    <td className="p-3 text-gray-600">{m.lions_member_id ?? '—'}</td>
                     <td className="p-3">{m.email}</td>
                     <td className="p-3">{m.phone ?? '—'}</td>
                     <td className="p-3 capitalize">{m.role}</td>

@@ -46,10 +46,11 @@ type BulkResponse = {
 const ROLES = ['admin', 'president', 'secretary', 'treasurer', 'officer', 'member'];
 const STATUSES = ['active', 'lapsed', 'suspended', 'pending'];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-// The template columns, in order. Header row an admin fills in Excel.
+// Simple template columns (for admins who prefer a clean manual sheet).
 const TEMPLATE_HEADERS = [
-  'Name', 'Email', 'Phone', 'WhatsApp', 'Role', 'Status', 'Club', 'Birthday', 'Lions Member ID',
+  'Name', 'Email', 'Phone', 'WhatsApp', 'Role', 'Status', 'Club', 'Birthday', 'Membership Number',
 ];
 const TEMPLATE_SAMPLE = [
   ['Lion Ramesh Patel', 'ramesh@example.com', '+919876543210', '+919876543210', 'member', 'active', '', '1980-04-15', '1234567'],
@@ -61,6 +62,39 @@ function norm(s: string): string {
   return String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+function cell(v: unknown): string {
+  if (v == null) return '';
+  if (v instanceof Date) return isNaN(v.getTime()) ? '' : v.toISOString();
+  return String(v).trim();
+}
+
+/** Keep a leading + and digits only; return null when clearly not a phone. */
+function cleanPhone(v: unknown): string | null {
+  const s = cell(v);
+  if (!s) return null;
+  let d = s.replace(/[^\d+]/g, '');
+  // Only a single leading '+' is allowed.
+  d = d.startsWith('+') ? '+' + d.slice(1).replace(/\+/g, '') : d.replace(/\+/g, '');
+  const digits = d.replace(/\D/g, '');
+  if (digits.length < 7) return null;
+  return d.length > 20 ? d.slice(0, 20) : d;
+}
+
+/** Normalize a birthday cell (Date object, Excel serial, or string) → YYYY-MM-DD. */
+function toDateString(v: unknown): string | null {
+  if (v == null || v === '') return null;
+  const asDate = v instanceof Date ? v : new Date(String(v).trim());
+  if (isNaN(asDate.getTime())) {
+    const s = String(v).trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+  }
+  const y = asDate.getFullYear();
+  const m = String(asDate.getMonth() + 1).padStart(2, '0');
+  const d = String(asDate.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// -------- Simple template header aliases --------
 const HEADER_ALIASES: Record<string, string[]> = {
   name: ['name', 'fullname', 'membername', 'lionname'],
   email: ['email', 'emailid', 'emailaddress', 'mail'],
@@ -70,51 +104,36 @@ const HEADER_ALIASES: Record<string, string[]> = {
   status: ['status', 'memberstatus'],
   club: ['club', 'clubname', 'clubid'],
   birthday: ['birthday', 'dob', 'dateofbirth', 'birthdate'],
-  lions_member_id: ['lionsmemberid', 'lionsid', 'lcimemberid', 'lciid', 'memberid', 'lionmemberid'],
+  lions_member_id: ['lionsmemberid', 'lionsid', 'lcimemberid', 'lciid', 'memberid', 'membershipnumber', 'lionmemberid', 'contactmemberid'],
 };
 
-/** Map the sheet's header cells to our field keys. */
-function buildColumnMap(headers: string[]): Record<string, number> {
-  const map: Record<string, number> = {};
-  headers.forEach((h, idx) => {
-    const n = norm(h);
-    for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
-      if (map[field] === undefined && aliases.includes(n)) map[field] = idx;
-    }
-  });
-  return map;
-}
-
-/** Normalize a birthday cell (Date object, Excel serial, or string) → YYYY-MM-DD. */
-function toDateString(v: unknown): string | null {
-  if (v == null || v === '') return null;
-  if (v instanceof Date && !isNaN(v.getTime())) {
-    const y = v.getFullYear();
-    const m = String(v.getMonth() + 1).padStart(2, '0');
-    const d = String(v.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-  const s = String(v).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const parsed = new Date(s);
-  if (!isNaN(parsed.getTime())) {
-    const y = parsed.getFullYear();
-    const m = String(parsed.getMonth() + 1).padStart(2, '0');
-    const d = String(parsed.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-  return null;
-}
-
-function cell(v: unknown): string {
-  return v == null ? '' : String(v).trim();
-}
+// -------- Lions International export column aliases (normalized) --------
+const LIONS_FIELDS: Record<string, string[]> = {
+  member_id: ['contactmemberid'],
+  salutation: ['contactsalutation'],
+  first: ['contactfirstname'],
+  last: ['contactlastname'],
+  club: ['accountname'],
+  district: ['parentdistrict'],
+  // "Preferred Email"/"Preferred Phone" columns hold a *label* (e.g. "Personal",
+  // "Mobile") naming which field is preferred — not the value itself. The real
+  // address/number lives in the type-specific columns below.
+  pref_email_label: ['contactpreferredemail'],
+  personal_email: ['contactpersonalemail'],
+  work_email: ['contactworkemail'],
+  alt_email: ['contactalternateemail'],
+  mobile: ['contactmobile'],
+  home_phone: ['contacthomephone'],
+  work_phone: ['contactworkphone'],
+  membership_type: ['membershipfulltype'],
+};
 
 export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [source, setSource] = useState<'lions' | 'template' | null>(null);
   const [rows, setRows] = useState<ParsedRow[] | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [result, setResult] = useState<BulkResponse | null>(null);
@@ -126,10 +145,123 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
   const validRows = rows?.filter((r) => !r.error) ?? [];
   const invalidRows = rows?.filter((r) => r.error) ?? [];
 
+  function resolveClub(nameOrId: string): { club_id: string | null; club_label: string | null } {
+    if (!nameOrId) return { club_id: null, club_label: null };
+    if (UUID_RE.test(nameOrId) && clubById.has(nameOrId)) {
+      return { club_id: nameOrId, club_label: clubById.get(nameOrId)!.name };
+    }
+    const found = clubByName.get(nameOrId.toLowerCase().trim());
+    if (found) return { club_id: found.id, club_label: found.name };
+    return { club_id: null, club_label: `${nameOrId} (not found)` };
+  }
+
+  /** Parse the Lions International "Member Contact Information" export. */
+  function parseLions(matrix: unknown[][], hIdx: number): ParsedRow[] | string {
+    const headers = (matrix[hIdx] ?? []).map((c) => norm(cell(c)));
+    const col: Record<string, number> = {};
+    headers.forEach((h, idx) => {
+      for (const [f, aliases] of Object.entries(LIONS_FIELDS)) {
+        if (col[f] === undefined && aliases.includes(h)) col[f] = idx;
+      }
+    });
+    if (col.member_id === undefined) {
+      return 'This looks like a Lions International export but the "Contact Member ID" column was not found.';
+    }
+
+    const out: ParsedRow[] = [];
+    let lastClub = '';
+    for (let i = hIdx + 1; i < matrix.length; i++) {
+      const r = matrix[i] ?? [];
+      const g = (f: string) => (col[f] === undefined ? '' : cell(r[col[f]]));
+
+      // Stop at the report footer (Total / Confidential / Copyright rows).
+      const firstText = cell(r.find((c) => c != null));
+      if (/^(Total\b|Confidential Information|Copyright)/i.test(firstText)) break;
+
+      // Club/District only appear on the first row of each group → carry down.
+      const clubCell = g('club');
+      if (clubCell) lastClub = clubCell;
+
+      const memberId = g('member_id');
+      const name = [g('first'), g('last')].filter(Boolean).join(' ').trim();
+      if (!memberId && !name) continue; // blank spacer row
+
+      // Honour the "Preferred Email" label (Personal/Work/Alternate), then fall
+      // back to whichever address column is populated.
+      const prefLabel = norm(g('pref_email_label'));
+      const preferred =
+        prefLabel === 'personal' ? g('personal_email')
+        : prefLabel === 'work' ? g('work_email')
+        : prefLabel.startsWith('alt') ? g('alt_email')
+        : '';
+      const email = (preferred || g('personal_email') || g('work_email') || g('alt_email')).toLowerCase();
+      const phone = cleanPhone(g('mobile') || g('home_phone') || g('work_phone'));
+      const whatsapp = cleanPhone(g('mobile'));
+      const status = /\[\s*active\s*\]/i.test(g('membership_type')) ? 'active' : 'pending';
+      const { club_id, club_label } = resolveClub(lastClub);
+
+      let error: string | undefined;
+      if (!name || name.length < 2) error = 'Name is required';
+      else if (!email || !EMAIL_RE.test(email)) error = 'No valid email in export';
+      else if (!memberId) error = 'Membership number is required';
+
+      out.push({
+        row: i + 1, name, email, phone, whatsapp, role: 'member', status,
+        club_id, club_label, birthday: null, lions_member_id: memberId || null, error,
+      });
+    }
+    return out;
+  }
+
+  /** Parse the clean manual template (headers on row 1). */
+  function parseSimple(matrix: unknown[][]): ParsedRow[] | string {
+    if (matrix.length < 2) return 'No data rows found below the header row.';
+    const headers = (matrix[0] as unknown[]).map((h) => cell(h));
+    const cm: Record<string, number> = {};
+    headers.forEach((h, idx) => {
+      const n = norm(h);
+      for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
+        if (cm[field] === undefined && aliases.includes(n)) cm[field] = idx;
+      }
+    });
+    if (cm.name === undefined || cm.email === undefined) {
+      return 'Could not find required "Name" and "Email" columns. Download the template for the expected headers.';
+    }
+
+    const out: ParsedRow[] = [];
+    for (let i = 1; i < matrix.length; i++) {
+      const r = matrix[i] as unknown[];
+      const get = (f: string) => (cm[f] === undefined ? '' : cell(r[cm[f]]));
+      const name = get('name');
+      const email = get('email').toLowerCase();
+      if (!name && !email && !get('phone') && !get('lions_member_id')) continue;
+
+      const rawRole = norm(get('role'));
+      const role = ROLES.includes(rawRole) ? rawRole : 'member';
+      const rawStatus = norm(get('status'));
+      const status = STATUSES.includes(rawStatus) ? rawStatus : 'active';
+      const { club_id, club_label } = resolveClub(get('club'));
+      const birthday = toDateString(cm.birthday === undefined ? '' : (r[cm.birthday] ?? ''));
+      const lionsMemberId = get('lions_member_id');
+
+      let error: string | undefined;
+      if (!name || name.length < 2) error = 'Name is required (min 2 chars)';
+      else if (!email || !EMAIL_RE.test(email)) error = 'Valid email required';
+      else if (!lionsMemberId) error = 'Membership number is required';
+
+      out.push({
+        row: i + 1, name, email,
+        phone: get('phone') || null,
+        whatsapp: get('whatsapp') || null,
+        role, status, club_id, club_label, birthday,
+        lions_member_id: lionsMemberId || null, error,
+      });
+    }
+    return out;
+  }
+
   async function onFile(file: File) {
-    setParseError(null);
-    setResult(null);
-    setRows(null);
+    setParseError(null); setResult(null); setRows(null); setSource(null);
     setFileName(file.name);
     try {
       const XLSX = await import('xlsx');
@@ -137,70 +269,24 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       const wb = XLSX.read(buf, { type: 'array', cellDates: true });
       const ws = wb.Sheets[wb.SheetNames[0]];
       if (!ws) { setParseError('The file has no sheets.'); return; }
-      const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, blankrows: false, raw: true });
-      if (matrix.length < 2) { setParseError('No data rows found below the header row.'); return; }
+      const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, blankrows: false, raw: true, defval: null });
+      if (!matrix.length) { setParseError('The file is empty.'); return; }
 
-      const headers = (matrix[0] as unknown[]).map((h) => cell(h));
-      const cm = buildColumnMap(headers);
-      if (cm.name === undefined || cm.email === undefined) {
-        setParseError('Could not find required "Name" and "Email" columns. Download the template for the expected headers.');
-        return;
-      }
-
-      const parsed: ParsedRow[] = [];
-      for (let i = 1; i < matrix.length; i++) {
-        const r = matrix[i] as unknown[];
-        const get = (f: string) => (cm[f] === undefined ? '' : cell(r[cm[f]]));
-        const name = get('name');
-        const email = get('email').toLowerCase();
-        // Skip fully blank rows.
-        if (!name && !email && !get('phone') && !get('lions_member_id')) continue;
-
-        const rawRole = norm(get('role'));
-        const role = ROLES.includes(rawRole) ? rawRole : 'member';
-        const rawStatus = norm(get('status'));
-        const status = STATUSES.includes(rawStatus) ? rawStatus : 'active';
-
-        // Resolve club: accept a UUID directly, otherwise match by name.
-        let club_id: string | null = null;
-        let club_label: string | null = null;
-        const clubCell = get('club');
-        if (clubCell) {
-          if (UUID_RE.test(clubCell) && clubById.has(clubCell)) {
-            club_id = clubCell; club_label = clubById.get(clubCell)!.name;
-          } else {
-            const found = clubByName.get(clubCell.toLowerCase());
-            if (found) { club_id = found.id; club_label = found.name; }
-            else club_label = `${clubCell} (not found)`;
-          }
+      // Auto-detect the Lions International export: its header row (with a
+      // "Contact Member ID" column) sits a few rows below a title banner.
+      let lionsHeaderIdx = -1;
+      for (let i = 0; i < Math.min(matrix.length, 25); i++) {
+        const cells = (matrix[i] ?? []).map((c) => norm(cell(c)));
+        if (cells.includes('contactmemberid') && (cells.includes('contactfirstname') || cells.includes('contactlastname'))) {
+          lionsHeaderIdx = i; break;
         }
-
-        const rawBirthday = cm.birthday === undefined ? '' : (r[cm.birthday] ?? '');
-        const birthday = toDateString(rawBirthday);
-
-        const lionsMemberId = get('lions_member_id');
-        let error: string | undefined;
-        if (!name || name.length < 2) error = 'Name is required (min 2 chars)';
-        else if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) error = 'Valid email required';
-        else if (!lionsMemberId) error = 'Membership number is required';
-
-        parsed.push({
-          row: i + 1,
-          name,
-          email,
-          phone: get('phone') || null,
-          whatsapp: get('whatsapp') || null,
-          role,
-          status,
-          club_id,
-          club_label,
-          birthday,
-          lions_member_id: get('lions_member_id') || null,
-          error,
-        });
       }
 
+      const isLions = lionsHeaderIdx >= 0;
+      const parsed = isLions ? parseLions(matrix, lionsHeaderIdx) : parseSimple(matrix);
+      if (typeof parsed === 'string') { setParseError(parsed); return; }
       if (!parsed.length) { setParseError('No member rows found in the file.'); return; }
+      setSource(isLions ? 'lions' : 'template');
       setRows(parsed);
     } catch (err) {
       setParseError(`Could not read the file: ${err instanceof Error ? err.message : String(err)}`);
@@ -257,7 +343,7 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
   }
 
   function resetAll() {
-    setRows(null); setResult(null); setParseError(null); setFileName(null);
+    setRows(null); setResult(null); setParseError(null); setFileName(null); setSource(null);
     if (fileInput.current) fileInput.current.value = '';
   }
 
@@ -279,12 +365,15 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
         <div>
           <h3 className="font-semibold text-navy-800 flex items-center gap-2">
             <Sparkles size={14} className="text-emerald-500" />
-            Bulk member upload — Excel / CSV
+            Bulk member upload — Lions International export or Excel / CSV
           </h3>
           <p className="text-xs text-gray-600 mt-0.5">
-            Upload an <strong>.xlsx</strong>, <strong>.xls</strong> or <strong>.csv</strong> file. Columns:
-            {' '}Name, Email, Phone, WhatsApp, Role, Status, Club, Birthday, Membership Number.
-            {' '}<strong>Name, Email &amp; Membership Number are required.</strong>
+            Upload the <strong>Lions International &ldquo;Member Contact Information&rdquo;</strong> Excel export as-is
+            {' '}(from MyLion / the Lion Portal) — the banner, grouping and footer rows are handled automatically.
+            {' '}It maps <em>Contact Member ID → Membership Number</em>, <em>First + Last → Name</em>,
+            {' '}<em>Preferred/Personal Email → Email</em>, <em>Mobile → Phone &amp; WhatsApp</em>, and <em>Account Name → Club</em>.
+            {' '}A plain <strong>.xlsx / .csv</strong> with columns Name, Email, Phone, WhatsApp, Role, Status, Club,
+            {' '}Birthday, Membership Number also works. <strong>Name, Email &amp; Membership Number are required.</strong>
           </p>
         </div>
         <button
@@ -330,6 +419,11 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       {rows && (
         <div className="mt-4">
           <div className="text-sm text-gray-700 mb-2">
+            {source === 'lions' && (
+              <span className="inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-medium">
+                Lions International format detected
+              </span>
+            )}
             Parsed <strong>{rows.length}</strong> row(s): {validRows.length} ready
             {invalidRows.length > 0 && <span className="text-red-700"> · {invalidRows.length} with errors (skipped)</span>}
           </div>
@@ -353,7 +447,7 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
                     <td className="px-2 py-1 text-gray-400">{r.row}</td>
                     {r.error ? (
                       <td className="px-2 py-1 text-red-700" colSpan={7}>
-                        {r.name || r.email || '(blank)'} — {r.error}
+                        {r.name || r.email || r.lions_member_id || '(blank)'} — {r.error}
                       </td>
                     ) : (
                       <>
