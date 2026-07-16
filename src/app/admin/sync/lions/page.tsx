@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Globe, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, Globe, CheckCircle2, XCircle, MapPin } from 'lucide-react';
 import { isLionsApiConfigured, getLionsApiConfig } from '@/lib/oidc/lions';
 import { isLionsPortalConfigured } from '@/lib/oidc/lions-portal';
 import { isOidcConfigured } from '@/lib/oidc';
@@ -8,6 +8,7 @@ import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
 import { loadLionsPortalSettings } from '@/lib/oidc/lions-portal-runtime';
 import { LionsSyncPanel } from './LionsSyncPanel';
+import { DistrictPortalUpload } from './DistrictPortalUpload';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,6 +123,22 @@ export default async function LionsSyncPage() {
         <CardHeader><CardTitle>Run Sync</CardTitle></CardHeader>
         <CardContent>
           <LionsSyncPanel apiConfigured={apiConfigured} portalConfigured={portalConfigured} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin size={16} className="text-amber-500" /> Upload district data (portal export)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 mb-3">
+            No API? Download your district report from the{' '}
+            <a href="https://lionsinternational.my.site.com/s/" target="_blank" rel="noopener noreferrer" className="text-amber-700 hover:underline">Lions Member Portal</a>{' '}
+            as Excel / CSV and upload it here to sync district data.
+          </p>
+          <DistrictPortalUpload />
         </CardContent>
       </Card>
 

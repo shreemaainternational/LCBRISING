@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 const ALLOWED: SyncEntity[] = [
   'members',
   'clubs',
+  'districts',
   'officers',
   'attendance',
   'donations',
