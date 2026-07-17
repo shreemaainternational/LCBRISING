@@ -18,7 +18,7 @@ export default async function ClubDetailPage({ params }: { params: Promise<{ id:
 
   const [{ count: memberCount }, { data: officers }, { data: activities }, { data: dues }] = await Promise.all([
     db.from('members').select('*', { count: 'exact', head: true }).eq('club_id', id).is('deleted_at', null),
-    db.from('club_officers').select('id, role, term_start, term_end, status, members(name, email)').eq('club_id', id).limit(20),
+    db.from('officers').select('id, role, term_start, term_end, status, members(name, email)').eq('scope_kind', 'club').eq('scope_id', id).order('role').limit(50),
     db.from('activities').select('id, title, date, beneficiaries, amount_raised').eq('club_id', id).order('date', { ascending: false }).limit(8),
     db.from('dues_invoices').select('amount, amount_paid, status').eq('club_id', id).neq('status', 'paid'),
   ]);

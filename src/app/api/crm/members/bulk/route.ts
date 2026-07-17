@@ -157,6 +157,8 @@ export async function POST(req: NextRequest) {
         const id = idByName.get(cname.toLowerCase());
         if (id) raw.club_id = id;
       }
+      // Stamp the district too so the district level counts these members.
+      if (hierarchy?.district_id && !str(raw.district_id)) raw.district_id = hierarchy.district_id;
     }
   }
 
@@ -202,18 +204,19 @@ export async function POST(req: NextRequest) {
     const lionsIds = valid.map((v) => v.data.lions_member_id?.trim()).filter(Boolean) as string[];
 
     const [{ data: byEmail }, byLions] = await Promise.all([
-      db.from('members').select('id, email, club_id').in('email', emails),
+      db.from('members').select('id, email, club_id, district_id').in('email', emails),
       lionsIds.length
-        ? db.from('members').select('id, lions_member_id, club_id').in('lions_member_id', lionsIds)
-        : Promise.resolve({ data: [] as { id: string; lions_member_id: string | null; club_id: string | null }[] }),
+        ? db.from('members').select('id, lions_member_id, club_id, district_id').in('lions_member_id', lionsIds)
+        : Promise.resolve({ data: [] as { id: string; lions_member_id: string | null; club_id: string | null; district_id: string | null }[] }),
     ]);
 
-    const emailMap = new Map<string, { id: string; club_id: string | null }>();
-    for (const m of byEmail ?? []) emailMap.set(String(m.email).toLowerCase().trim(), { id: m.id as string, club_id: (m.club_id as string | null) ?? null });
-    const lionsMap = new Map<string, { id: string; club_id: string | null }>();
+    type Ex = { id: string; club_id: string | null; district_id: string | null };
+    const emailMap = new Map<string, Ex>();
+    for (const m of byEmail ?? []) emailMap.set(String(m.email).toLowerCase().trim(), { id: m.id as string, club_id: (m.club_id as string | null) ?? null, district_id: (m.district_id as string | null) ?? null });
+    const lionsMap = new Map<string, Ex>();
     for (const m of byLions.data ?? []) {
       const k = String(m.lions_member_id).trim();
-      if (k) lionsMap.set(k, { id: m.id as string, club_id: (m.club_id as string | null) ?? null });
+      if (k) lionsMap.set(k, { id: m.id as string, club_id: (m.club_id as string | null) ?? null, district_id: (m.district_id as string | null) ?? null });
     }
 
     for (let i = valid.length - 1; i >= 0; i--) {
@@ -222,11 +225,14 @@ export async function POST(req: NextRequest) {
       const ex = emailMap.get(v.data.email) ?? (lionsId ? lionsMap.get(lionsId) : undefined);
       if (!ex) continue;
 
-      // Backfill a missing club link on the existing member.
-      if (!dry_run && v.data.club_id && !ex.club_id) {
-        const { error } = await db.from('members').update({ club_id: v.data.club_id }).eq('id', ex.id);
+      // Backfill a missing club/district link on the existing member.
+      const patch: Record<string, unknown> = {};
+      if (v.data.club_id && !ex.club_id) patch.club_id = v.data.club_id;
+      if (hierarchy?.district_id && !ex.district_id) patch.district_id = hierarchy.district_id;
+      if (!dry_run && Object.keys(patch).length) {
+        const { error } = await db.from('members').update(patch).eq('id', ex.id);
         if (!error) {
-          results.push({ row: v.row, status: 'updated', name: v.data.name, email: v.data.email, reason: 'club linked' });
+          results.push({ row: v.row, status: 'updated', name: v.data.name, email: v.data.email, reason: patch.club_id ? 'club linked' : 'district linked' });
           updated++;
           valid.splice(i, 1);
           continue;

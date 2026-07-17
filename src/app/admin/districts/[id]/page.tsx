@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, Building2, Users, MapPin, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +35,9 @@ export default async function DistrictDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supa = await createClient();
+  // Admin-gated page: service-role read so the district's member count bypasses
+  // the self-referential members RLS policy.
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
   const [districtRes, clubsRes, memberCount, officerCount] = await Promise.all([
     supa.from('districts').select('*').eq('id', id).maybeSingle(),
