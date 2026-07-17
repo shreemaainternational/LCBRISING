@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState, useTransition } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Trash2, X, Loader2, Save, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +49,76 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
+  // Row selection for bulk actions. Held as a Set of member ids.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const allIds = useMemo(() => members.map((m) => m.id), [members]);
+  const allSelected = selected.size > 0 && selected.size === allIds.length;
+  const someSelected = selected.size > 0 && selected.size < allIds.length;
+
+  // Reflect the "some but not all" state on the header checkbox.
+  const headerRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (headerRef.current) headerRef.current.indeterminate = someSelected;
+  }, [someSelected]);
+
+  // Drop ids that no longer exist after a refresh so the count stays honest.
+  useEffect(() => {
+    setSelected((prev) => {
+      const live = new Set(allIds);
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (live.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [allIds]);
+
+  function toggleOne(id: string) {
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  }
+
+  function toggleAll() {
+    setSelected((s) => (s.size === allIds.length ? new Set() : new Set(allIds)));
+  }
+
+  function toggleGroup(ids: string[]) {
+    setSelected((s) => {
+      const n = new Set(s);
+      const allIn = ids.every((id) => n.has(id));
+      for (const id of ids) { if (allIn) n.delete(id); else n.add(id); }
+      return n;
+    });
+  }
+
+  function removeSelected() {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    if (!window.confirm(`Remove ${ids.length} selected member${ids.length === 1 ? '' : 's'} from the roster? This can be restored by an admin.`)) return;
+    setError(null);
+    start(async () => {
+      try {
+        const headers = await authHeaders();
+        const results = await Promise.allSettled(
+          ids.map((id) => fetch(`/api/crm/members/${id}`, { method: 'DELETE', headers })),
+        );
+        const failed = results.filter(
+          (r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok),
+        ).length;
+        if (failed) setError(`${failed} of ${ids.length} deletion${ids.length === 1 ? '' : 's'} failed. The rest were removed.`);
+        setSelected(new Set());
+        router.refresh();
+      } catch {
+        setError('Network error while deleting the selected members.');
+      }
+    });
+  }
+
   // Group the roster club-wise: one section per club (alphabetical), with
   // members who have no club last under "Unassigned".
   const clubNameById = new Map(clubs.map((c) => [c.id, c.name]));
@@ -92,10 +162,46 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
           <AlertCircle size={14} /> {error}
         </p>
       )}
+
+      {selected.size > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-navy-100 bg-navy-50/70 px-3 py-2">
+          <span className="text-sm font-medium text-navy-800">
+            {selected.size} selected
+          </span>
+          <button
+            type="button"
+            onClick={removeSelected}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-red-200 bg-white text-red-700 text-xs font-semibold hover:bg-red-50 disabled:opacity-60"
+          >
+            {pending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+            Delete selected
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            disabled={pending}
+            className="text-xs text-gray-600 hover:text-gray-900 hover:underline disabled:opacity-60"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
+              <th className="p-3 w-10">
+                <input
+                  ref={headerRef}
+                  type="checkbox"
+                  aria-label="Select all members"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  className="h-4 w-4 rounded border-gray-300 accent-navy-700 cursor-pointer align-middle"
+                />
+              </th>
               <th className="text-left p-3">Name</th>
               <th className="text-left p-3">Member #</th>
               <th className="text-left p-3">Email</th>
@@ -110,12 +216,36 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
             {groups.map(([clubName, rows]) => (
               <Fragment key={clubName}>
                 <tr className="bg-navy-50/70 border-t">
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select all members in ${clubName}`}
+                      checked={rows.every((r) => selected.has(r.id))}
+                      ref={(el) => {
+                        if (el) {
+                          const sel = rows.filter((r) => selected.has(r.id)).length;
+                          el.indeterminate = sel > 0 && sel < rows.length;
+                        }
+                      }}
+                      onChange={() => toggleGroup(rows.map((r) => r.id))}
+                      className="h-4 w-4 rounded border-gray-300 accent-navy-700 cursor-pointer align-middle"
+                    />
+                  </td>
                   <td colSpan={8} className="px-3 py-2 text-xs font-semibold text-navy-800 uppercase tracking-wide">
                     {clubName} · {rows.length} member{rows.length === 1 ? '' : 's'}
                   </td>
                 </tr>
                 {rows.map((m) => (
-                  <tr key={m.id} className="border-t">
+                  <tr key={m.id} className={`border-t ${selected.has(m.id) ? 'bg-navy-50/40' : ''}`}>
+                    <td className="p-3">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${m.name ?? m.email ?? 'member'}`}
+                        checked={selected.has(m.id)}
+                        onChange={() => toggleOne(m.id)}
+                        className="h-4 w-4 rounded border-gray-300 accent-navy-700 cursor-pointer align-middle"
+                      />
+                    </td>
                     <td className="p-3 font-medium">{m.name ?? '—'}</td>
                     <td className="p-3 text-gray-600">{m.lions_member_id ?? '—'}</td>
                     <td className="p-3">{m.email ?? '—'}</td>
