@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { zonesPreset } from '@/components/admin/quick-add-presets';
+import { RowDeleteButton } from '@/components/admin/RowDeleteButton';
 import { MapPin } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -72,6 +73,7 @@ export default async function ZonesPage() {
                   <th className="text-left p-3">District</th>
                   <th className="text-left p-3">Chairperson</th>
                   <th className="text-right p-3">Clubs</th>
+                  <th className="text-right p-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -84,6 +86,9 @@ export default async function ZonesPage() {
                     <td className="p-3 text-gray-600">{districts[z.district_id]?.code ?? '—'}</td>
                     <td className="p-3">{z.chairperson_name ?? '—'}</td>
                     <td className="p-3 text-right">{clubsByZone.get(z.id) ?? 0}</td>
+                    <td className="p-3 text-right">
+                      <RowDeleteButton endpoint={`/api/zones/${z.id}`} label="zone" />
+                    </td>
                   </tr>
                 ))}
               </tbody>

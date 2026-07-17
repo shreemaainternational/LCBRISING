@@ -56,3 +56,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   return NextResponse.json({ district: data });
 }
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const actor = await requirePermission('district.update', { district_id: id });
+  if (isGuardFailure(actor)) return actor;
+
+  const supa = await createClient();
+  const { error } = await supa
+    .from('districts')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await writeAudit({
+    action: 'district.delete',
+    entity: 'district',
+    entity_id: id,
+    actor_user_id: actor.user_id,
+    actor_member_id: actor.member_id ?? null,
+    payload: { soft_delete: true },
+  });
+
+  return NextResponse.json({ ok: true });
+}
