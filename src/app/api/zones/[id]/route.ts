@@ -18,6 +18,21 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
   const supa = zoneDb() ?? await createClient();
+
+  // Lions hierarchy: a zone can't be removed while clubs are still assigned
+  // to it — reassign or remove those clubs first (no orphaned clubs).
+  const { count } = await supa
+    .from('clubs')
+    .select('id', { count: 'exact', head: true })
+    .eq('zone_id', id)
+    .is('deleted_at', null);
+  if ((count ?? 0) > 0) {
+    return NextResponse.json(
+      { error: `Can't remove this zone — ${count} club(s) are still assigned. Reassign or remove them first.` },
+      { status: 409 },
+    );
+  }
+
   const { error } = await supa
     .from('zones')
     .update({ deleted_at: new Date().toISOString() })

@@ -96,6 +96,21 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (isGuardFailure(actor)) return actor;
 
   const supa = clubDb() ?? await createClient();
+
+  // Lions hierarchy: don't orphan members — block while any are still in the
+  // club. Move or drop them first.
+  const { count } = await supa
+    .from('members')
+    .select('id', { count: 'exact', head: true })
+    .eq('club_id', id)
+    .is('deleted_at', null);
+  if ((count ?? 0) > 0) {
+    return NextResponse.json(
+      { error: `Can't remove this club — ${count} member(s) are still assigned. Move or remove them first.` },
+      { status: 409 },
+    );
+  }
+
   const { error } = await supa
     .from('clubs')
     .update({ deleted_at: new Date().toISOString() })

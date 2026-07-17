@@ -38,7 +38,7 @@ export function ClubsTable({ clubs, districts }: { clubs: ClubRow[]; districts: 
   const [pending, start] = useTransition();
 
   function remove(c: ClubRow) {
-    if (!window.confirm(`Remove "${c.name}"? Members stay in the roster; this can be restored by an admin.`)) return;
+    if (!window.confirm(`Remove "${c.name}"? A club with members can't be removed until they're moved; this can be restored by an admin.`)) return;
     setError(null);
     setDeletingId(c.id);
     start(async () => {

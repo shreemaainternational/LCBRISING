@@ -63,6 +63,26 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (isGuardFailure(actor)) return actor;
 
   const supa = await createClient();
+
+  // Lions hierarchy (District → Region → Zone → Club → Member) never orphans
+  // children: block removal while the district still holds any.
+  const [clubs, zones, regions] = await Promise.all([
+    supa.from('clubs').select('id', { count: 'exact', head: true }).eq('district_id', id).is('deleted_at', null),
+    supa.from('zones').select('id', { count: 'exact', head: true }).eq('district_id', id).is('deleted_at', null),
+    supa.from('regions').select('id', { count: 'exact', head: true }).eq('district_id', id).is('deleted_at', null),
+  ]);
+  const parts = [
+    (clubs.count ?? 0) && `${clubs.count} club(s)`,
+    (zones.count ?? 0) && `${zones.count} zone(s)`,
+    (regions.count ?? 0) && `${regions.count} region(s)`,
+  ].filter(Boolean);
+  if (parts.length) {
+    return NextResponse.json(
+      { error: `Can't remove this district — it still has ${parts.join(', ')}. Move or remove them first.` },
+      { status: 409 },
+    );
+  }
+
   const { error } = await supa
     .from('districts')
     .update({ deleted_at: new Date().toISOString() })
