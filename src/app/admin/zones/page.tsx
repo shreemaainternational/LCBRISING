@@ -1,10 +1,9 @@
-import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { zonesPreset } from '@/components/admin/quick-add-presets';
-import { RowDeleteButton } from '@/components/admin/RowDeleteButton';
+import { ZonesTable, type ZoneRow } from '@/components/admin/ZonesTable';
 import { MapPin } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +17,7 @@ type Zone = {
   district_id: string;
 };
 
-type DistrictRef = { id: string; code: string };
+type DistrictRef = { id: string; code: string; name: string };
 
 export default async function ZonesPage() {
   const supa = await createClient();
@@ -31,15 +30,26 @@ export default async function ZonesPage() {
   ]);
 
   const zones = (zonesRes.data ?? []) as Zone[];
+  const districtOptions = (districtsRes.data ?? []) as DistrictRef[];
   const districts: Record<string, DistrictRef> = Object.fromEntries(
-    ((districtsRes.data ?? []) as DistrictRef[]).map((d) => [d.id, d]),
+    districtOptions.map((d) => [d.id, d]),
   );
   const clubsByZone = new Map<string, number>();
   for (const c of (clubCountsRes.data ?? []) as { zone_id: string | null }[]) {
     if (c.zone_id) clubsByZone.set(c.zone_id, (clubsByZone.get(c.zone_id) ?? 0) + 1);
   }
 
-  const preset = zonesPreset({ districts: districtsRes.data ?? [] });
+  const zoneRows: ZoneRow[] = zones.map((z) => ({
+    id: z.id,
+    code: z.code,
+    name: z.name,
+    chairperson_name: z.chairperson_name,
+    district_id: z.district_id,
+    district_code: districts[z.district_id]?.code ?? null,
+    club_count: clubsByZone.get(z.id) ?? 0,
+  }));
+
+  const preset = zonesPreset({ districts: districtOptions });
 
   return (
     <div>
@@ -63,36 +73,9 @@ export default async function ZonesPage() {
         />
       ) : (
         <Card>
-          <CardHeader><CardTitle>{zones.length} zones</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{zoneRows.length} zones</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-3">Code</th>
-                  <th className="text-left p-3">Name</th>
-                  <th className="text-left p-3">District</th>
-                  <th className="text-left p-3">Chairperson</th>
-                  <th className="text-right p-3">Clubs</th>
-                  <th className="text-right p-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {zones.map((z) => (
-                  <tr key={z.id} className="border-t">
-                    <td className="p-3 font-mono">
-                      <Link href={`/admin/zones/${z.id}`} className="text-navy-700 hover:underline">{z.code}</Link>
-                    </td>
-                    <td className="p-3 font-medium">{z.name}</td>
-                    <td className="p-3 text-gray-600">{districts[z.district_id]?.code ?? '—'}</td>
-                    <td className="p-3">{z.chairperson_name ?? '—'}</td>
-                    <td className="p-3 text-right">{clubsByZone.get(z.id) ?? 0}</td>
-                    <td className="p-3 text-right">
-                      <RowDeleteButton endpoint={`/api/zones/${z.id}`} label="zone" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ZonesTable zones={zoneRows} districts={districtOptions} />
           </CardContent>
         </Card>
       )}
