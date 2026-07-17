@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { districtsPreset } from '@/components/admin/quick-add-presets';
@@ -9,7 +9,10 @@ import { Globe } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function DistrictsPage() {
-  const supa = await createClient();
+  // Read via the service-role client (this page is gated by the admin layout)
+  // so the district list survives databases where the `members` RLS policy
+  // recurses; fall back to the SSR session when no service-role key is set.
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
   const { data: districts } = await supa
     .from('districts')
     .select('id, code, name, governor_name, cabinet_secretary_name, cabinet_treasurer_name, lions_year, multiple_district_id')

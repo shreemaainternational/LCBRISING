@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { districtSchema } from '@/lib/validation/schemas';
 import { writeAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
+// Trusted admin reads/writes (gated by requirePermission at each call site).
+// Prefer the service-role client so queries bypass RLS on databases where the
+// federation RLS policies aren't fully applied — the `districts` policies
+// sub-select `members`, which recurses ("infinite recursion detected in policy
+// for relation members") until migration 0059 is applied. Fall back to the
+// SSR session when no service-role key is configured.
+function districtDb() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : null;
+}
+
 export async function GET() {
   const actor = await requirePermission('district.read');
   if (isGuardFailure(actor)) return actor;
-  const supa = await createClient();
+  const supa = districtDb() ?? await createClient();
   const { data, error } = await supa
     .from('districts')
     .select('id, code, name, governor_name, lions_year, multiple_district_id, created_at')
@@ -29,7 +39,7 @@ export async function POST(req: NextRequest) {
   const actor = await requirePermission('district.update');
   if (isGuardFailure(actor)) return actor;
 
-  const supa = await createClient();
+  const supa = districtDb() ?? await createClient();
 
   // A district with this code may already exist but be hidden from the list —
   // most often soft-deleted (deleted_at set). The unique constraint on `code`

@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { districtSchema } from '@/lib/validation/schemas';
 import { writeAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
+// Trusted admin reads/writes (gated by requirePermission at each call site).
+// Prefer the service-role client so queries bypass RLS on databases where the
+// `districts`/`members` policies recurse ("infinite recursion detected in
+// policy for relation members"); fall back to the SSR session otherwise.
+function districtDb() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : null;
+}
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await requirePermission('district.read');
   if (isGuardFailure(actor)) return actor;
 
-  const supa = await createClient();
+  const supa = districtDb() ?? await createClient();
   const [districtRes, clubsRes, membersCountRes] = await Promise.all([
     supa.from('districts').select('*').eq('id', id).maybeSingle(),
     supa.from('clubs').select('id, name, club_number, zone_id, region_id').eq('district_id', id).is('deleted_at', null),
@@ -36,7 +44,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const actor = await requirePermission('district.update', { district_id: id });
   if (isGuardFailure(actor)) return actor;
 
-  const supa = await createClient();
+  const supa = districtDb() ?? await createClient();
   const { data, error } = await supa
     .from('districts')
     .update(parsed.data)
@@ -62,7 +70,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const actor = await requirePermission('district.update', { district_id: id });
   if (isGuardFailure(actor)) return actor;
 
-  const supa = await createClient();
+  const supa = districtDb() ?? await createClient();
 
   // Lions hierarchy (District → Region → Zone → Club → Member) never orphans
   // children: block removal while the district still holds any.

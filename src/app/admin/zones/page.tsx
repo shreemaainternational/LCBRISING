@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { zonesPreset } from '@/components/admin/quick-add-presets';
@@ -20,7 +20,10 @@ type Zone = {
 type DistrictRef = { id: string; code: string; name: string };
 
 export default async function ZonesPage() {
-  const supa = await createClient();
+  // Read via the service-role client (gated by the admin layout) so the zones
+  // list survives databases where the `members` RLS policy recurses; fall back
+  // to the SSR session when no service-role key is set.
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
   const [zonesRes, districtsRes, clubCountsRes] = await Promise.all([
     supa.from('zones').select('id, code, name, chairperson_name, region_id, district_id')
