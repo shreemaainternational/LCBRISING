@@ -24,10 +24,11 @@ export default async function ZonesPage() {
   // where the members RLS policy is still self-referential.
   const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
-  const [zonesRes, districtsRes, clubCountsRes] = await Promise.all([
+  const [zonesRes, districtsRes, regionsRes, clubCountsRes] = await Promise.all([
     supa.from('zones').select('id, code, name, chairperson_name, region_id, district_id')
       .is('deleted_at', null).order('code'),
     supa.from('districts').select('id, code, name').is('deleted_at', null).order('code'),
+    supa.from('regions').select('id, code, name').is('deleted_at', null).order('code'),
     supa.from('clubs').select('zone_id').is('deleted_at', null),
   ]);
 
@@ -35,12 +36,15 @@ export default async function ZonesPage() {
   const districts: Record<string, DistrictRef> = Object.fromEntries(
     ((districtsRes.data ?? []) as DistrictRef[]).map((d) => [d.id, d]),
   );
+  const regionsById: Record<string, { code: string; name: string }> = Object.fromEntries(
+    ((regionsRes.data ?? []) as { id: string; code: string; name: string }[]).map((r) => [r.id, r]),
+  );
   const clubsByZone = new Map<string, number>();
   for (const c of (clubCountsRes.data ?? []) as { zone_id: string | null }[]) {
     if (c.zone_id) clubsByZone.set(c.zone_id, (clubsByZone.get(c.zone_id) ?? 0) + 1);
   }
 
-  const preset = zonesPreset({ districts: districtsRes.data ?? [] });
+  const preset = zonesPreset({ districts: districtsRes.data ?? [], regions: regionsRes.data ?? [] });
 
   return (
     <div>
@@ -71,6 +75,7 @@ export default async function ZonesPage() {
                 <tr>
                   <th className="text-left p-3">Code</th>
                   <th className="text-left p-3">Name</th>
+                  <th className="text-left p-3">Region</th>
                   <th className="text-left p-3">District</th>
                   <th className="text-left p-3">Chairperson</th>
                   <th className="text-right p-3">Clubs</th>
@@ -83,6 +88,7 @@ export default async function ZonesPage() {
                       <Link href={`/admin/zones/${z.id}`} className="text-navy-700 hover:underline">{z.code}</Link>
                     </td>
                     <td className="p-3 font-medium">{z.name}</td>
+                    <td className="p-3 text-gray-600">{z.region_id ? regionsById[z.region_id]?.name ?? '—' : '—'}</td>
                     <td className="p-3 text-gray-600">{districts[z.district_id]?.code ?? '—'}</td>
                     <td className="p-3">{z.chairperson_name ?? '—'}</td>
                     <td className="p-3 text-right">{clubsByZone.get(z.id) ?? 0}</td>

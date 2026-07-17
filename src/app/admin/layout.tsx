@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell, Plug, Building2, ShieldCheck,
-  Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
+  Globe, Map, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
   KeyRound, Command, Stethoscope, BookOpen,
 } from 'lucide-react';
 
@@ -18,6 +18,7 @@ const navItems = [
   { href: '/admin/reports',     label: 'Reports',       icon: BarChart3 },
   { href: '/admin/beneficiaries', label: 'Beneficiaries', icon: HeartHandshake },
   { href: '/admin/districts',   label: 'Districts',     icon: Globe },
+  { href: '/admin/regions',     label: 'Regions',       icon: Map },
   { href: '/admin/zones',       label: 'Zones',         icon: MapPin },
   { href: '/admin/clubs',       label: 'Clubs',         icon: Building2 },
   { href: '/admin/members',     label: 'Members',       icon: Users },

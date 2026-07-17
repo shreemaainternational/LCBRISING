@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Building2, Users, MapPin, Calendar } from 'lucide-react';
+import { ArrowLeft, Building2, Users, Map, MapPin, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
@@ -39,7 +39,7 @@ export default async function DistrictDetailPage({
   // the self-referential members RLS policy.
   const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
-  const [districtRes, clubsRes, memberCount, officerCount] = await Promise.all([
+  const [districtRes, clubsRes, memberCount, officerCount, regionCount, zoneCount] = await Promise.all([
     supa.from('districts').select('*').eq('id', id).maybeSingle(),
     supa
       .from('clubs')
@@ -58,6 +58,8 @@ export default async function DistrictDetailPage({
       .eq('scope_kind', 'district')
       .eq('scope_id', id)
       .eq('status', 'active'),
+    supa.from('regions').select('id', { count: 'exact', head: true }).eq('district_id', id).is('deleted_at', null),
+    supa.from('zones').select('id', { count: 'exact', head: true }).eq('district_id', id).is('deleted_at', null),
   ]);
 
   if (!districtRes.data) notFound();
@@ -85,7 +87,9 @@ export default async function DistrictDetailPage({
             </p>
           )}
         </div>
-        <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="grid grid-cols-3 md:grid-cols-5 gap-3 text-center">
+          <Link href="/admin/regions"><Stat label="Regions" value={regionCount.count ?? 0} icon={<Map size={14} />} /></Link>
+          <Link href="/admin/zones"><Stat label="Zones" value={zoneCount.count ?? 0} icon={<MapPin size={14} />} /></Link>
           <Stat label="Clubs" value={clubs.length} icon={<Building2 size={14} />} />
           <Stat label="Members" value={memberCount.count ?? 0} icon={<Users size={14} />} />
           <Stat label="Officers" value={officerCount.count ?? 0} icon={<Calendar size={14} />} />

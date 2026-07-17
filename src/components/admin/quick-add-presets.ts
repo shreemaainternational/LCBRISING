@@ -9,6 +9,26 @@ interface PresetOptions {
   clubs?: { id: string; name: string }[];
   members?: { id: string; name: string; email: string }[];
   districts?: { id: string; code: string; name: string }[];
+  regions?: { id: string; code: string; name: string }[];
+}
+
+export function regionsPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 'title'> {
+  const districtOptions = (o.districts ?? []).map((d) => ({ value: d.id, label: `${d.code} — ${d.name}` }));
+  const placeholder = districtOptions.length === 0
+    ? 'District 3232 F1 (default — will be created)'
+    : '— pick a district —';
+  return {
+    endpoint: '/api/regions',
+    accent: 'purple',
+    description: 'Add a region under a district. A region groups several zones. Leave the District menu on the default to auto-place under "District 3232 F1".',
+    responseKey: 'region',
+    fields: [
+      { name: 'name', label: 'Region Name', type: 'text', required: true, placeholder: 'e.g. Region 5' },
+      { name: 'district_id', label: 'District', type: 'select',
+        placeholder, defaultValue: districtOptions[0]?.value ?? '', options: districtOptions },
+      { name: 'chairperson_name', label: 'Region Chairperson', type: 'text' },
+    ],
+  };
 }
 
 export function membersPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 'title'> {
@@ -84,6 +104,9 @@ export function zonesPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 'tit
         placeholder,
         defaultValue: districtOptions[0]?.value ?? '',
         options: districtOptions },
+      { name: 'region_id', label: 'Region', type: 'select',
+        placeholder: '— optional region —',
+        options: (o.regions ?? []).map((r) => ({ value: r.id, label: `${r.code} — ${r.name}` })) },
       { name: 'zone_chairperson_name', label: 'Zone Chairperson', type: 'text' },
     ],
   };
