@@ -104,22 +104,25 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 px-3 py-3 border-b bg-gray-50/50">
-        <label className="text-xs font-semibold text-gray-600">Filter by club</label>
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b bg-emerald-50/40">
+        <label htmlFor="club-filter" className="text-sm font-semibold text-navy-800">Club</label>
         <select
+          id="club-filter"
           value={clubFilter}
           onChange={(e) => setClubFilter(e.target.value)}
-          className="px-3 py-1.5 border rounded-md text-sm bg-white"
+          className="px-3 py-2 border-2 border-emerald-300 rounded-md text-sm bg-white font-medium min-w-[16rem]"
         >
-          <option value="all">All clubs ({members.length})</option>
+          <option value="all">All clubs ({members.length} members)</option>
           {clubOptions.map((c) => (
             <option key={c.name} value={c.name}>{c.name} ({c.count})</option>
           ))}
           {unassignedCount > 0 && <option value="Unassigned">Unassigned ({unassignedCount})</option>}
         </select>
-        {clubFilter !== 'all' && (
-          <span className="text-xs text-gray-500">Showing {shownCount} member{shownCount === 1 ? '' : 's'}</span>
-        )}
+        <span className="text-xs text-gray-600">
+          {clubFilter === 'all'
+            ? 'Select a club to view only its members.'
+            : `Showing ${shownCount} member${shownCount === 1 ? '' : 's'} in ${clubFilter}.`}
+        </span>
       </div>
 
       <div className="overflow-x-auto">
