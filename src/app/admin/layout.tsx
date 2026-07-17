@@ -1,45 +1,8 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentMember } from '@/lib/auth';
 import { env } from '@/lib/env';
 import { LogoutButton } from '@/components/admin/LogoutButton';
-import {
-  LayoutDashboard, Users, Banknote, HeartHandshake,
-  Activity as ActivityIcon, Calendar, Mail, Settings,
-  Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell, Plug, Building2, ShieldCheck,
-  Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
-  KeyRound, Command, Stethoscope, BookOpen,
-} from 'lucide-react';
-
-const navItems = [
-  { href: '/admin',             label: 'Dashboard',     icon: LayoutDashboard },
-  { href: '/admin/operations',  label: 'Command Center', icon: Command },
-  { href: '/admin/diagnostics', label: 'Diagnostics',    icon: Stethoscope },
-  { href: '/admin/reports',     label: 'Reports',       icon: BarChart3 },
-  { href: '/admin/beneficiaries', label: 'Beneficiaries', icon: HeartHandshake },
-  { href: '/admin/districts',   label: 'Districts',     icon: Globe },
-  { href: '/admin/zones',       label: 'Zones',         icon: MapPin },
-  { href: '/admin/clubs',       label: 'Clubs',         icon: Building2 },
-  { href: '/admin/members',     label: 'Members',       icon: Users },
-  { href: '/admin/dues',        label: 'Dues',          icon: Banknote },
-  { href: '/admin/donations',   label: 'Donations',     icon: HeartHandshake },
-  { href: '/admin/payments',    label: 'Payments / QR', icon: QrCode },
-  { href: '/admin/activities',  label: 'Activities',    icon: ActivityIcon },
-  { href: '/admin/events',      label: 'Events',        icon: Calendar },
-  { href: '/admin/blog',        label: 'Newsroom',      icon: BookOpen },
-  { href: '/admin/media',       label: 'Media library', icon: ImageIcon },
-  { href: '/admin/creative',    label: 'Creative',      icon: Sparkles },
-  { href: '/admin/social',      label: 'Social',        icon: Megaphone },
-  { href: '/admin/communications', label: 'Comms',      icon: Mail },
-  { href: '/admin/notifications', label: 'Push',         icon: Bell },
-  { href: '/admin/automation',  label: 'Automation',    icon: Settings },
-  { href: '/admin/sync',        label: 'Sync',          icon: RefreshCw },
-  { href: '/admin/governance',  label: 'Governance',   icon: ShieldCheck },
-  { href: '/admin/integrations', label: 'Integrations', icon: Plug },
-  { href: '/admin/audit',       label: 'Audit log',     icon: ScrollText },
-  { href: '/admin/profile',     label: 'My Profile',    icon: KeyRound },
-  { href: '/m',                 label: 'Mobile App',    icon: Smartphone },
-];
+import { AdminSidebarNav } from '@/components/admin/AdminSidebarNav';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const member = await getCurrentMember();
@@ -60,20 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <div className="text-xs text-gray-400 font-normal">Admin Portal</div>
           </div>
         </div>
-        <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-white/10"
-              >
-                <Icon size={16} /> {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <AdminSidebarNav />
         <div className="p-4 border-t border-white/10 text-sm">
           <div className="font-medium">{member.name}</div>
           <div className="text-xs text-gray-400 mb-2 capitalize">{member.role}</div>
