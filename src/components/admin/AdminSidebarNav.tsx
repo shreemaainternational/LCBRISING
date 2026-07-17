@@ -8,7 +8,7 @@ import {
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell, Plug, Building2, ShieldCheck,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
-  KeyRound, Command, Stethoscope, BookOpen, ChevronDown,
+  KeyRound, Command, Stethoscope, BookOpen, ChevronDown, Network,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -32,6 +32,7 @@ const NAV: Item[] = [
     group: 'District',
     icon: Globe,
     children: [
+      { href: '/admin/hierarchy', label: 'Hierarchy', icon: Network },
       { href: '/admin/districts', label: 'Districts', icon: Globe },
       { href: '/admin/zones',     label: 'Zones',     icon: MapPin },
       { href: '/admin/clubs',     label: 'Clubs',     icon: Building2 },

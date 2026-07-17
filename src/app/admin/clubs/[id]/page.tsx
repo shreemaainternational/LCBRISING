@@ -4,6 +4,7 @@ import { ArrowLeft, Users, Activity, Banknote, ShieldCheck, MapPin, Calendar, Ex
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createAdminClient } from '@/lib/supabase/server';
 import { formatINRShort } from '@/lib/utils';
+import { ClubMembersPanel, type ClubMember } from '@/components/admin/ClubMembersPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,12 +17,19 @@ export default async function ClubDetailPage({ params }: { params: Promise<{ id:
     .eq('id', id).is('deleted_at', null).maybeSingle();
   if (!club) notFound();
 
-  const [{ count: memberCount }, { data: officers }, { data: activities }, { data: dues }] = await Promise.all([
-    db.from('members').select('*', { count: 'exact', head: true }).eq('club_id', id).is('deleted_at', null),
+  const [{ data: memberRows }, { data: officers }, { data: activities }, { data: dues }] = await Promise.all([
+    db.from('members').select('id, name, email, phone, role, lions_role, lions_member_id, status').eq('club_id', id).is('deleted_at', null).order('name'),
     db.from('club_officers').select('id, role, term_start, term_end, status, members(name, email)').eq('club_id', id).limit(20),
     db.from('activities').select('id, title, date, beneficiaries, amount_raised').eq('club_id', id).order('date', { ascending: false }).limit(8),
     db.from('dues_invoices').select('amount, amount_paid, status').eq('club_id', id).neq('status', 'paid'),
   ]);
+
+  const members: ClubMember[] = (memberRows ?? []).map((m) => ({
+    id: m.id, name: m.name, email: m.email ?? null, phone: m.phone ?? null,
+    role: m.role ?? null, lions_role: m.lions_role ?? null,
+    lions_member_id: m.lions_member_id ?? null, status: m.status ?? null,
+  }));
+  const memberCount = members.length;
 
   const duesPending = ((dues ?? []) as { amount: number; amount_paid: number | null }[])
     .reduce((a, b) => a + Math.max(0, Number(b.amount ?? 0) - Number(b.amount_paid ?? 0)), 0);
@@ -66,6 +74,15 @@ export default async function ClubDetailPage({ params }: { params: Promise<{ id:
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="inline-flex items-center gap-2"><Users size={14} className="text-emerald-500" /> Members</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ClubMembersPanel club={{ id: club.id, name: club.name }} members={members} />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>

@@ -9,6 +9,8 @@ interface PresetOptions {
   clubs?: { id: string; name: string }[];
   members?: { id: string; name: string; email: string }[];
   districts?: { id: string; code: string; name: string }[];
+  /** Pre-select a club in the members form (e.g. when adding within a club). */
+  clubId?: string;
 }
 
 export function membersPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 'title'> {
@@ -36,7 +38,7 @@ export function membersPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 't
         { value: 'lapsed', label: 'Lapsed' },
         { value: 'suspended', label: 'Suspended' },
       ] },
-      { name: 'club_id', label: 'Club', type: 'select',
+      { name: 'club_id', label: 'Club', type: 'select', defaultValue: o.clubId,
         options: (o.clubs ?? []).map((c) => ({ value: c.id, label: c.name })) },
       { name: 'birthday', label: 'Birthday', type: 'date' },
       { name: 'lions_member_id', label: 'Membership Number', type: 'text', required: true, hint: 'LCI membership number (required)' },

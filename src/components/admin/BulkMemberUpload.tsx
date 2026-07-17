@@ -128,7 +128,14 @@ const LIONS_FIELDS: Record<string, string[]> = {
   membership_type: ['membershipfulltype'],
 };
 
-export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
+export function BulkMemberUpload({
+  clubs = [], defaultClubId, defaultClubName,
+}: {
+  clubs?: ClubOption[];
+  /** When set, sheet rows that don't name a club attach to this club. */
+  defaultClubId?: string;
+  defaultClubName?: string;
+}) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -146,7 +153,12 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
   const invalidRows = rows?.filter((r) => r.error) ?? [];
 
   function resolveClub(nameOrId: string): { club_id: string | null; club_label: string | null } {
-    if (!nameOrId) return { club_id: null, club_label: null };
+    if (!nameOrId) {
+      // Scoped upload (within a club): rows that omit a club attach to it.
+      return defaultClubId
+        ? { club_id: defaultClubId, club_label: defaultClubName ?? null }
+        : { club_id: null, club_label: null };
+    }
     if (UUID_RE.test(nameOrId) && clubById.has(nameOrId)) {
       return { club_id: nameOrId, club_label: clubById.get(nameOrId)!.name };
     }
