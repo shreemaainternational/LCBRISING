@@ -17,12 +17,14 @@ export default async function MembersPage() {
   // and once any member row exists that read trips "infinite recursion detected
   // in policy for relation members". Bypassing RLS here keeps the page working.
   const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
-  const [{ data: members }, { data: clubs }] = await Promise.all([
+  const [{ data: members }, { data: clubs }, { data: zones }, { data: regions }] = await Promise.all([
     supabase.from('members').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
-    supabase.from('clubs').select('id, name').is('deleted_at', null).order('name'),
+    supabase.from('clubs').select('id, name, zone_id, region_id').is('deleted_at', null).order('name'),
+    supabase.from('zones').select('id, name, region_id').is('deleted_at', null).order('name'),
+    supabase.from('regions').select('id, name').is('deleted_at', null).order('name'),
   ]);
 
-  const preset = membersPreset({ clubs: clubs ?? [] });
+  const preset = membersPreset({ clubs: (clubs ?? []).map((c) => ({ id: c.id, name: c.name })) });
   const clubOptions = clubs ?? [];
 
   return (
@@ -51,7 +53,7 @@ export default async function MembersPage() {
         <Card>
           <CardHeader><CardTitle>{members.length} members</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <MembersTable members={members as MemberRow[]} clubs={clubOptions} />
+            <MembersTable members={members as MemberRow[]} clubs={clubOptions} zones={zones ?? []} regions={regions ?? []} />
           </CardContent>
         </Card>
       )}

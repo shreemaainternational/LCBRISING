@@ -20,7 +20,9 @@ export type MemberRow = {
   joined_at: string | null;
 };
 
-type ClubOption = { id: string; name: string };
+type ClubOption = { id: string; name: string; zone_id?: string | null; region_id?: string | null };
+type ZoneOption = { id: string; name: string; region_id: string | null };
+type RegionOption = { id: string; name: string };
 
 const ROLES = ['member', 'officer', 'treasurer', 'secretary', 'president', 'admin'];
 const STATUSES = ['pending', 'active', 'lapsed', 'suspended'];
@@ -42,38 +44,70 @@ async function authHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
-export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: ClubOption[] }) {
+export function MembersTable({ members, clubs, zones = [], regions = [] }: {
+  members: MemberRow[]; clubs: ClubOption[]; zones?: ZoneOption[]; regions?: RegionOption[];
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState<MemberRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [clubFilter, setClubFilter] = useState<string>('all');
+  const [regionFilter, setRegionFilter] = useState<string>('all');
+  const [zoneFilter, setZoneFilter] = useState<string>('all');
+  const [clubFilter, setClubFilter] = useState<string>('all'); // club id, or 'unassigned'
   const [pending, start] = useTransition();
 
-  // Group the roster club-wise: one section per club (alphabetical), with
-  // members who have no club last under "Unassigned".
-  const clubNameById = new Map(clubs.map((c) => [c.id, c.name]));
-  const groupMap = new Map<string, MemberRow[]>();
+  const clubById = new Map(clubs.map((c) => [c.id, c]));
+  const clubOf = (m: MemberRow) => (m.club_id ? clubById.get(m.club_id) : undefined);
+
+  // Member counts per region / zone / club (a member inherits its club's
+  // region & zone).
+  const byRegion = new Map<string, number>();
+  const byZone = new Map<string, number>();
+  const byClub = new Map<string, number>();
+  let unassignedCount = 0;
   for (const m of members) {
-    const key = m.club_id && clubNameById.has(m.club_id) ? clubNameById.get(m.club_id)! : 'Unassigned';
+    const c = clubOf(m);
+    if (!m.club_id || !c) unassignedCount++;
+    if (m.club_id) byClub.set(m.club_id, (byClub.get(m.club_id) ?? 0) + 1);
+    if (c?.region_id) byRegion.set(c.region_id, (byRegion.get(c.region_id) ?? 0) + 1);
+    if (c?.zone_id) byZone.set(c.zone_id, (byZone.get(c.zone_id) ?? 0) + 1);
+  }
+
+  // Cascading option lists: zones narrow to the picked region; clubs narrow to
+  // the picked region/zone.
+  const zoneOptions = [...zones]
+    .filter((z) => regionFilter === 'all' || z.region_id === regionFilter)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const clubFilterOptions = [...clubs]
+    .filter((c) => (regionFilter === 'all' || c.region_id === regionFilter) && (zoneFilter === 'all' || c.zone_id === zoneFilter))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const regionOptions = [...regions].sort((a, b) => a.name.localeCompare(b.name));
+
+  // Apply the three filters (AND), then group the survivors club-wise.
+  const filtered = members.filter((m) => {
+    const c = clubOf(m);
+    if (regionFilter !== 'all' && c?.region_id !== regionFilter) return false;
+    if (zoneFilter !== 'all' && c?.zone_id !== zoneFilter) return false;
+    if (clubFilter === 'unassigned') return !m.club_id || !c;
+    if (clubFilter !== 'all' && m.club_id !== clubFilter) return false;
+    return true;
+  });
+
+  const groupMap = new Map<string, MemberRow[]>();
+  for (const m of filtered) {
+    const key = m.club_id && clubById.has(m.club_id) ? clubById.get(m.club_id)!.name : 'Unassigned';
     if (!groupMap.has(key)) groupMap.set(key, []);
     groupMap.get(key)!.push(m);
   }
-  const groups = Array.from(groupMap.entries()).sort((a, b) => {
+  const visibleGroups = Array.from(groupMap.entries()).sort((a, b) => {
     if (a[0] === 'Unassigned') return 1;
     if (b[0] === 'Unassigned') return -1;
     return a[0].localeCompare(b[0]);
   });
-  const visibleGroups = clubFilter === 'all' ? groups : groups.filter(([name]) => name === clubFilter);
-  const shownCount = visibleGroups.reduce((n, [, rows]) => n + rows.length, 0);
+  const shownCount = filtered.length;
 
-  // Dropdown lists every club alphabetically (from the clubs table), even those
-  // with no members yet, plus an "Unassigned" bucket when relevant.
-  const countByClubName = new Map(groups.map(([name, rows]) => [name, rows.length]));
-  const clubOptions = [...clubs]
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((c) => ({ name: c.name, count: countByClubName.get(c.name) ?? 0 }));
-  const unassignedCount = countByClubName.get('Unassigned') ?? 0;
+  function pickRegion(v: string) { setRegionFilter(v); setZoneFilter('all'); setClubFilter('all'); }
+  function pickZone(v: string) { setZoneFilter(v); setClubFilter('all'); }
 
   function remove(m: MemberRow) {
     if (!window.confirm(`Remove "${m.name ?? m.email ?? 'this member'}" from the roster? This can be restored by an admin.`)) return;
@@ -104,24 +138,38 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b bg-emerald-50/40">
-        <label htmlFor="club-filter" className="text-sm font-semibold text-navy-800">Club</label>
-        <select
-          id="club-filter"
-          value={clubFilter}
-          onChange={(e) => setClubFilter(e.target.value)}
-          className="px-3 py-2 border-2 border-emerald-300 rounded-md text-sm bg-white font-medium min-w-[16rem]"
-        >
-          <option value="all">All clubs ({members.length} members)</option>
-          {clubOptions.map((c) => (
-            <option key={c.name} value={c.name}>{c.name} ({c.count})</option>
-          ))}
-          {unassignedCount > 0 && <option value="Unassigned">Unassigned ({unassignedCount})</option>}
-        </select>
-        <span className="text-xs text-gray-600">
-          {clubFilter === 'all'
-            ? 'Select a club to view only its members.'
-            : `Showing ${shownCount} member${shownCount === 1 ? '' : 's'} in ${clubFilter}.`}
+      <div className="flex flex-wrap items-end gap-4 px-4 py-3 border-b bg-emerald-50/40">
+        <div>
+          <label htmlFor="region-filter" className="block text-xs font-semibold text-navy-800 mb-1">Region</label>
+          <select id="region-filter" value={regionFilter} onChange={(e) => pickRegion(e.target.value)}
+            className="px-3 py-2 border-2 border-emerald-300 rounded-md text-sm bg-white font-medium min-w-[12rem]">
+            <option value="all">All regions</option>
+            {regionOptions.map((r) => <option key={r.id} value={r.id}>{r.name} ({byRegion.get(r.id) ?? 0})</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="zone-filter" className="block text-xs font-semibold text-navy-800 mb-1">Zone</label>
+          <select id="zone-filter" value={zoneFilter} onChange={(e) => pickZone(e.target.value)}
+            className="px-3 py-2 border-2 border-emerald-300 rounded-md text-sm bg-white font-medium min-w-[12rem]">
+            <option value="all">All zones</option>
+            {zoneOptions.map((z) => <option key={z.id} value={z.id}>{z.name} ({byZone.get(z.id) ?? 0})</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="club-filter" className="block text-xs font-semibold text-navy-800 mb-1">Club</label>
+          <select id="club-filter" value={clubFilter} onChange={(e) => setClubFilter(e.target.value)}
+            className="px-3 py-2 border-2 border-emerald-300 rounded-md text-sm bg-white font-medium min-w-[14rem]">
+            <option value="all">All clubs</option>
+            {clubFilterOptions.map((c) => <option key={c.id} value={c.id}>{c.name} ({byClub.get(c.id) ?? 0})</option>)}
+            {unassignedCount > 0 && regionFilter === 'all' && zoneFilter === 'all' && (
+              <option value="unassigned">Unassigned ({unassignedCount})</option>
+            )}
+          </select>
+        </div>
+        <span className="text-xs text-gray-600 pb-2">
+          {regionFilter === 'all' && zoneFilter === 'all' && clubFilter === 'all'
+            ? 'Filter members by region, zone or club.'
+            : `Showing ${shownCount} member${shownCount === 1 ? '' : 's'}.`}
         </span>
       </div>
 
