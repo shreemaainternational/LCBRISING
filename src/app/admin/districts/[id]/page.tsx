@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Building2, Users, Map, MapPin, Calendar } from 'lucide-react';
+import { ArrowLeft, Building2, Users, Map, MapPin, Calendar, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
@@ -86,6 +86,10 @@ export default async function DistrictDetailPage({
               Lions year {district.lions_year}
             </p>
           )}
+          <Link href={`/admin/districts/${id}/dashboard`}
+            className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-navy-700 hover:bg-navy-800 text-white text-sm font-semibold">
+            <BarChart3 size={14} /> Open dashboard
+          </Link>
         </div>
         <div className="grid grid-cols-3 md:grid-cols-5 gap-3 text-center">
           <Link href="/admin/regions"><Stat label="Regions" value={regionCount.count ?? 0} icon={<Map size={14} />} /></Link>
