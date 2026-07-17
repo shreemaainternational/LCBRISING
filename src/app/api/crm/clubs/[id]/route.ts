@@ -40,6 +40,15 @@ async function fetchClub(id: string) {
   return data;
 }
 
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const actor = await requirePermission('club.read');
+  if (isGuardFailure(actor)) return actor;
+  const club = await fetchClub(id);
+  if (!club) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  return NextResponse.json({ club });
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const parsed = clubUpdateSchema.safeParse(await req.json().catch(() => null));

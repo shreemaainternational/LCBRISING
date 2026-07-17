@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { Counter } from '@/components/site/Counter';
 import { formatINRShort } from '@/lib/utils';
+import { causeForCategory } from '@/lib/causes';
 
 export const metadata: Metadata = {
   title: 'Impact Dashboard',
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 type CauseAggRow = {
-  cause: string | null;
+  category: string | null;
   beneficiaries: number | null;
 };
 
@@ -27,7 +28,7 @@ async function loadImpact() {
       activities: 0,
       donations: 0,
       beneficiaries: 0,
-      causes: [] as { name: string; beneficiaries: number }[],
+      causes: [] as { slug: string; name: string; beneficiaries: number }[],
     };
   }
   try {
@@ -41,7 +42,7 @@ async function loadImpact() {
       supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'active'),
       supabase.from('activities').select('*', { count: 'exact', head: true }),
       supabase.from('donations').select('amount'),
-      supabase.from('activities').select('cause, beneficiaries'),
+      supabase.from('activities').select('category, beneficiaries'),
     ]);
 
     const totalDonations = (donationsAgg ?? []).reduce(
@@ -53,13 +54,17 @@ async function loadImpact() {
       0,
     );
 
-    const byCause = new Map<string, number>();
+    // Group activities into their Lions cause (categories roll up to a
+    // cause via the shared config) and sum beneficiaries per cause.
+    const byCause = new Map<string, { name: string; beneficiaries: number }>();
     for (const row of ((activityAgg ?? []) as CauseAggRow[])) {
-      const k = row.cause ?? 'Humanitarian';
-      byCause.set(k, (byCause.get(k) ?? 0) + Number(row.beneficiaries ?? 0));
+      const cause = causeForCategory(row.category);
+      const entry = byCause.get(cause.slug) ?? { name: cause.title, beneficiaries: 0 };
+      entry.beneficiaries += Number(row.beneficiaries ?? 0);
+      byCause.set(cause.slug, entry);
     }
     const causes = Array.from(byCause.entries())
-      .map(([name, beneficiaries]) => ({ name, beneficiaries }))
+      .map(([slug, v]) => ({ slug, name: v.name, beneficiaries: v.beneficiaries }))
       .sort((a, b) => b.beneficiaries - a.beneficiaries)
       .slice(0, 8);
 
@@ -76,7 +81,7 @@ async function loadImpact() {
       activities: 0,
       donations: 0,
       beneficiaries: 0,
-      causes: [] as { name: string; beneficiaries: number }[],
+      causes: [] as { slug: string; name: string; beneficiaries: number }[],
     };
   }
 }
@@ -131,9 +136,9 @@ export default async function ImpactPage() {
                   const max = Math.max(...stats.causes.map((x) => x.beneficiaries), 1);
                   const pct = (c.beneficiaries / max) * 100;
                   return (
-                    <div key={c.name}>
+                    <Link key={c.slug} href={`/activities/${c.slug}`} className="block group">
                       <div className="flex justify-between text-sm font-semibold mb-1.5">
-                        <span className="text-navy-900">{c.name}</span>
+                        <span className="text-navy-900 group-hover:text-brand-600 transition-colors">{c.name}</span>
                         <span className="text-gray-600">{c.beneficiaries.toLocaleString('en-IN')} lives</span>
                       </div>
                       <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -142,7 +147,7 @@ export default async function ImpactPage() {
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>

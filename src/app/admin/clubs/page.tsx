@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
-import { ClubsTable, type ClubRow } from '@/components/admin/ClubsTable';
+import { ClubsTable } from '@/components/admin/ClubsTable';
 import { clubsPreset } from '@/components/admin/quick-add-presets';
 import { Building2 } from 'lucide-react';
 
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default async function ClubsPage() {
   const supa = await createClient();
   const [{ data: clubs }, { data: districts }, { data: members }] = await Promise.all([
-    supa.from('clubs').select('id, name, district, city, state, country, charter_date, club_number, district_id')
+    supa.from('clubs').select('id, name, district, city, state, charter_date, club_number, district_id')
       .is('deleted_at', null).order('name'),
     supa.from('districts').select('id, code, name').is('deleted_at', null).order('code'),
     supa.from('members').select('club_id').is('deleted_at', null),
@@ -23,21 +23,7 @@ export default async function ClubsPage() {
     if (m.club_id) memberCount.set(m.club_id, (memberCount.get(m.club_id) ?? 0) + 1);
   }
 
-  const districtOptions = districts ?? [];
-  const clubRows: ClubRow[] = (clubs ?? []).map((c) => ({
-    id: c.id,
-    name: c.name,
-    club_number: c.club_number ?? null,
-    district: c.district ?? null,
-    district_id: c.district_id ?? null,
-    city: c.city ?? null,
-    state: c.state ?? null,
-    country: c.country ?? null,
-    charter_date: c.charter_date ?? null,
-    member_count: memberCount.get(c.id) ?? 0,
-  }));
-
-  const preset = clubsPreset({ districts: districtOptions });
+  const preset = clubsPreset({ districts: districts ?? [] });
 
   return (
     <div>
@@ -59,9 +45,13 @@ export default async function ClubsPage() {
         />
       ) : (
         <Card>
-          <CardHeader><CardTitle>{clubRows.length} clubs</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{clubs.length} clubs</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <ClubsTable clubs={clubRows} districts={districtOptions} />
+            <ClubsTable
+              clubs={clubs}
+              districts={districts ?? []}
+              memberCounts={Object.fromEntries(memberCount)}
+            />
           </CardContent>
         </Card>
       )}

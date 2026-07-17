@@ -1,16 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import {
-  Leaf,
-  Eye,
-  Utensils,
-  Shield,
-  Ribbon,
-  Droplet,
-  Users,
-  Heart,
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
+import { CAUSES } from '@/lib/causes';
 
 export const metadata: Metadata = {
   title: 'Service Activities',
@@ -19,123 +11,24 @@ export const metadata: Metadata = {
   alternates: { canonical: '/activities' },
 };
 
-type Cause = {
-  id: string;
-  icon: typeof Leaf;
-  title: string;
-  body: string;
-  points: string[];
-};
-
-const CAUSES: Cause[] = [
-  {
-    id: 'environment',
-    icon: Leaf,
-    title: 'Environment',
-    body: 'Protecting our planet through tree plantation drives, cleanup campaigns, and environmental awareness programs. We work to create sustainable communities and preserve natural resources for future generations.',
-    points: [
-      'Tree plantation drives across Vadodara',
-      'River and lake cleanup campaigns',
-      'Plastic-free community initiatives',
-    ],
-  },
-  {
-    id: 'vision',
-    icon: Eye,
-    title: 'Vision',
-    body: 'Providing free eye care services including screenings, spectacle distribution, and cataract surgery support. Lions Clubs are the global leader in sight preservation and blindness prevention.',
-    points: [
-      'Free eye check-up camps',
-      'Spectacle distribution for underprivileged',
-      'Cataract surgery referrals and support',
-    ],
-  },
-  {
-    id: 'hunger',
-    icon: Utensils,
-    title: 'Hunger Relief',
-    body: 'No one should go hungry. Our hunger relief programs serve thousands of meals through community kitchens, food pantries, and nutrition education to fight food insecurity.',
-    points: [
-      'Weekly food distribution drives',
-      'Community kitchen meals program',
-      'Nutrition awareness workshops',
-    ],
-  },
-  {
-    id: 'relief',
-    icon: Shield,
-    title: 'Disaster Relief',
-    body: 'When disasters strike, Lions are among the first to respond. We provide immediate relief including food, shelter, medical aid, and long-term rehabilitation support to affected communities.',
-    points: [
-      'Emergency relief material distribution',
-      'Flood and earthquake response teams',
-      'Long-term rehabilitation support',
-    ],
-  },
-  {
-    id: 'cancer',
-    icon: Ribbon,
-    title: 'Childhood Cancer',
-    body: 'Supporting children and families affected by childhood cancer through financial assistance, awareness campaigns, and emotional support programs. Every child deserves a fighting chance.',
-    points: [
-      'Financial aid for treatment costs',
-      'Cancer awareness and early detection camps',
-      'Emotional support for families',
-    ],
-  },
-  {
-    id: 'diabetes',
-    icon: Droplet,
-    title: 'Diabetes',
-    body: 'Combating the diabetes epidemic through free screening camps, awareness programs, and lifestyle education. We help communities understand, prevent, and manage diabetes effectively.',
-    points: [
-      'Free diabetes screening camps',
-      'Diet and lifestyle counseling',
-      'Insulin and medication support',
-    ],
-  },
-  {
-    id: 'youth',
-    icon: Users,
-    title: 'Youth',
-    body: 'Empowering the next generation through mentorship, leadership training, and skill development programs. We invest in youth to build confident, responsible future leaders.',
-    points: [
-      'Youth leadership workshops',
-      'Career guidance and mentorship',
-      'Leo Club development programs',
-    ],
-  },
-  {
-    id: 'humanitarian',
-    icon: Heart,
-    title: 'Humanitarian',
-    body: 'Addressing diverse community needs through blood donation drives, senior care, education support, and other humanitarian initiatives that uplift the most vulnerable members of society.',
-    points: [
-      'Blood donation camps',
-      'Senior citizen support programs',
-      'Education scholarship initiatives',
-    ],
-  },
-];
-
 export default function ActivitiesPage() {
   return (
     <>
       <PageHero
         pillText="Lions International Global Causes"
         headline="Our Service Activities"
-        subtitle="Lions Club of Baroda Rising Star serves the community through these 8 global cause areas identified by Lions Clubs International."
+        subtitle="Lions Club of Baroda Rising Star serves the community through these 8 global cause areas identified by Lions Clubs International. Select a cause to see its activities and photos."
         backgroundImage={PAGE_HERO_BG.activities}
       />
 
-      {/* Cause cards */}
+      {/* Cause cards — each links to that cause's activities */}
       <section className="container-page py-16 md:py-20">
         <div className="grid md:grid-cols-2 gap-7">
           {CAUSES.map((c) => (
             <article
-              key={c.id}
-              id={c.id}
-              className="scroll-mt-28 bg-white border border-gray-200 rounded-2xl p-8 target:ring-2 target:ring-brand-400"
+              key={c.slug}
+              id={c.slug}
+              className="scroll-mt-28 flex flex-col bg-white border border-gray-200 rounded-2xl p-8 target:ring-2 target:ring-brand-400"
             >
               <div className="flex items-start gap-4 mb-4">
                 <div className="h-12 w-12 flex-shrink-0 rounded-xl bg-gray-100 flex items-center justify-center">
@@ -146,7 +39,7 @@ export default function ActivitiesPage() {
                 </h2>
               </div>
               <p className="text-gray-600 leading-relaxed mb-5">{c.body}</p>
-              <ul className="space-y-2">
+              <ul className="space-y-2 mb-6">
                 {c.points.map((p) => (
                   <li key={p} className="flex items-start gap-2.5 text-sm">
                     <span
@@ -157,6 +50,13 @@ export default function ActivitiesPage() {
                   </li>
                 ))}
               </ul>
+              <Link
+                href={`/activities/${c.slug}`}
+                className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 hover:text-brand-600"
+              >
+                View {c.title} activities
+                <ArrowRight size={15} aria-hidden />
+              </Link>
             </article>
           ))}
         </div>

@@ -1,22 +1,21 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Pencil, Trash2, X, Loader2, Save, AlertCircle, Users, MapPin, Calendar } from 'lucide-react';
+import { Users, MapPin, Calendar, Pencil, Trash2, X, Loader2, Save, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export type ClubRow = {
   id: string;
   name: string;
-  club_number: string | null;
   district: string | null;
-  district_id: string | null;
   city: string | null;
   state: string | null;
-  country: string | null;
   charter_date: string | null;
-  member_count: number;
+  club_number: string | null;
+  district_id: string | null;
+  country?: string | null;
 };
 
 type DistrictOption = { id: string; code: string; name: string };
@@ -30,7 +29,13 @@ async function authHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
-export function ClubsTable({ clubs, districts }: { clubs: ClubRow[]; districts: DistrictOption[] }) {
+export function ClubsTable({
+  clubs, districts, memberCounts,
+}: {
+  clubs: ClubRow[];
+  districts: DistrictOption[];
+  memberCounts: Record<string, number>;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState<ClubRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -61,7 +66,7 @@ export function ClubsTable({ clubs, districts }: { clubs: ClubRow[]; districts: 
   return (
     <div>
       {error && (
-        <p className="p-3 inline-flex items-center gap-1.5 text-sm text-red-700">
+        <p className="mb-3 px-3 inline-flex items-center gap-1.5 text-sm text-red-700">
           <AlertCircle size={14} /> {error}
         </p>
       )}
@@ -91,14 +96,16 @@ export function ClubsTable({ clubs, districts }: { clubs: ClubRow[]; districts: 
                     : '—'}
                 </td>
                 <td className="p-3 text-right">
-                  <span className="inline-flex items-center gap-1 text-xs"><Users size={11} />{c.member_count}</span>
+                  <span className="inline-flex items-center gap-1 text-xs"><Users size={11} />{memberCounts[c.id] ?? 0}</span>
                 </td>
                 <td className="p-3 text-xs text-gray-600">
                   {c.charter_date ? <span className="inline-flex items-center gap-1"><Calendar size={11} />{new Date(c.charter_date).toLocaleDateString('en-IN')}</span> : '—'}
                 </td>
                 <td className="p-3">
                   <div className="flex items-center justify-end gap-1.5">
-                    <Link href={`/admin/clubs/${c.id}`} className="text-xs text-amber-600 hover:text-amber-800 mr-1">View →</Link>
+                    <Link href={`/admin/clubs/${c.id}`} className="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs text-amber-600 hover:text-amber-800">
+                      View →
+                    </Link>
                     <button
                       type="button"
                       onClick={() => { setError(null); setEditing(c); }}
@@ -147,8 +154,8 @@ function EditClubModal({
 }) {
   const [form, setForm] = useState({
     name: club.name ?? '',
-    club_number: club.club_number ?? '',
     district_id: club.district_id ?? '',
+    club_number: club.club_number ?? '',
     city: club.city ?? '',
     state: club.state ?? '',
     country: club.country ?? 'India',
@@ -163,14 +170,14 @@ function EditClubModal({
 
   function save() {
     setError(null);
-    if (!form.name.trim()) { setError('Club name is required.'); return; }
+    if (!form.name.trim() || form.name.trim().length < 2) { setError('Club name is required (min 2 characters).'); return; }
     const payload: Record<string, unknown> = {
       name: form.name.trim(),
-      club_number: form.club_number.trim() || null,
       district_id: form.district_id || null,
+      club_number: form.club_number.trim() || null,
       city: form.city.trim() || null,
       state: form.state.trim() || null,
-      country: form.country.trim() || null,
+      country: form.country.trim() || 'India',
       charter_date: form.charter_date || null,
     };
     start(async () => {
@@ -211,11 +218,7 @@ function EditClubModal({
         <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
           <label className="block md:col-span-2">
             <span className={labelCls}>Club Name <span className="text-red-500">*</span></span>
-            <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} />
-          </label>
-          <label className="block">
-            <span className={labelCls}>LCI Club Number</span>
-            <input className={inputCls} value={form.club_number} onChange={(e) => set('club_number', e.target.value)} placeholder="e.g. 31637" />
+            <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Lions Club of …" />
           </label>
           <label className="block">
             <span className={labelCls}>District</span>
@@ -223,6 +226,10 @@ function EditClubModal({
               <option value="">—</option>
               {districts.map((d) => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
             </select>
+          </label>
+          <label className="block">
+            <span className={labelCls}>LCI Club Number</span>
+            <input className={inputCls} value={form.club_number} onChange={(e) => set('club_number', e.target.value)} />
           </label>
           <label className="block">
             <span className={labelCls}>City</span>
@@ -254,7 +261,7 @@ function EditClubModal({
             type="button"
             onClick={save}
             disabled={pending}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold disabled:opacity-60"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold disabled:opacity-60"
           >
             {pending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {pending ? 'Saving…' : 'Save changes'}
