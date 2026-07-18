@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ChevronDown, Menu, Phone, X, ArrowRight } from 'lucide-react';
 import { env } from '@/lib/env';
 import { CAUSES } from '@/lib/causes';
+import { EVENT_CATEGORY_GROUPS } from '@/lib/event-categories';
 
 type NavItem = {
   href: string;
@@ -143,17 +144,39 @@ export function PublicNav() {
                   {item.label}
                 </Link>
                 {item.hasDropdown && (
-                  <div className="ml-3 mb-2 grid grid-cols-2 gap-1">
-                    {CAUSES.map((c) => (
-                      <Link
-                        key={c.slug}
-                        href={`/activities/${c.slug}`}
-                        className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
-                        onClick={() => setOpen(false)}
-                      >
-                        <c.icon size={14} className="text-brand-400" aria-hidden />
-                        {c.title}
-                      </Link>
+                  <div className="ml-3 mb-2">
+                    <div className="grid grid-cols-2 gap-1">
+                      {CAUSES.map((c) => (
+                        <Link
+                          key={c.slug}
+                          href={`/activities/${c.slug}`}
+                          className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
+                          onClick={() => setOpen(false)}
+                        >
+                          <c.icon size={14} className="text-brand-400" aria-hidden />
+                          {c.title}
+                        </Link>
+                      ))}
+                    </div>
+                    {EVENT_CATEGORY_GROUPS.map((group) => (
+                      <div key={group.key} className="mt-2">
+                        <div className="py-1 text-[10px] font-semibold tracking-[0.15em] text-brand-300">
+                          {group.title.toUpperCase()}
+                        </div>
+                        <div className="grid grid-cols-2 gap-1">
+                          {group.items.map((sub) => (
+                            <Link
+                              key={sub.slug}
+                              href={`/events?category=${sub.slug}`}
+                              className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
+                              onClick={() => setOpen(false)}
+                            >
+                              <group.icon size={14} className="text-brand-400 flex-shrink-0" aria-hidden />
+                              {sub.label}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -197,7 +220,7 @@ function ServiceActivitiesDropdown({
         />
       </Link>
       <div className="absolute left-0 top-full pt-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity">
-        <div className="bg-navy-800 text-white rounded-lg shadow-xl border border-white/10 w-[260px] overflow-hidden">
+        <div className="bg-navy-800 text-white rounded-lg shadow-xl border border-white/10 w-[280px] max-h-[80vh] overflow-y-auto">
           <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
             LIONS GLOBAL CAUSES
           </div>
@@ -213,6 +236,25 @@ function ServiceActivitiesDropdown({
               </Link>
             ))}
           </div>
+          {EVENT_CATEGORY_GROUPS.map((group) => (
+            <div key={group.key} className="border-t border-white/10">
+              <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
+                {group.title.toUpperCase()}
+              </div>
+              <div className="pb-2">
+                {group.items.map((item) => (
+                  <Link
+                    key={item.slug}
+                    href={`/events?category=${item.slug}`}
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
+                  >
+                    <group.icon size={16} className="text-brand-400 flex-shrink-0" aria-hidden />
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
           <Link
             href="/activities"
             className="flex items-center justify-center gap-1.5 border-t border-white/10 px-4 py-3 text-sm font-semibold text-brand-300 hover:bg-white/5"
