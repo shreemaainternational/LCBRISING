@@ -1,8 +1,10 @@
 import { CreativeBuilder } from './CreativeBuilder';
+import { loadCanvaRuntime } from '@/lib/canva/config';
 
 export const dynamic = 'force-dynamic';
 
-export default function CreativePage() {
+export default async function CreativePage() {
+  const canva = await loadCanvaRuntime(true).catch(() => ({ connected: false }));
   return (
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Creative Builder</h1>
@@ -11,7 +13,7 @@ export default function CreativePage() {
         video scripts with AI + Canva, then publish to every connected
         social channel in one click.
       </p>
-      <CreativeBuilder />
+      <CreativeBuilder canvaConnected={canva.connected} />
     </div>
   );
 }

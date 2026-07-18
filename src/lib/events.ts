@@ -58,6 +58,28 @@ export async function getUpcomingPublicEvents(limit?: number): Promise<PublicEve
   }
 }
 
+/** A single public event by id, or null if not found / not public. */
+export async function getPublicEventById(id: string): Promise<PublicEventRow | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const supabase = await publicEventReader();
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .eq('is_public', true)
+      .maybeSingle();
+    if (error) {
+      console.error('[events] byId read failed:', error.message);
+      return null;
+    }
+    return (data ?? null) as PublicEventRow | null;
+  } catch (err) {
+    console.error('[events] byId read threw:', err);
+    return null;
+  }
+}
+
 /** All public events (past and upcoming), newest first. */
 export async function getAllPublicEvents(): Promise<PublicEventRow[]> {
   if (!isSupabaseConfigured()) return [];

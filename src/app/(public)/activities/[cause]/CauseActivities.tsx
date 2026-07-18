@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Calendar,
@@ -10,6 +11,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ArrowRight,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
@@ -22,6 +24,8 @@ export type CauseActivity = {
   beneficiaries: number | null;
   photos: string[];
   captions: Record<string, string>;
+  /** Raw activities.category — used by the programme tab filters. */
+  category?: string | null;
 };
 
 type Lightbox = {
@@ -125,6 +129,13 @@ export function CauseActivities({ activities }: { activities: CauseActivity[] })
                     </span>
                   )}
                 </div>
+                <Link
+                  href={`/activities/report/${a.id}`}
+                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 hover:text-brand-600"
+                >
+                  View full report
+                  <ArrowRight size={15} aria-hidden />
+                </Link>
               </div>
             </article>
           );

@@ -3,21 +3,43 @@ import { redirect } from 'next/navigation';
 import { Calendar, MapPin, Clock, ChevronLeft } from 'lucide-react';
 import { getCurrentMember } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/server';
+import {
+  EVENT_CATEGORY_GROUPS,
+  getEventCategory,
+  getEventCategoryGroup,
+  groupCategorySlugs,
+} from '@/lib/event-categories';
 
 export const dynamic = 'force-dynamic';
 
-export default async function MobileEventsPage() {
+export default async function MobileEventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ group?: string }>;
+}) {
   const me = await getCurrentMember();
   if (!me) redirect('/login?redirectTo=/m/events');
   const db = createAdminClient();
 
+  const { group: groupKey } = await searchParams;
+  const activeGroup = groupKey ? getEventCategoryGroup(groupKey) : undefined;
+  const filterSlugs = activeGroup ? groupCategorySlugs(activeGroup) : null;
+
   const today = new Date().toISOString().slice(0, 10);
-  const { data: upcoming } = await db.from('events')
+  const upcomingQuery = db.from('events')
     .select('id, title, description, date, location, category')
     .gte('date', today).order('date').limit(50);
-  const { data: past } = await db.from('events')
-    .select('id, title, date, location')
+  const pastQuery = db.from('events')
+    .select('id, title, date, location, category')
     .lt('date', today).order('date', { ascending: false }).limit(10);
+  if (filterSlugs) {
+    upcomingQuery.in('category', filterSlugs);
+    pastQuery.in('category', filterSlugs);
+  }
+  const [{ data: upcoming }, { data: past }] = await Promise.all([
+    upcomingQuery,
+    pastQuery,
+  ]);
 
   const upRows = upcoming ?? [];
   const pastRows = past ?? [];
@@ -29,7 +51,21 @@ export default async function MobileEventsPage() {
           <Link href="/m" className="text-gray-600 -ml-1 p-1">
             <ChevronLeft size={20} />
           </Link>
-          <h1 className="text-lg font-bold text-navy-900">Events</h1>
+          <h1 className="text-lg font-bold text-navy-900">
+            {activeGroup ? activeGroup.title : 'Events'}
+          </h1>
+        </div>
+        {/* Category filter */}
+        <div className="px-4 pb-3 flex gap-2 overflow-x-auto">
+          <FilterChip href="/m/events" label="All" active={!activeGroup} />
+          {EVENT_CATEGORY_GROUPS.map((g) => (
+            <FilterChip
+              key={g.key}
+              href={`/m/events?group=${g.key}`}
+              label={g.title}
+              active={activeGroup?.key === g.key}
+            />
+          ))}
         </div>
       </header>
 
@@ -72,6 +108,21 @@ export default async function MobileEventsPage() {
   );
 }
 
+function FilterChip({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold border ${
+        active
+          ? 'bg-navy-800 border-navy-800 text-white'
+          : 'bg-white border-gray-200 text-navy-700'
+      }`}
+    >
+      {label}
+    </Link>
+  );
+}
+
 interface EventRow {
   id: string;
   title: string;
@@ -83,6 +134,9 @@ interface EventRow {
 
 function EventCard({ e }: { e: EventRow }) {
   const d = new Date(e.date);
+  const categoryLabel = e.category
+    ? getEventCategory(e.category)?.label ?? e.category
+    : null;
   return (
     <article className="bg-white rounded-xl p-3 shadow-sm">
       <div className="flex gap-3">
@@ -98,7 +152,7 @@ function EventCard({ e }: { e: EventRow }) {
           <div className="text-[11px] text-gray-500 mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
             <span className="inline-flex items-center gap-0.5"><Clock size={10} />{d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
             {e.location && <span className="inline-flex items-center gap-0.5"><MapPin size={10} />{e.location}</span>}
-            {e.category && <span className="text-[10px] uppercase tracking-wider bg-gray-100 px-1.5 py-0.5 rounded-full">{e.category}</span>}
+            {categoryLabel && <span className="text-[10px] uppercase tracking-wider bg-gray-100 px-1.5 py-0.5 rounded-full">{categoryLabel}</span>}
           </div>
         </div>
       </div>

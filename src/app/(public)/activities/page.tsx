@@ -98,16 +98,17 @@ export default async function ActivitiesPage() {
               {events.map((e, i) => {
                 const image = e.cover_url || EVENT_FALLBACK_IMAGES[i % EVENT_FALLBACK_IMAGES.length];
                 return (
-                  <article
+                  <Link
                     key={e.id}
-                    className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition-shadow"
+                    href={`/events/${e.id}`}
+                    className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition-shadow"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={image}
                       alt={e.title}
                       loading="lazy"
-                      className="h-48 w-full object-cover"
+                      className="h-48 w-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
                     />
                     <div className="p-6 flex flex-col flex-1">
                       <div className="text-xs text-brand-600 font-medium mb-1.5 flex items-center gap-1.5">
@@ -125,7 +126,7 @@ export default async function ActivitiesPage() {
                         </div>
                       )}
                     </div>
-                  </article>
+                  </Link>
                 );
               })}
             </div>

@@ -149,6 +149,14 @@ const schema = z.object({
   LIONS_API_MULTI_DISTRICT_CODE: z.string().optional(),
   LIONS_WEBHOOK_SECRET: z.string().optional(),
 
+  // --- Lions newsroom blog crawler (public content, no auth) ---
+  LIONS_BLOG_BASE_URL: z.string().url().default('https://www.lionsclubs.org'),
+  LIONS_BLOG_PATH: z.string().default('/en/blog'),
+  LIONS_BLOG_USER_AGENT: z.string().optional(),
+  LIONS_BLOG_CONCURRENCY: z.coerce.number().int().min(1).max(16).optional(),
+  LIONS_BLOG_MAX_POSTS: z.coerce.number().int().min(0).optional(),
+  LIONS_BLOG_AUTOPUBLISH: z.string().optional(), // '1' → publish on import
+
   // --- Secret encryption at rest (AES-256-GCM wrapper) ---
   SECRET_ENCRYPTION_KEY: z.string().optional(),
 
@@ -227,6 +235,12 @@ const parsed = schema.parse({
   LIONS_API_DISTRICT_CODE: process.env.LIONS_API_DISTRICT_CODE,
   LIONS_API_MULTI_DISTRICT_CODE: process.env.LIONS_API_MULTI_DISTRICT_CODE,
   LIONS_WEBHOOK_SECRET: process.env.LIONS_WEBHOOK_SECRET,
+  LIONS_BLOG_BASE_URL: process.env.LIONS_BLOG_BASE_URL,
+  LIONS_BLOG_PATH: process.env.LIONS_BLOG_PATH,
+  LIONS_BLOG_USER_AGENT: process.env.LIONS_BLOG_USER_AGENT,
+  LIONS_BLOG_CONCURRENCY: process.env.LIONS_BLOG_CONCURRENCY,
+  LIONS_BLOG_MAX_POSTS: process.env.LIONS_BLOG_MAX_POSTS,
+  LIONS_BLOG_AUTOPUBLISH: process.env.LIONS_BLOG_AUTOPUBLISH,
   SECRET_ENCRYPTION_KEY: process.env.SECRET_ENCRYPTION_KEY,
   VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
@@ -284,3 +298,24 @@ export const integrations = {
   lionsOidc: Boolean(parsed.LIONS_OIDC_ISSUER && parsed.LIONS_OIDC_CLIENT_ID && parsed.LIONS_OIDC_REDIRECT_URI),
   webPush: Boolean(parsed.VAPID_PUBLIC_KEY && parsed.VAPID_PRIVATE_KEY),
 };
+
+/**
+ * Crawl-config overrides for the Lions newsroom blog sync, derived from
+ * environment. Returns only the keys that are actually set so the library
+ * defaults (src/lib/blog-sync/lions-newsroom.ts) fill in the rest.
+ */
+export function blogSyncEnvConfig(): Record<string, unknown> {
+  const cfg: Record<string, unknown> = {
+    baseUrl: parsed.LIONS_BLOG_BASE_URL,
+    blogPath: parsed.LIONS_BLOG_PATH,
+    articlePathPrefix: parsed.LIONS_BLOG_PATH.replace(/\/+$/, '') + '/',
+  };
+  if (parsed.LIONS_BLOG_USER_AGENT) cfg.userAgent = parsed.LIONS_BLOG_USER_AGENT;
+  if (parsed.LIONS_BLOG_CONCURRENCY != null) cfg.concurrency = parsed.LIONS_BLOG_CONCURRENCY;
+  if (parsed.LIONS_BLOG_MAX_POSTS != null) cfg.maxPosts = parsed.LIONS_BLOG_MAX_POSTS;
+  return cfg;
+}
+
+export function blogSyncAutoPublish(): boolean {
+  return parsed.LIONS_BLOG_AUTOPUBLISH === '1';
+}
