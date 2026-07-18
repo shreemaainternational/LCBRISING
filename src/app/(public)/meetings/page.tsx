@@ -1,12 +1,18 @@
 import type { Metadata } from 'next';
-import { ProgrammeEventsPage } from '@/components/site/ProgrammeEventsPage';
+import { ProgrammeActivitiesPage } from '@/components/site/ProgrammeActivitiesPage';
 
 export const metadata: Metadata = {
   title: 'Meetings',
   alternates: { canonical: '/meetings' },
 };
-export const revalidate = 60;
 
-export default function MeetingsPage() {
-  return <ProgrammeEventsPage groupKey="meeting" />;
+export default async function MeetingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const { category } = await searchParams;
+  return (
+    <ProgrammeActivitiesPage groupKey="meeting" initialCategory={category ?? ''} />
+  );
 }

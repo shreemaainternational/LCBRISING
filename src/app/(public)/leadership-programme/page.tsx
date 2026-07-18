@@ -1,12 +1,21 @@
 import type { Metadata } from 'next';
-import { ProgrammeEventsPage } from '@/components/site/ProgrammeEventsPage';
+import { ProgrammeActivitiesPage } from '@/components/site/ProgrammeActivitiesPage';
 
 export const metadata: Metadata = {
   title: 'Leadership Programme',
   alternates: { canonical: '/leadership-programme' },
 };
-export const revalidate = 60;
 
-export default function LeadershipProgrammePage() {
-  return <ProgrammeEventsPage groupKey="leadership" />;
+export default async function LeadershipProgrammePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const { category } = await searchParams;
+  return (
+    <ProgrammeActivitiesPage
+      groupKey="leadership"
+      initialCategory={category ?? ''}
+    />
+  );
 }
