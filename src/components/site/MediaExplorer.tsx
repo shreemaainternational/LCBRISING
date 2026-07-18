@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Search, Calendar, Newspaper, Globe, Tv } from 'lucide-react';
-import { ShareButton } from './ShareButton';
+import { Search, Calendar, Newspaper, Globe, Tv, Share2 } from 'lucide-react';
+import { ShareCardTrigger } from './ShareButton';
 
 export type MediaItem = {
   id: string;
@@ -71,18 +71,17 @@ export function MediaExplorer({ items }: { items: MediaItem[] }) {
               {filtered.map((m) => {
                 const meta = TYPE_META[m.type];
                 const Icon = meta.icon;
-                const Wrapper = m.url ? 'a' : 'div';
                 return (
-                  <Wrapper
+                  <ShareCardTrigger
                     key={m.id}
-                    {...(m.url
-                      ? {
-                          href: m.url,
-                          target: '_blank',
-                          rel: 'noopener noreferrer',
-                        }
-                      : {})}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group"
+                    title={m.title}
+                    text={`${m.outlet} · ${m.type} coverage — ${m.date}`}
+                    url={m.url ?? '/media'}
+                    image={m.image}
+                    meta={`${m.date} · ${m.outlet}`}
+                    href={m.url}
+                    hrefLabel="View coverage"
+                    className="group text-left w-full bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow"
                   >
                     <div className="relative">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -108,17 +107,11 @@ export function MediaExplorer({ items }: { items: MediaItem[] }) {
                       <h3 className="font-bold text-lg text-navy-800 group-hover:text-brand-600 transition-colors">
                         {m.title}
                       </h3>
-                      <div className="mt-auto pt-4 flex items-center justify-end">
-                        <ShareButton
-                          title={m.title}
-                          text={`${m.title} — ${m.outlet}, ${m.date}`}
-                          url={m.url ?? '/media'}
-                          image={m.image}
-                          variant="icon"
-                        />
+                      <div className="mt-auto pt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 group-hover:text-brand-600">
+                        View &amp; share <Share2 size={14} />
                       </div>
                     </div>
-                  </Wrapper>
+                  </ShareCardTrigger>
                 );
               })}
             </div>

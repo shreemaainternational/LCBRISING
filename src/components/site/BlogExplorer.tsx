@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { BookOpen, ExternalLink, Search } from 'lucide-react';
-import { ShareButton } from './ShareButton';
+import { ShareCardTrigger } from './ShareButton';
 
 export type BlogStory = {
   id: string;
@@ -100,9 +100,16 @@ export function BlogExplorer({ stories }: { stories: BlogStory[] }) {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
               {filtered.map((s) => (
-                <article
+                <ShareCardTrigger
                   key={s.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col"
+                  title={s.title}
+                  text={s.excerpt}
+                  url={s.url}
+                  image={s.image}
+                  meta={`${s.date} · ${s.source}`}
+                  href={s.url}
+                  hrefLabel={/^https?:/i.test(s.url) ? 'Read full article' : 'Read more'}
+                  className="group text-left w-full bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow"
                 >
                   <div className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -127,26 +134,17 @@ export function BlogExplorer({ stories }: { stories: BlogStory[] }) {
                       </span>
                       <span className="text-xs text-gray-500">{s.date}</span>
                     </div>
-                    <h3 className="font-bold text-lg text-navy-800 mb-2">
+                    <h3 className="font-bold text-lg text-navy-800 mb-2 group-hover:text-brand-600">
                       {s.title}
                     </h3>
                     <p className="text-sm text-gray-600 line-clamp-3 mb-5">
                       {s.excerpt}
                     </p>
-                    <div className="mt-auto flex items-center justify-between gap-2">
-                      <a
-                        href={s.url}
-                        target={/^https?:/i.test(s.url) ? '_blank' : undefined}
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 hover:text-brand-600"
-                      >
-                        Read more
-                        <ExternalLink size={14} aria-hidden />
-                      </a>
-                      <ShareButton title={s.title} text={s.excerpt} url={s.url} image={s.image} variant="icon" />
+                    <div className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 group-hover:text-brand-600">
+                      View &amp; share <ExternalLink size={14} aria-hidden />
                     </div>
                   </div>
-                </article>
+                </ShareCardTrigger>
               ))}
             </div>
           )}

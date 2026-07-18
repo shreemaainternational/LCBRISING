@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Link2, Check, Share2, Mail, MessageCircle } from 'lucide-react';
+import Link from 'next/link';
+import { X, Link2, Check, Share2, Mail, MessageCircle, ArrowRight } from 'lucide-react';
 
 /** Small brand glyph — this lucide build has no brand icons, so use letter badges. */
 function Badge({ char, bg }: { char: string; bg: string }) {
@@ -105,9 +106,20 @@ export function ShareButton({ title, text, url, image, variant = 'chip', label =
   );
 }
 
-export function ShareModal({ title, text, url, image, onClose }: {
-  title: string; text?: string; url: string; image?: string | null; onClose: () => void;
-}) {
+export type ShareModalProps = {
+  title: string;
+  text?: string;
+  url: string;
+  image?: string | null;
+  /** Small line under the title (e.g. "22 Mar 2026 · Vadodara"). */
+  meta?: string;
+  /** Optional read-more / view CTA. */
+  href?: string;
+  hrefLabel?: string;
+  onClose: () => void;
+};
+
+export function ShareModal({ title, text, url, image, meta, href, hrefLabel, onClose }: ShareModalProps) {
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onEsc);
@@ -115,25 +127,59 @@ export function ShareModal({ title, text, url, image, onClose }: {
     return () => { document.removeEventListener('keydown', onEsc); document.body.style.overflow = ''; };
   }, [onClose]);
 
+  const external = href ? /^https?:\/\//i.test(href) : false;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         {image && (
           <div className="relative aspect-[16/9] bg-gray-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image} alt={title} className="w-full h-full object-cover" />
+            <button type="button" onClick={onClose} aria-label="Close" className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 text-gray-700 hover:bg-white flex items-center justify-center shadow"><X size={16} /></button>
           </div>
         )}
         <div className="p-5">
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="text-lg font-bold text-navy-900">{title}</h3>
-            <button type="button" onClick={onClose} aria-label="Close" className="shrink-0 w-8 h-8 rounded-full border text-gray-500 hover:bg-gray-50 flex items-center justify-center"><X size={15} /></button>
-          </div>
-          {text && <p className="mt-2 text-sm text-gray-600 line-clamp-3">{text}</p>}
+          {!image && (
+            <div className="flex justify-end -mt-1 mb-1">
+              <button type="button" onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-full border text-gray-500 hover:bg-gray-50 flex items-center justify-center"><X size={15} /></button>
+            </div>
+          )}
+          {meta && <div className="text-xs text-brand-600 font-semibold mb-1">{meta}</div>}
+          <h3 className="text-xl font-bold text-navy-900">{title}</h3>
+          {text && <p className="mt-2 text-sm text-gray-700 leading-relaxed">{text}</p>}
+
+          {href && (
+            external ? (
+              <a href={href} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 hover:text-brand-600">
+                {hrefLabel ?? 'Read more'} <ArrowRight size={14} />
+              </a>
+            ) : (
+              <Link href={href} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 hover:text-brand-600">
+                {hrefLabel ?? 'Read more'} <ArrowRight size={14} />
+              </Link>
+            )
+          )}
+
           <p className="mt-4 text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Share</p>
           <ShareTargets title={title} text={text} url={url} />
         </div>
       </div>
     </div>
+  );
+}
+
+/** Wrap any card markup so clicking it opens the details + share modal. */
+export function ShareCardTrigger({
+  className, children, ...modal
+}: Omit<ShareModalProps, 'onClose'> & { className?: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={className ?? 'text-left w-full'}>
+        {children}
+      </button>
+      {open && <ShareModal {...modal} onClose={() => setOpen(false)} />}
+    </>
   );
 }

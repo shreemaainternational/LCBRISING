@@ -4,6 +4,7 @@ import { Heart, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
+import { ShareCardTrigger } from '@/components/site/ShareButton';
 
 export const metadata: Metadata = {
   title: 'Human Stories',
@@ -221,11 +222,18 @@ function SpotlightStory({ story }: { story: Story }) {
 }
 
 function StoryCard({ story }: { story: Story }) {
-  const href = story.slug && story.slug !== '#' ? `/stories/${story.slug}` : '/donate';
+  const hasPage = story.slug && story.slug !== '#';
+  const href = hasPage ? `/stories/${story.slug}` : undefined;
   return (
-    <Link
+    <ShareCardTrigger
+      title={story.title}
+      text={story.subtitle ?? story.impact_quote ?? undefined}
+      url={hasPage ? `/stories/${story.slug}` : '/stories'}
+      image={story.hero_image || FALLBACK_HERO}
+      meta={[story.beneficiary_name, story.location].filter(Boolean).join(' · ') || undefined}
       href={href}
-      className="group block overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-sm"
+      hrefLabel="Read full story"
+      className="group text-left w-full block overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -252,6 +260,6 @@ function StoryCard({ story }: { story: Story }) {
           <p className="mt-3 text-xs font-semibold text-brand-700">{story.impact_metric}</p>
         )}
       </div>
-    </Link>
+    </ShareCardTrigger>
   );
 }
