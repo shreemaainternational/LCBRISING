@@ -1,13 +1,9 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
-import {
-  EVENT_CATEGORY_GROUPS,
-  getEventCategory,
-} from '@/lib/event-categories';
+import { getEventCategory } from '@/lib/event-categories';
 
 export const metadata: Metadata = { title: 'Events', alternates: { canonical: '/events' } };
 export const revalidate = 60;
@@ -94,9 +90,6 @@ export default async function EventsPage({
         backgroundImage={PAGE_HERO_BG.events}
       />
 
-      {/* Category filter */}
-      <EventFilter activeSlug={filterSlug} />
-
       {/* Upcoming events grid */}
       <section className="container-page py-16 md:py-20">
         <div className="text-center mb-12">
@@ -138,47 +131,6 @@ export default async function EventsPage({
         )}
       </section>
     </>
-  );
-}
-
-function EventFilter({ activeSlug }: { activeSlug: string | null }) {
-  const chipBase =
-    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors';
-  const active =
-    'bg-navy-800 border-navy-800 text-white';
-  const idle =
-    'bg-white border-gray-200 text-navy-700 hover:border-brand-400 hover:text-brand-600';
-
-  return (
-    <section className="border-b border-gray-200 bg-gray-50">
-      <div className="container-page py-5 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/events"
-            className={`${chipBase} ${activeSlug === null ? active : idle}`}
-          >
-            All Events
-          </Link>
-        </div>
-        {EVENT_CATEGORY_GROUPS.map((group) => (
-          <div key={group.key} className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 mr-1">
-              <group.icon size={14} className="text-brand-500" aria-hidden />
-              {group.title}
-            </span>
-            {group.items.map((item) => (
-              <Link
-                key={item.slug}
-                href={`/events?category=${item.slug}`}
-                className={`${chipBase} ${activeSlug === item.slug ? active : idle}`}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 
