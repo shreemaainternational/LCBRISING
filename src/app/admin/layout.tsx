@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell, Plug, Building2, ShieldCheck,
-  Globe, Map, MapPin, RefreshCw, ScrollText, Image as ImageIcon,
+  Globe, Map, MapPin, RefreshCw, ScrollText, Image as ImageIcon, GitMerge,
   KeyRound, Command, Stethoscope, BookOpen,
 } from 'lucide-react';
 
@@ -35,6 +35,7 @@ const navItems = [
   { href: '/admin/notifications', label: 'Push',         icon: Bell },
   { href: '/admin/automation',  label: 'Automation',    icon: Settings },
   { href: '/admin/sync',        label: 'Sync',          icon: RefreshCw },
+  { href: '/admin/dedupe',      label: 'Merge Duplicates', icon: GitMerge },
   { href: '/admin/governance',  label: 'Governance',   icon: ShieldCheck },
   { href: '/admin/integrations', label: 'Integrations', icon: Plug },
   { href: '/admin/audit',       label: 'Audit log',     icon: ScrollText },
