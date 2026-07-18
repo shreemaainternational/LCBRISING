@@ -5,6 +5,7 @@ import { ArrowLeft, Calendar, Clock, MapPin } from 'lucide-react';
 import { getPublicEventById } from '@/lib/events';
 import { getEventCategory } from '@/lib/event-categories';
 import { LocationMap } from '@/components/site/LocationMap';
+import { ShareButtons } from '@/components/site/ShareButtons';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +92,8 @@ export default async function EventReportPage({
             </span>
           )}
         </div>
+
+        <ShareButtons title={event.title} className="mb-8" />
 
         {/* Full report */}
         <div className="grid lg:grid-cols-3 gap-10">

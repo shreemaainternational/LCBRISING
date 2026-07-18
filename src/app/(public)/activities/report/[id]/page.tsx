@@ -5,6 +5,7 @@ import { ArrowLeft, Calendar, MapPin, Users, Clock, IndianRupee } from 'lucide-r
 import { getActivityReport } from '@/lib/activities';
 import { activityCategoryLabel } from '@/lib/activity-categories';
 import { LocationMap } from '@/components/site/LocationMap';
+import { ShareButtons } from '@/components/site/ShareButtons';
 import { formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -88,6 +89,8 @@ export default async function ActivityReportPage({
             </span>
           )}
         </div>
+
+        <ShareButtons title={a.title} className="mb-8" />
 
         <div className="grid lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2">
