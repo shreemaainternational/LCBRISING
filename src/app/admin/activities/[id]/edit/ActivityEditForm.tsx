@@ -9,7 +9,8 @@ import { PhotoMultiUpload } from '@/components/admin/PhotoMultiUpload';
 
 const CATEGORIES = [
   'vision', 'hunger', 'environment', 'diabetes', 'childhood_cancer',
-  'humanitarian', 'youth', 'education', 'healthcare', 'women', 'senior', 'other',
+  'humanitarian', 'youth', 'education', 'healthcare', 'women', 'senior',
+  'meeting', 'leadership_program', 'event', 'other',
 ];
 
 const STATUSES = ['completed', 'in_progress', 'planned', 'cancelled'];

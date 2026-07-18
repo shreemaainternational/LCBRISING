@@ -60,6 +60,7 @@ export const EVENT_CATEGORY_GROUPS: EventCategoryGroup[] = [
     blurb:
       'Installations and the Global Action Team (GAT) and Global Extension Team (GET) leadership conclaves.',
     items: [
+      { slug: 'leadership_program', label: 'Leadership Programme' },
       { slug: 'installation', label: 'Installation' },
       { slug: 'gat_conclave', label: 'GAT Conclave' },
       { slug: 'get_conclave', label: 'GET Conclave' },

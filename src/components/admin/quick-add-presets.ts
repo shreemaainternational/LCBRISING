@@ -203,6 +203,7 @@ export function activitiesPreset(): Omit<QuickAddCardProps, 'title'> {
         { value: 'healthcare', label: 'Healthcare' },
         { value: 'women', label: 'Women Empowerment' },
         { value: 'senior', label: 'Senior Citizens' },
+        { value: 'event', label: 'Event' },
         { value: 'other', label: 'Other' },
         ...PROGRAMME_GROUPS.flatMap((g) =>
           g.items.map((i) => ({ value: i.slug, label: `${g.title} · ${i.label}` })),
