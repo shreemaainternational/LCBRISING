@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createAdminClient } from '@/lib/supabase/server';
-import { formatINR, formatDate } from '@/lib/utils';
+import { formatINR, formatDate, formatActivityWhen } from '@/lib/utils';
 import {
   ArrowLeft, MapPin, Calendar, Users, Clock, Banknote,
   HeartPulse, Sparkles, Image as ImageIcon, Pencil,
@@ -51,7 +51,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             )}
             <h1 className="text-3xl font-bold text-navy-800">{a.title}</h1>
             <div className="flex flex-wrap gap-3 text-sm text-gray-600 mt-2">
-              <span className="inline-flex items-center gap-1"><Calendar size={13} /> {formatDate(a.date)}</span>
+              <span className="inline-flex items-center gap-1"><Calendar size={13} /> {a.start_at ? formatActivityWhen(a.start_at, a.end_at, a.date) : formatDate(a.date)}</span>
               {a.location && <span className="inline-flex items-center gap-1"><MapPin size={13} /> {a.location}</span>}
               {a.clubs && <span className="inline-flex items-center gap-1">🏢 {(a.clubs as { name?: string }).name}</span>}
               {a.csr_partners && (

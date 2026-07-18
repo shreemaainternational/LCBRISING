@@ -39,6 +39,48 @@ export function formatDate(input: string | Date, opts?: Intl.DateTimeFormatOptio
   }).format(d);
 }
 
+const IST = 'Asia/Kolkata';
+const IST_DATE: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric', timeZone: IST };
+const IST_TIME: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: IST };
+
+/**
+ * Human "when" for an activity — a start date+time, optionally through an end.
+ * When the end falls on the same day only its time is shown. Falls back to the
+ * legacy date-only column when no start timestamp was recorded.
+ *   "18 Jul 2026, 2:30 pm – 4:00 pm"
+ *   "18 Jul 2026, 2:30 pm – 19 Jul 2026, 11:00 am"
+ */
+export function formatActivityWhen(
+  startAt: string | null | undefined,
+  endAt: string | null | undefined,
+  fallbackDate?: string | null,
+): string {
+  if (!startAt) {
+    return fallbackDate ? new Intl.DateTimeFormat('en-IN', IST_DATE).format(new Date(fallbackDate)) : '—';
+  }
+  const start = new Date(startAt);
+  const startStr = `${new Intl.DateTimeFormat('en-IN', IST_DATE).format(start)}, ${new Intl.DateTimeFormat('en-IN', IST_TIME).format(start)}`;
+  if (!endAt) return startStr;
+  const end = new Date(endAt);
+  const sameDay =
+    new Intl.DateTimeFormat('en-IN', IST_DATE).format(start) ===
+    new Intl.DateTimeFormat('en-IN', IST_DATE).format(end);
+  const endStr = sameDay
+    ? new Intl.DateTimeFormat('en-IN', IST_TIME).format(end)
+    : `${new Intl.DateTimeFormat('en-IN', IST_DATE).format(end)}, ${new Intl.DateTimeFormat('en-IN', IST_TIME).format(end)}`;
+  return `${startStr} – ${endStr}`;
+}
+
+/** Compact time-only range for list chips — "" when no start timestamp. */
+export function formatActivityTimeRange(
+  startAt: string | null | undefined,
+  endAt: string | null | undefined,
+): string {
+  if (!startAt) return '';
+  const startStr = new Intl.DateTimeFormat('en-IN', IST_TIME).format(new Date(startAt));
+  return endAt ? `${startStr} – ${new Intl.DateTimeFormat('en-IN', IST_TIME).format(new Date(endAt))}` : startStr;
+}
+
 export function buildReceiptNo(prefix: 'DON' | 'DUE' | 'EVT', sequence?: number) {
   const ts = new Date();
   const yy = String(ts.getFullYear()).slice(-2);
