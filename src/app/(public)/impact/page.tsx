@@ -6,7 +6,7 @@ import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { Counter } from '@/components/site/Counter';
 import { formatINRShort } from '@/lib/utils';
-import { causeForCategory } from '@/lib/causes';
+import { activityCategoryLabel } from '@/lib/activity-categories';
 
 export const metadata: Metadata = {
   title: 'Impact Dashboard',
@@ -28,7 +28,7 @@ async function loadImpact() {
       activities: 0,
       donations: 0,
       beneficiaries: 0,
-      causes: [] as { slug: string; name: string; beneficiaries: number }[],
+      categories: [] as { slug: string; name: string; beneficiaries: number; count: number }[],
     };
   }
   try {
@@ -54,26 +54,31 @@ async function loadImpact() {
       0,
     );
 
-    // Group activities into their Lions cause (categories roll up to a
-    // cause via the shared config) and sum beneficiaries per cause.
-    const byCause = new Map<string, { name: string; beneficiaries: number }>();
+    // Group activities by their real `category` (one row per category, not
+    // rolled up to a cause) and sum beneficiaries + count per category.
+    const byCategory = new Map<string, { beneficiaries: number; count: number }>();
     for (const row of ((activityAgg ?? []) as CauseAggRow[])) {
-      const cause = causeForCategory(row.category);
-      const entry = byCause.get(cause.slug) ?? { name: cause.title, beneficiaries: 0 };
+      const slug = (row.category ?? 'other').toLowerCase();
+      const entry = byCategory.get(slug) ?? { beneficiaries: 0, count: 0 };
       entry.beneficiaries += Number(row.beneficiaries ?? 0);
-      byCause.set(cause.slug, entry);
+      entry.count += 1;
+      byCategory.set(slug, entry);
     }
-    const causes = Array.from(byCause.entries())
-      .map(([slug, v]) => ({ slug, name: v.name, beneficiaries: v.beneficiaries }))
-      .sort((a, b) => b.beneficiaries - a.beneficiaries)
-      .slice(0, 8);
+    const categories = Array.from(byCategory.entries())
+      .map(([slug, v]) => ({
+        slug,
+        name: activityCategoryLabel(slug),
+        beneficiaries: v.beneficiaries,
+        count: v.count,
+      }))
+      .sort((a, b) => b.beneficiaries - a.beneficiaries || b.count - a.count);
 
     return {
       members: members ?? 0,
       activities: activities ?? 0,
       donations: totalDonations,
       beneficiaries: totalBeneficiaries,
-      causes,
+      categories,
     };
   } catch {
     return {
@@ -81,7 +86,7 @@ async function loadImpact() {
       activities: 0,
       donations: 0,
       beneficiaries: 0,
-      causes: [] as { slug: string; name: string; beneficiaries: number }[],
+      categories: [] as { slug: string; name: string; beneficiaries: number; count: number }[],
     };
   }
 }
@@ -128,18 +133,31 @@ export default async function ImpactPage() {
             />
           </div>
 
-          {stats.causes.length > 0 && (
+          {stats.categories.length > 0 && (
             <div className="mt-12">
-              <h2 className="text-2xl font-bold text-navy-900 mb-6">Impact by cause</h2>
+              <div className="flex items-end justify-between mb-6">
+                <h2 className="text-2xl font-bold text-navy-900">Impact by category</h2>
+                <span className="text-sm text-gray-500">Tap a category to see its activities</span>
+              </div>
               <div className="space-y-4">
-                {stats.causes.map((c) => {
-                  const max = Math.max(...stats.causes.map((x) => x.beneficiaries), 1);
+                {stats.categories.map((c) => {
+                  const max = Math.max(...stats.categories.map((x) => x.beneficiaries), 1);
                   const pct = (c.beneficiaries / max) * 100;
                   return (
-                    <Link key={c.slug} href={`/activities/${c.slug}`} className="block group">
+                    <Link
+                      key={c.slug}
+                      href={`/activities/category/${c.slug}`}
+                      className="block group"
+                    >
                       <div className="flex justify-between text-sm font-semibold mb-1.5">
-                        <span className="text-navy-900 group-hover:text-brand-600 transition-colors">{c.name}</span>
-                        <span className="text-gray-600">{c.beneficiaries.toLocaleString('en-IN')} lives</span>
+                        <span className="text-navy-900 group-hover:text-brand-600 transition-colors">
+                          {c.name}
+                        </span>
+                        <span className="text-gray-600">
+                          {c.beneficiaries > 0
+                            ? `${c.beneficiaries.toLocaleString('en-IN')} lives`
+                            : `${c.count} ${c.count === 1 ? 'activity' : 'activities'}`}
+                        </span>
                       </div>
                       <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
                         <div

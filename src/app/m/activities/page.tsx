@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/server';
 import { Plus, Activity, Calendar, MapPin } from 'lucide-react';
+import { activityCategoryLabel } from '@/lib/activity-categories';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,7 @@ export default async function MobileActivities() {
                       <MapPin size={10} />{a.location}
                     </span>
                   )}
-                  {a.category && <span className="capitalize">{a.category}</span>}
+                  {a.category && <span>{activityCategoryLabel(a.category)}</span>}
                 </div>
               </div>
             </div>

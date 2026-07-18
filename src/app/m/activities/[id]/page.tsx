@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/server';
 import { ArrowLeft, Calendar, MapPin, Users, Clock, Banknote } from 'lucide-react';
 import { formatINR } from '@/lib/utils';
+import { activityCategoryLabel } from '@/lib/activity-categories';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,7 @@ export default async function MobileActivityDetail({ params }: { params: Promise
       <div className="bg-white rounded-2xl p-4 shadow-sm">
         {a.category && (
           <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 mb-2">
-            {a.category}
+            {activityCategoryLabel(a.category)}
           </span>
         )}
         <h1 className="text-xl font-bold text-navy-800">{a.title}</h1>

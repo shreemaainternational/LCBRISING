@@ -6,6 +6,7 @@ import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { BulkActivityUpload } from '@/components/admin/BulkActivityUpload';
 import { activitiesPreset } from '@/components/admin/quick-add-presets';
+import { activityCategoryLabel } from '@/lib/activity-categories';
 import { Activity as ActivityIcon, Pencil } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -63,7 +64,7 @@ export default async function AdminActivitiesPage() {
                         {a.title}
                       </Link>
                     </td>
-                    <td className="p-3">{a.category ?? '—'}</td>
+                    <td className="p-3">{a.category ? activityCategoryLabel(a.category) : '—'}</td>
                     <td className="p-3">{formatDate(a.date)}</td>
                     <td className="p-3 text-right">{a.beneficiaries}</td>
                     <td className="p-3 text-right">{Number(a.service_hours)}</td>
