@@ -1,15 +1,17 @@
-import { PROGRAMME_GROUPS } from '@/lib/event-categories';
-
 /**
  * Single source of truth for the activity `category` options, shared by the
  * mobile Log Activity form, the CRM quick-add + Edit Activity forms, and the
  * public report/label lookups — so the list, slugs and spelling never drift
  * between the app, CRM and website.
  *
- * Cause categories carry the Lions global-cause labels; the Meetings and
- * Leadership Programme sub-categories are pulled from the same taxonomy that
- * drives the public programme pages and their filter tabs.
+ * The dropdown keeps only the top-level buckets: the Lions global causes plus
+ * the generic Meeting, Leadership Programme, Event and Other. The granular
+ * Meetings / Leadership Programme sub-types (BM, GB, Installation, …) were
+ * removed from the picker to keep it short; they still exist as filter tabs on
+ * the public programme pages.
  */
+import { getEventCategory } from '@/lib/event-categories';
+
 export type ActivityCategoryOption = { value: string; label: string };
 
 const CAUSE_CATEGORIES: ActivityCategoryOption[] = [
@@ -27,19 +29,10 @@ const CAUSE_CATEGORIES: ActivityCategoryOption[] = [
   { value: 'senior', label: 'Senior Citizens' },
 ];
 
-// Meetings / Leadership Programme sub-categories. A sub-category whose label
-// already equals its group title (the generic bucket) is shown as just the
-// group title; the rest are prefixed for context, e.g. "Meetings · BM".
-const PROGRAMME_CATEGORIES: ActivityCategoryOption[] = PROGRAMME_GROUPS.flatMap((g) =>
-  g.items.map((i) => ({
-    value: i.slug,
-    label: i.label === g.title ? g.title : `${g.title} · ${i.label}`,
-  })),
-);
-
 export const ACTIVITY_CATEGORY_OPTIONS: ActivityCategoryOption[] = [
   ...CAUSE_CATEGORIES,
-  ...PROGRAMME_CATEGORIES,
+  { value: 'meeting', label: 'Meeting' },
+  { value: 'leadership_program', label: 'Leadership Programme' },
   { value: 'event', label: 'Event' },
   { value: 'other', label: 'Other' },
 ];
@@ -48,11 +41,16 @@ const LABEL_BY_VALUE: Record<string, string> = Object.fromEntries(
   ACTIVITY_CATEGORY_OPTIONS.map((o) => [o.value, o.label]),
 );
 
-/** Human label for an activity category slug, with a Title-Case fallback. */
+/**
+ * Human label for an activity category slug. Falls back to the event-category
+ * taxonomy so activities still tagged with a granular programme slug (no longer
+ * offered in the picker) keep a clean label, then to Title Case.
+ */
 export function activityCategoryLabel(slug: string | null | undefined): string {
   if (!slug) return 'Service Activity';
   return (
     LABEL_BY_VALUE[slug] ??
+    getEventCategory(slug)?.label ??
     slug.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   );
 }
