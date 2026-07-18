@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
+import { BulkClubUpload } from '@/components/admin/BulkClubUpload';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { clubsPreset } from '@/components/admin/quick-add-presets';
 import { Users, MapPin, Calendar, Building2 } from 'lucide-react';
@@ -35,6 +36,10 @@ export default async function ClubsPage() {
           <p className="text-gray-600">All Lions clubs in the federation. Click a club to drill into officers and members.</p>
         </div>
         <QuickAddCard title="Club" {...preset} />
+      </div>
+
+      <div className="mb-6">
+        <BulkClubUpload />
       </div>
 
       {!clubs?.length ? (
