@@ -6,12 +6,7 @@ import {
   Loader2, Save, AlertCircle, CheckCircle2, ArrowLeft, ImagePlus,
 } from 'lucide-react';
 import { PhotoMultiUpload } from '@/components/admin/PhotoMultiUpload';
-
-const CATEGORIES = [
-  'vision', 'hunger', 'environment', 'diabetes', 'childhood_cancer',
-  'humanitarian', 'youth', 'education', 'healthcare', 'women', 'senior',
-  'meeting', 'leadership_program', 'event', 'other',
-];
+import { ACTIVITY_CATEGORY_OPTIONS } from '@/lib/activity-categories';
 
 const STATUSES = ['completed', 'in_progress', 'planned', 'cancelled'];
 
@@ -144,7 +139,9 @@ export function ActivityEditForm({ initial }: { initial: ActivityInitial }) {
           </Field>
           <Field label="Category">
             <select value={category} onChange={(e) => setCategory(e.target.value)} className={input}>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
+              {ACTIVITY_CATEGORY_OPTIONS.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
             </select>
           </Field>
           <Field label="Status">

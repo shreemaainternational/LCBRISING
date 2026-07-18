@@ -4,7 +4,8 @@
  * duplicating field definitions.
  */
 import type { QuickAddCardProps, QuickField } from './QuickAddCard';
-import { EVENT_CATEGORY_GROUPS, PROGRAMME_GROUPS } from '@/lib/event-categories';
+import { EVENT_CATEGORY_GROUPS } from '@/lib/event-categories';
+import { ACTIVITY_CATEGORY_OPTIONS } from '@/lib/activity-categories';
 
 interface PresetOptions {
   clubs?: { id: string; name: string }[];
@@ -190,25 +191,7 @@ export function activitiesPreset(): Omit<QuickAddCardProps, 'title'> {
       { name: 'date', label: 'Date', type: 'date', required: true, defaultValue: new Date().toISOString().slice(0, 10) },
       { name: 'category', label: 'Service Category', type: 'select', defaultValue: 'healthcare',
         hint: 'Meetings / Leadership Programme categories drive their dedicated pages and tab filters.',
-        options: [
-        { value: 'vision', label: 'Vision' },
-        { value: 'hunger', label: 'Hunger Relief' },
-        { value: 'environment', label: 'Environment' },
-        { value: 'relief', label: 'Disaster Relief' },
-        { value: 'diabetes', label: 'Diabetes Awareness' },
-        { value: 'childhood_cancer', label: 'Childhood Cancer' },
-        { value: 'humanitarian', label: 'Humanitarian' },
-        { value: 'youth', label: 'Youth Development' },
-        { value: 'education', label: 'Education' },
-        { value: 'healthcare', label: 'Healthcare' },
-        { value: 'women', label: 'Women Empowerment' },
-        { value: 'senior', label: 'Senior Citizens' },
-        { value: 'event', label: 'Event' },
-        { value: 'other', label: 'Other' },
-        ...PROGRAMME_GROUPS.flatMap((g) =>
-          g.items.map((i) => ({ value: i.slug, label: `${g.title} · ${i.label}` })),
-        ),
-      ] },
+        options: ACTIVITY_CATEGORY_OPTIONS },
       { name: 'beneficiaries', label: 'Beneficiaries', type: 'number', min: 0, defaultValue: 0, cast: 'int' },
       { name: 'lion_members_count', label: 'Presence of Lion Member', type: 'number', min: 0, defaultValue: 0, cast: 'int', hint: 'How many Lion members attended this project' },
       { name: 'service_hours', label: 'Service Hours', type: 'number', min: 0, defaultValue: 0, cast: 'number', step: 0.5 },

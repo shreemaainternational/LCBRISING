@@ -3,21 +3,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Calendar, MapPin, Users, Clock, IndianRupee } from 'lucide-react';
 import { getActivityReport } from '@/lib/activities';
-import { getCause } from '@/lib/causes';
-import { getEventCategory } from '@/lib/event-categories';
+import { activityCategoryLabel } from '@/lib/activity-categories';
 import { LocationMap } from '@/components/site/LocationMap';
 import { formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
-
-function categoryLabel(slug: string | null): string {
-  if (!slug) return 'Service Activity';
-  return (
-    getCause(slug)?.title ??
-    getEventCategory(slug)?.label ??
-    slug.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-  );
-}
 
 export async function generateMetadata({
   params,
@@ -66,7 +56,7 @@ export default async function ActivityReportPage({
         </Link>
 
         <span className="inline-block bg-blue-50 text-navy-700 px-3 py-1 rounded-full text-xs font-semibold mb-3">
-          {categoryLabel(a.category)}
+          {activityCategoryLabel(a.category)}
         </span>
         <h1 className="text-3xl md:text-4xl font-bold text-navy-800 mb-5">{a.title}</h1>
 
