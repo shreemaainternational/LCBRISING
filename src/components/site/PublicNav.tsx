@@ -6,26 +6,34 @@ import { useState } from 'react';
 import { ChevronDown, Menu, Phone, X, ArrowRight } from 'lucide-react';
 import { env } from '@/lib/env';
 import { CAUSES } from '@/lib/causes';
-import { EVENT_CATEGORY_GROUPS } from '@/lib/event-categories';
+import {
+  PROGRAMME_GROUPS,
+  getEventCategoryGroup,
+} from '@/lib/event-categories';
+
+type DropdownKind = 'services' | 'events';
 
 type NavItem = {
   href: string;
   label: string;
-  hasDropdown?: boolean;
+  dropdown?: DropdownKind;
 };
 
 const NAV: NavItem[] = [
   { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
-  { href: '/activities', label: 'Service Activities', hasDropdown: true },
+  { href: '/activities', label: 'Service Activities', dropdown: 'services' },
   { href: '/stories', label: 'Stories' },
   { href: '/campaigns', label: 'Campaigns' },
   { href: '/impact', label: 'Impact' },
   { href: '/blog', label: 'Newsroom' },
-  { href: '/events', label: 'Events' },
+  { href: '/events', label: 'Events', dropdown: 'events' },
   { href: '/media', label: 'Media' },
   { href: '/contact', label: 'Contact' },
 ];
+
+// The celebration/festival categories now live under the Events menu.
+const CELEBRATION_GROUP = getEventCategoryGroup('celebration');
 
 const DISTRICT_LINE = 'District 3232 F1  |  Region V  |  Zone I';
 const CONTACT_PHONE = '+91-9712299333';
@@ -84,8 +92,14 @@ export function PublicNav() {
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
             {NAV.map((item) =>
-              item.hasDropdown ? (
+              item.dropdown === 'services' ? (
                 <ServiceActivitiesDropdown
+                  key={item.href}
+                  item={item}
+                  active={isActive(item.href)}
+                />
+              ) : item.dropdown === 'events' ? (
+                <EventsDropdown
                   key={item.href}
                   item={item}
                   active={isActive(item.href)}
@@ -143,7 +157,8 @@ export function PublicNav() {
                 >
                   {item.label}
                 </Link>
-                {item.hasDropdown && (
+
+                {item.dropdown === 'services' && (
                   <div className="ml-3 mb-2">
                     <div className="grid grid-cols-2 gap-1">
                       {CAUSES.map((c) => (
@@ -158,26 +173,40 @@ export function PublicNav() {
                         </Link>
                       ))}
                     </div>
-                    {EVENT_CATEGORY_GROUPS.map((group) => (
-                      <div key={group.key} className="mt-2">
-                        <div className="py-1 text-[10px] font-semibold tracking-[0.15em] text-brand-300">
-                          {group.title.toUpperCase()}
-                        </div>
-                        <div className="grid grid-cols-2 gap-1">
-                          {group.items.map((sub) => (
-                            <Link
-                              key={sub.slug}
-                              href={`/events?category=${sub.slug}`}
-                              className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
-                              onClick={() => setOpen(false)}
-                            >
-                              <group.icon size={14} className="text-brand-400 flex-shrink-0" aria-hidden />
-                              {sub.label}
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                    <div className="mt-2 grid grid-cols-1 gap-1">
+                      {PROGRAMME_GROUPS.map((group) => (
+                        <Link
+                          key={group.key}
+                          href={group.route!}
+                          className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
+                          onClick={() => setOpen(false)}
+                        >
+                          <group.icon size={14} className="text-brand-400 flex-shrink-0" aria-hidden />
+                          {group.title}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {item.dropdown === 'events' && CELEBRATION_GROUP && (
+                  <div className="ml-3 mb-2">
+                    <div className="py-1 text-[10px] font-semibold tracking-[0.15em] text-brand-300">
+                      {CELEBRATION_GROUP.title.toUpperCase()}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {CELEBRATION_GROUP.items.map((sub) => (
+                        <Link
+                          key={sub.slug}
+                          href={`/events?category=${sub.slug}`}
+                          className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
+                          onClick={() => setOpen(false)}
+                        >
+                          <CELEBRATION_GROUP.icon size={14} className="text-brand-400 flex-shrink-0" aria-hidden />
+                          {sub.label}
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -198,12 +227,15 @@ export function PublicNav() {
   );
 }
 
-function ServiceActivitiesDropdown({
+/** Shared shell: a top-nav link with a hover-revealed dropdown panel. */
+function DropdownShell({
   item,
   active,
+  children,
 }: {
   item: NavItem;
   active: boolean;
+  children: React.ReactNode;
 }) {
   return (
     <div className="relative group">
@@ -221,49 +253,94 @@ function ServiceActivitiesDropdown({
       </Link>
       <div className="absolute left-0 top-full pt-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity">
         <div className="bg-navy-800 text-white rounded-lg shadow-xl border border-white/10 w-[280px] max-h-[80vh] overflow-y-auto">
-          <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
-            LIONS GLOBAL CAUSES
-          </div>
-          <div className="pb-2">
-            {CAUSES.map((c) => (
-              <Link
-                key={c.slug}
-                href={`/activities/${c.slug}`}
-                className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
-              >
-                <c.icon size={16} className="text-brand-400" aria-hidden />
-                {c.title}
-              </Link>
-            ))}
-          </div>
-          {EVENT_CATEGORY_GROUPS.map((group) => (
-            <div key={group.key} className="border-t border-white/10">
-              <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
-                {group.title.toUpperCase()}
-              </div>
-              <div className="pb-2">
-                {group.items.map((item) => (
-                  <Link
-                    key={item.slug}
-                    href={`/events?category=${item.slug}`}
-                    className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
-                  >
-                    <group.icon size={16} className="text-brand-400 flex-shrink-0" aria-hidden />
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
-          <Link
-            href="/activities"
-            className="flex items-center justify-center gap-1.5 border-t border-white/10 px-4 py-3 text-sm font-semibold text-brand-300 hover:bg-white/5"
-          >
-            View All Activities
-            <ArrowRight size={14} aria-hidden />
-          </Link>
+          {children}
         </div>
       </div>
     </div>
+  );
+}
+
+function ServiceActivitiesDropdown({
+  item,
+  active,
+}: {
+  item: NavItem;
+  active: boolean;
+}) {
+  return (
+    <DropdownShell item={item} active={active}>
+      <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
+        LIONS GLOBAL CAUSES
+      </div>
+      <div className="pb-2">
+        {CAUSES.map((c) => (
+          <Link
+            key={c.slug}
+            href={`/activities/${c.slug}`}
+            className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
+          >
+            <c.icon size={16} className="text-brand-400" aria-hidden />
+            {c.title}
+          </Link>
+        ))}
+      </div>
+      <div className="border-t border-white/10">
+        <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
+          MEETINGS &amp; LEADERSHIP
+        </div>
+        <div className="pb-2">
+          {PROGRAMME_GROUPS.map((group) => (
+            <Link
+              key={group.key}
+              href={group.route!}
+              className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
+            >
+              <group.icon size={16} className="text-brand-400 flex-shrink-0" aria-hidden />
+              {group.title}
+            </Link>
+          ))}
+        </div>
+      </div>
+      <Link
+        href="/activities"
+        className="flex items-center justify-center gap-1.5 border-t border-white/10 px-4 py-3 text-sm font-semibold text-brand-300 hover:bg-white/5"
+      >
+        View All Activities
+        <ArrowRight size={14} aria-hidden />
+      </Link>
+    </DropdownShell>
+  );
+}
+
+function EventsDropdown({ item, active }: { item: NavItem; active: boolean }) {
+  return (
+    <DropdownShell item={item} active={active}>
+      {CELEBRATION_GROUP && (
+        <>
+          <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
+            {CELEBRATION_GROUP.title.toUpperCase()}
+          </div>
+          <div className="pb-2">
+            {CELEBRATION_GROUP.items.map((sub) => (
+              <Link
+                key={sub.slug}
+                href={`/events?category=${sub.slug}`}
+                className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
+              >
+                <CELEBRATION_GROUP.icon size={16} className="text-brand-400 flex-shrink-0" aria-hidden />
+                {sub.label}
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+      <Link
+        href="/events"
+        className="flex items-center justify-center gap-1.5 border-t border-white/10 px-4 py-3 text-sm font-semibold text-brand-300 hover:bg-white/5"
+      >
+        View All Events
+        <ArrowRight size={14} aria-hidden />
+      </Link>
+    </DropdownShell>
   );
 }

@@ -26,14 +26,21 @@ export type EventCategoryGroup = {
   key: string;
   title: string;
   icon: LucideIcon;
+  /** Dedicated landing page listing every event in the group.
+   *  Groups without a route (e.g. Celebrations) surface as category links. */
+  route?: string;
+  blurb?: string;
   items: EventCategory[];
 };
 
 export const EVENT_CATEGORY_GROUPS: EventCategoryGroup[] = [
   {
     key: 'meeting',
-    title: 'Meeting',
+    title: 'Meetings',
     icon: Users,
+    route: '/meetings',
+    blurb:
+      'Conferences, board and general body meetings, official visits and zone advisory sessions of the club.',
     items: [
       { slug: 'conference', label: 'All Conferences' },
       { slug: 'meeting', label: 'Meetings' },
@@ -49,6 +56,9 @@ export const EVENT_CATEGORY_GROUPS: EventCategoryGroup[] = [
     key: 'leadership',
     title: 'Leadership Programme',
     icon: GraduationCap,
+    route: '/leadership-programme',
+    blurb:
+      'Installations and the Global Action Team (GAT) and Global Extension Team (GET) leadership conclaves.',
     items: [
       { slug: 'installation', label: 'Installation' },
       { slug: 'gat_conclave', label: 'GAT Conclave' },
@@ -80,6 +90,27 @@ const CATEGORY_BY_SLUG: Record<string, EventCategory> = Object.fromEntries(
 export function getEventCategory(slug: string): EventCategory | undefined {
   return CATEGORY_BY_SLUG[slug];
 }
+
+const GROUP_BY_KEY: Record<string, EventCategoryGroup> = Object.fromEntries(
+  EVENT_CATEGORY_GROUPS.map((g) => [g.key, g]),
+);
+
+/** Look up a category group by its key. Returns undefined when unknown. */
+export function getEventCategoryGroup(
+  key: string,
+): EventCategoryGroup | undefined {
+  return GROUP_BY_KEY[key];
+}
+
+/** The category slugs belonging to a group, e.g. for an `in` filter. */
+export function groupCategorySlugs(group: EventCategoryGroup): string[] {
+  return group.items.map((i) => i.slug);
+}
+
+/** Groups that have their own landing page (Meetings, Leadership Programme). */
+export const PROGRAMME_GROUPS: EventCategoryGroup[] = EVENT_CATEGORY_GROUPS.filter(
+  (g) => !!g.route,
+);
 
 /** All valid event-category slugs — used for validation. */
 export const EVENT_CATEGORY_SLUGS = EVENT_CATEGORIES.map((c) => c.slug);
