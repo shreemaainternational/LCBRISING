@@ -222,6 +222,8 @@ export interface Activity {
   service_hours: number;
   amount_raised: number;
   date: string;
+  start_at: string | null;
+  end_at: string | null;
   location: string | null;
   photos: string[];
   reported_to_district: boolean;

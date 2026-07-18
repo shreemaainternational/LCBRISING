@@ -14,6 +14,8 @@ const patchSchema = z.object({
   service_hours: z.number().nonnegative().optional(),
   amount_raised: z.number().nonnegative().optional(),
   date: z.string().optional(),
+  start_at: z.string().nullable().optional(),
+  end_at: z.string().nullable().optional(),
   location: z.string().optional(),
   photos: z.array(z.string().url()).optional(),
   photo_captions: z.record(z.string(), z.string()).optional(),
