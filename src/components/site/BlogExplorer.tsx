@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { BookOpen, ExternalLink, Search } from 'lucide-react';
+import { ShareButton } from './ShareButton';
 
 export type BlogStory = {
   id: string;
@@ -132,15 +133,18 @@ export function BlogExplorer({ stories }: { stories: BlogStory[] }) {
                     <p className="text-sm text-gray-600 line-clamp-3 mb-5">
                       {s.excerpt}
                     </p>
-                    <a
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 hover:text-brand-600"
-                    >
-                      Read on LionsClubs.org
-                      <ExternalLink size={14} aria-hidden />
-                    </a>
+                    <div className="mt-auto flex items-center justify-between gap-2">
+                      <a
+                        href={s.url}
+                        target={/^https?:/i.test(s.url) ? '_blank' : undefined}
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 hover:text-brand-600"
+                      >
+                        Read more
+                        <ExternalLink size={14} aria-hidden />
+                      </a>
+                      <ShareButton title={s.title} text={s.excerpt} url={s.url} image={s.image} variant="icon" />
+                    </div>
                   </div>
                 </article>
               ))}

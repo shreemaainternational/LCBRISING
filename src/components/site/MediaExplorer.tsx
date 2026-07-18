@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Search, Calendar, Newspaper, Globe, Tv } from 'lucide-react';
+import { ShareButton } from './ShareButton';
 
 export type MediaItem = {
   id: string;
@@ -107,6 +108,15 @@ export function MediaExplorer({ items }: { items: MediaItem[] }) {
                       <h3 className="font-bold text-lg text-navy-800 group-hover:text-brand-600 transition-colors">
                         {m.title}
                       </h3>
+                      <div className="mt-auto pt-4 flex items-center justify-end">
+                        <ShareButton
+                          title={m.title}
+                          text={`${m.title} — ${m.outlet}, ${m.date}`}
+                          url={m.url ?? '/media'}
+                          image={m.image}
+                          variant="icon"
+                        />
+                      </div>
                     </div>
                   </Wrapper>
                 );
