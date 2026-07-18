@@ -1,8 +1,13 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
+import {
+  EVENT_CATEGORY_GROUPS,
+  getEventCategory,
+} from '@/lib/event-categories';
 
 export const metadata: Metadata = { title: 'Events', alternates: { canonical: '/events' } };
 export const revalidate = 60;
@@ -40,22 +45,42 @@ function fmtTime(iso: string) {
   });
 }
 
-export default async function EventsPage() {
+export default async function EventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const { category } = await searchParams;
+  const activeCategory = category ? getEventCategory(category) : undefined;
+  // Ignore an unknown slug so a bad query param never hides every event.
+  const filterSlug = activeCategory?.slug ?? null;
+
   let upcoming: EventRow[] = [];
   let past: EventRow[] = [];
   if (isSupabaseConfigured()) {
     const supabase = await createClient();
     const now = new Date().toISOString();
-    const [u, p] = await Promise.all([
-      supabase.from('events').select('*').eq('is_public', true).gte('date', now).order('date'),
-      supabase
-        .from('events')
-        .select('*')
-        .eq('is_public', true)
-        .lt('date', now)
-        .order('date', { ascending: false })
-        .limit(6),
-    ]);
+
+    const upcomingQuery = supabase
+      .from('events')
+      .select('*')
+      .eq('is_public', true)
+      .gte('date', now)
+      .order('date');
+    const pastQuery = supabase
+      .from('events')
+      .select('*')
+      .eq('is_public', true)
+      .lt('date', now)
+      .order('date', { ascending: false })
+      .limit(6);
+
+    if (filterSlug) {
+      upcomingQuery.eq('category', filterSlug);
+      pastQuery.eq('category', filterSlug);
+    }
+
+    const [u, p] = await Promise.all([upcomingQuery, pastQuery]);
     upcoming = (u.data ?? []) as EventRow[];
     past = (p.data ?? []) as EventRow[];
   }
@@ -64,10 +89,13 @@ export default async function EventsPage() {
     <>
       <PageHero
         pillText="EVENTS"
-        headline="Upcoming Events"
+        headline={activeCategory ? activeCategory.label : 'Upcoming Events'}
         subtitle="Join us at our upcoming service activities, meetings, and community events. Everyone is welcome!"
         backgroundImage={PAGE_HERO_BG.events}
       />
+
+      {/* Category filter */}
+      <EventFilter activeSlug={filterSlug} />
 
       {/* Upcoming events grid */}
       <section className="container-page py-16 md:py-20">
@@ -76,13 +104,17 @@ export default async function EventsPage() {
             Upcoming
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-navy-800">
-            Don&apos;t Miss These Events
+            {activeCategory
+              ? `${activeCategory.label}`
+              : "Don't Miss These Events"}
           </h2>
         </div>
 
         {upcoming.length === 0 ? (
           <p className="text-center text-gray-500">
-            No upcoming events scheduled. Check back soon!
+            {activeCategory
+              ? `No upcoming ${activeCategory.label} events scheduled. Check back soon!`
+              : 'No upcoming events scheduled. Check back soon!'}
           </p>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
@@ -109,6 +141,47 @@ export default async function EventsPage() {
   );
 }
 
+function EventFilter({ activeSlug }: { activeSlug: string | null }) {
+  const chipBase =
+    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors';
+  const active =
+    'bg-navy-800 border-navy-800 text-white';
+  const idle =
+    'bg-white border-gray-200 text-navy-700 hover:border-brand-400 hover:text-brand-600';
+
+  return (
+    <section className="border-b border-gray-200 bg-gray-50">
+      <div className="container-page py-5 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/events"
+            className={`${chipBase} ${activeSlug === null ? active : idle}`}
+          >
+            All Events
+          </Link>
+        </div>
+        {EVENT_CATEGORY_GROUPS.map((group) => (
+          <div key={group.key} className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 mr-1">
+              <group.icon size={14} className="text-brand-500" aria-hidden />
+              {group.title}
+            </span>
+            {group.items.map((item) => (
+              <Link
+                key={item.slug}
+                href={`/events?category=${item.slug}`}
+                className={`${chipBase} ${activeSlug === item.slug ? active : idle}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function EventCard({
   event,
   fallbackIndex,
@@ -123,6 +196,9 @@ function EventCard({
   const timeRange = event.end_date
     ? `${fmtTime(event.date)} - ${fmtTime(event.end_date)}`
     : fmtTime(event.date);
+  const categoryLabel = event.category
+    ? getEventCategory(event.category)?.label ?? event.category
+    : 'Community Event';
 
   return (
     <article
@@ -138,7 +214,7 @@ function EventCard({
       />
       <div className="p-6 flex flex-col flex-1">
         <span className="inline-block self-start bg-blue-50 text-navy-700 px-3 py-1 rounded-full text-xs font-semibold mb-3">
-          {event.category || 'Community Event'}
+          {categoryLabel}
         </span>
         <h3 className="font-bold text-lg text-navy-800 mb-2">{event.title}</h3>
         {event.description && (
