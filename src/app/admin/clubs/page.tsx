@@ -13,10 +13,12 @@ export default async function ClubsPage() {
   // Read via the service-role client (this page is gated by the admin layout)
   // so member counts survive databases where the `members` RLS policy recurses.
   const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
-  const [{ data: clubs }, { data: districts }, { data: members }] = await Promise.all([
-    supa.from('clubs').select('id, name, district, city, state, charter_date, club_number, district_id')
+  const [{ data: clubs }, { data: districts }, { data: zones }, { data: regions }, { data: members }] = await Promise.all([
+    supa.from('clubs').select('id, name, district, city, state, charter_date, club_number, district_id, zone_id, region_id')
       .is('deleted_at', null).order('name'),
     supa.from('districts').select('id, code, name').is('deleted_at', null).order('code'),
+    supa.from('zones').select('id, code, name, district_id').is('deleted_at', null).order('code'),
+    supa.from('regions').select('id, code, name, district_id').is('deleted_at', null).order('code'),
     supa.from('members').select('club_id').is('deleted_at', null),
   ]);
 
@@ -52,6 +54,8 @@ export default async function ClubsPage() {
             <ClubsTable
               clubs={clubs}
               districts={districts ?? []}
+              zones={zones ?? []}
+              regions={regions ?? []}
               memberCounts={Object.fromEntries(memberCount)}
             />
           </CardContent>

@@ -23,6 +23,8 @@ const clubUpdateSchema = z.object({
   name: z.string().min(2).max(200).optional(),
   club_number: z.string().max(64).nullable().optional(),
   district_id: z.string().uuid().nullable().optional(),
+  region_id: z.string().uuid().nullable().optional(),
+  zone_id: z.string().uuid().nullable().optional(),
   city: z.string().max(120).nullable().optional(),
   state: z.string().max(120).nullable().optional(),
   country: z.string().max(120).nullable().optional(),
