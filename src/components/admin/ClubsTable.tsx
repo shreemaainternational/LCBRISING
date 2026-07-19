@@ -15,10 +15,13 @@ export type ClubRow = {
   charter_date: string | null;
   club_number: string | null;
   district_id: string | null;
+  region_id?: string | null;
+  zone_id?: string | null;
   country?: string | null;
 };
 
 type DistrictOption = { id: string; code: string; name: string };
+type HierOption = { id: string; code: string; name: string; district_id: string };
 
 async function authHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -30,10 +33,12 @@ async function authHeaders(): Promise<Record<string, string>> {
 }
 
 export function ClubsTable({
-  clubs, districts, memberCounts,
+  clubs, districts, zones = [], regions = [], memberCounts,
 }: {
   clubs: ClubRow[];
   districts: DistrictOption[];
+  zones?: HierOption[];
+  regions?: HierOption[];
   memberCounts: Record<string, number>;
 }) {
   const router = useRouter();
@@ -136,6 +141,8 @@ export function ClubsTable({
         <EditClubModal
           club={editing}
           districts={districts}
+          zones={zones}
+          regions={regions}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); router.refresh(); }}
         />
@@ -145,16 +152,20 @@ export function ClubsTable({
 }
 
 function EditClubModal({
-  club, districts, onClose, onSaved,
+  club, districts, zones, regions, onClose, onSaved,
 }: {
   club: ClubRow;
   districts: DistrictOption[];
+  zones: HierOption[];
+  regions: HierOption[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
     name: club.name ?? '',
     district_id: club.district_id ?? '',
+    region_id: club.region_id ?? '',
+    zone_id: club.zone_id ?? '',
     club_number: club.club_number ?? '',
     city: club.city ?? '',
     state: club.state ?? '',
@@ -174,6 +185,8 @@ function EditClubModal({
     const payload: Record<string, unknown> = {
       name: form.name.trim(),
       district_id: form.district_id || null,
+      region_id: form.region_id || null,
+      zone_id: form.zone_id || null,
       club_number: form.club_number.trim() || null,
       city: form.city.trim() || null,
       state: form.state.trim() || null,
@@ -222,9 +235,30 @@ function EditClubModal({
           </label>
           <label className="block">
             <span className={labelCls}>District</span>
-            <select className={inputCls} value={form.district_id} onChange={(e) => set('district_id', e.target.value)}>
+            <select className={inputCls} value={form.district_id}
+              onChange={(e) => setForm((s) => ({ ...s, district_id: e.target.value, region_id: '', zone_id: '' }))}>
               <option value="">—</option>
               {districts.map((d) => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className={labelCls}>Region</span>
+            <select className={inputCls} value={form.region_id} onChange={(e) => set('region_id', e.target.value)}
+              disabled={!form.district_id}>
+              <option value="">— none —</option>
+              {regions.filter((r) => r.district_id === form.district_id).map((r) => (
+                <option key={r.id} value={r.id}>{r.code} — {r.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className={labelCls}>Zone</span>
+            <select className={inputCls} value={form.zone_id} onChange={(e) => set('zone_id', e.target.value)}
+              disabled={!form.district_id}>
+              <option value="">— none —</option>
+              {zones.filter((z) => z.district_id === form.district_id).map((z) => (
+                <option key={z.id} value={z.id}>{z.code} — {z.name}</option>
+              ))}
             </select>
           </label>
           <label className="block">
