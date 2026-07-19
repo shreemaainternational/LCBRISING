@@ -92,7 +92,7 @@ export interface District {
   cabinet_treasurer_name: string | null;
   lions_year: string | null;
   source_id: string | null;
-  // Lions Portal-shaped fields (see migration 0063).
+  // Lions Portal-shaped fields (see migration 0065).
   multiple_district_code: string | null;
   constitutional_area: string | null;
   status: string | null;
@@ -238,6 +238,8 @@ export interface Activity {
   service_hours: number;
   amount_raised: number;
   date: string;
+  start_at: string | null;
+  end_at: string | null;
   location: string | null;
   photos: string[];
   reported_to_district: boolean;

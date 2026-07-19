@@ -22,6 +22,8 @@ export type CauseActivity = {
   beneficiaries: number | null;
   photos: string[];
   captions: Record<string, string>;
+  /** Raw activities.category — used by the programme tab filters. */
+  category?: string | null;
 };
 
 type Lightbox = {

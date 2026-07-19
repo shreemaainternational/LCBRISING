@@ -4,6 +4,7 @@
  * duplicating field definitions.
  */
 import type { QuickAddCardProps, QuickField } from './QuickAddCard';
+import { EVENT_CATEGORY_GROUPS, PROGRAMME_GROUPS } from '@/lib/event-categories';
 
 interface PresetOptions {
   clubs?: { id: string; name: string }[];
@@ -184,6 +185,13 @@ export function eventsPreset(): Omit<QuickAddCardProps, 'title'> {
     promotePhotos: { first: 'cover_url' },
     fields: [
       { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Eye Camp, Installation Night…' },
+      { name: 'category', label: 'Category', type: 'select',
+        hint: 'Drives the Meeting / Leadership Programme filters on the website.',
+        options: [
+          ...EVENT_CATEGORY_GROUPS.flatMap((g) =>
+            g.items.map((i) => ({ value: i.slug, label: `${g.title} · ${i.label}` })),
+          ),
+        ] },
       { name: 'date', label: 'Starts At', type: 'datetime-local', required: true },
       { name: 'end_date', label: 'Ends At', type: 'datetime-local' },
       { name: 'location', label: 'Location', type: 'text', placeholder: 'Venue or address' },
@@ -207,7 +215,9 @@ export function activitiesPreset(): Omit<QuickAddCardProps, 'title'> {
     fields: [
       { name: 'title', label: 'Project Title', type: 'text', required: true, placeholder: 'Eye Camp at SSG Hospital' },
       { name: 'date', label: 'Date', type: 'date', required: true, defaultValue: new Date().toISOString().slice(0, 10) },
-      { name: 'category', label: 'Service Category', type: 'select', defaultValue: 'healthcare', options: [
+      { name: 'category', label: 'Service Category', type: 'select', defaultValue: 'healthcare',
+        hint: 'Meetings / Leadership Programme categories drive their dedicated pages and tab filters.',
+        options: [
         { value: 'vision', label: 'Vision' },
         { value: 'hunger', label: 'Hunger Relief' },
         { value: 'environment', label: 'Environment' },
@@ -221,6 +231,9 @@ export function activitiesPreset(): Omit<QuickAddCardProps, 'title'> {
         { value: 'women', label: 'Women Empowerment' },
         { value: 'senior', label: 'Senior Citizens' },
         { value: 'other', label: 'Other' },
+        ...PROGRAMME_GROUPS.flatMap((g) =>
+          g.items.map((i) => ({ value: i.slug, label: `${g.title} · ${i.label}` })),
+        ),
       ] },
       { name: 'beneficiaries', label: 'Beneficiaries', type: 'number', min: 0, defaultValue: 0, cast: 'int' },
       { name: 'lion_members_count', label: 'Presence of Lion Member', type: 'number', min: 0, defaultValue: 0, cast: 'int', hint: 'How many Lion members attended this project' },

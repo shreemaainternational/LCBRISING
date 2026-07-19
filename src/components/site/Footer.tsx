@@ -177,13 +177,16 @@ function SocialIcon({
 }
 
 // The public counter starts from a baseline so it never reads as a
-// brand-new site. Real tracked visits (site_counters.value) are added
-// on top once they exceed the baseline.
+// brand-new site. `site_counters.value` holds only the real tracked
+// visits (seeded at 0), which are ADDED on top of this baseline.
 const VISITOR_BASELINE = 25_889;
 
 function VisitorCounter({ count }: { count: number | null }) {
-  // Show the larger of the baseline or the real tracked value.
-  const total = Math.max(count ?? 0, VISITOR_BASELINE);
+  // Baseline floor + every real tracked visit. Using addition (not
+  // Math.max) is what keeps the counter moving: with `Math.max` the
+  // baseline masked every real visit until they exceeded 25,889, so
+  // the number sat frozen at the baseline forever.
+  const total = VISITOR_BASELINE + Math.max(count ?? 0, 0);
   const display = total.toString().padStart(5, '0');
   const digits = display.split('');
   return (
