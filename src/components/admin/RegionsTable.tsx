@@ -7,19 +7,17 @@ import { Pencil, X, Loader2, Save, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { RowDeleteButton } from './RowDeleteButton';
 
-export type ZoneRow = {
+export type RegionRow = {
   id: string;
   code: string;
   name: string;
   chairperson_name: string | null;
   district_id: string;
   district_code: string | null;
-  region_id: string | null;
-  club_count: number;
+  zone_count: number;
 };
 
 type DistrictOption = { id: string; code: string; name: string };
-type RegionOption = { id: string; code: string; name: string; district_id: string };
 
 async function authHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -30,9 +28,9 @@ async function authHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
-export function ZonesTable({ zones, districts, regions = [] }: { zones: ZoneRow[]; districts: DistrictOption[]; regions?: RegionOption[] }) {
+export function RegionsTable({ regions, districts }: { regions: RegionRow[]; districts: DistrictOption[] }) {
   const router = useRouter();
-  const [editing, setEditing] = useState<ZoneRow | null>(null);
+  const [editing, setEditing] = useState<RegionRow | null>(null);
 
   return (
     <div className="overflow-x-auto">
@@ -43,31 +41,31 @@ export function ZonesTable({ zones, districts, regions = [] }: { zones: ZoneRow[
             <th className="text-left p-3">Name</th>
             <th className="text-left p-3">District</th>
             <th className="text-left p-3">Chairperson</th>
-            <th className="text-right p-3">Clubs</th>
+            <th className="text-right p-3">Zones</th>
             <th className="text-right p-3">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {zones.map((z) => (
-            <tr key={z.id} className="border-t">
+          {regions.map((r) => (
+            <tr key={r.id} className="border-t">
               <td className="p-3 font-mono">
-                <Link href={`/admin/zones/${z.id}`} className="text-navy-700 hover:underline">{z.code}</Link>
+                <Link href={`/admin/zones?region=${r.id}`} className="text-navy-700 hover:underline">{r.code}</Link>
               </td>
-              <td className="p-3 font-medium">{z.name}</td>
-              <td className="p-3 text-gray-600">{z.district_code ?? '—'}</td>
-              <td className="p-3">{z.chairperson_name ?? '—'}</td>
-              <td className="p-3 text-right">{z.club_count}</td>
+              <td className="p-3 font-medium">{r.name}</td>
+              <td className="p-3 text-gray-600">{r.district_code ?? '—'}</td>
+              <td className="p-3">{r.chairperson_name ?? '—'}</td>
+              <td className="p-3 text-right">{r.zone_count}</td>
               <td className="p-3">
                 <div className="flex items-center justify-end gap-1.5">
                   <button
                     type="button"
-                    onClick={() => setEditing(z)}
+                    onClick={() => setEditing(r)}
                     className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-gray-200 text-gray-700 text-xs hover:bg-gray-50"
-                    title="Edit zone"
+                    title="Edit region"
                   >
                     <Pencil size={13} /> Edit
                   </button>
-                  <RowDeleteButton endpoint={`/api/zones/${z.id}`} label="zone" />
+                  <RowDeleteButton endpoint={`/api/regions/${r.id}`} label="region" />
                 </div>
               </td>
             </tr>
@@ -76,10 +74,9 @@ export function ZonesTable({ zones, districts, regions = [] }: { zones: ZoneRow[
       </table>
 
       {editing && (
-        <EditZoneModal
-          zone={editing}
+        <EditRegionModal
+          region={editing}
           districts={districts}
-          regions={regions}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); router.refresh(); }}
         />
@@ -88,15 +85,14 @@ export function ZonesTable({ zones, districts, regions = [] }: { zones: ZoneRow[
   );
 }
 
-function EditZoneModal({
-  zone, districts, regions, onClose, onSaved,
-}: { zone: ZoneRow; districts: DistrictOption[]; regions: RegionOption[]; onClose: () => void; onSaved: () => void }) {
+function EditRegionModal({
+  region, districts, onClose, onSaved,
+}: { region: RegionRow; districts: DistrictOption[]; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({
-    name: zone.name ?? '',
-    code: zone.code ?? '',
-    district_id: zone.district_id ?? '',
-    region_id: zone.region_id ?? '',
-    chairperson_name: zone.chairperson_name ?? '',
+    name: region.name ?? '',
+    code: region.code ?? '',
+    district_id: region.district_id ?? '',
+    chairperson_name: region.chairperson_name ?? '',
   });
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -107,18 +103,17 @@ function EditZoneModal({
 
   function save() {
     setError(null);
-    if (!form.name.trim()) { setError('Zone name is required.'); return; }
+    if (!form.name.trim()) { setError('Region name is required.'); return; }
     if (!form.district_id) { setError('Pick a district.'); return; }
     const payload = {
       name: form.name.trim(),
-      code: form.code.trim() || null,
+      code: form.code.trim() || undefined,
       district_id: form.district_id,
-      region_id: form.region_id || null,
       chairperson_name: form.chairperson_name.trim() || null,
     };
     start(async () => {
       try {
-        const res = await fetch(`/api/zones/${zone.id}`, {
+        const res = await fetch(`/api/regions/${region.id}`, {
           method: 'PATCH', headers: await authHeaders(), body: JSON.stringify(payload),
         });
         const j = await res.json().catch(() => ({}));
@@ -135,7 +130,7 @@ function EditZoneModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-xl bg-white rounded-xl shadow-xl max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
-          <h3 className="font-semibold text-navy-800">Edit zone</h3>
+          <h3 className="font-semibold text-navy-800">Edit region</h3>
           <button type="button" onClick={onClose} className="w-8 h-8 rounded-full border text-gray-500 hover:text-gray-800 flex items-center justify-center">
             <X size={15} />
           </button>
@@ -143,33 +138,22 @@ function EditZoneModal({
 
         <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
           <label className="block md:col-span-2">
-            <span className={labelCls}>Zone Name <span className="text-red-500">*</span></span>
-            <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Zone B" />
+            <span className={labelCls}>Region Name <span className="text-red-500">*</span></span>
+            <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Region V" />
           </label>
           <label className="block">
-            <span className={labelCls}>Zone Code</span>
+            <span className={labelCls}>Region Code</span>
             <input className={inputCls} value={form.code} onChange={(e) => set('code', e.target.value)} />
           </label>
           <label className="block">
             <span className={labelCls}>District <span className="text-red-500">*</span></span>
-            <select className={inputCls} value={form.district_id}
-              onChange={(e) => setForm((s) => ({ ...s, district_id: e.target.value, region_id: '' }))}>
+            <select className={inputCls} value={form.district_id} onChange={(e) => set('district_id', e.target.value)}>
               <option value="">— pick a district —</option>
               {districts.map((d) => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
             </select>
           </label>
           <label className="block md:col-span-2">
-            <span className={labelCls}>Region</span>
-            <select className={inputCls} value={form.region_id} onChange={(e) => set('region_id', e.target.value)}
-              disabled={!form.district_id}>
-              <option value="">— none —</option>
-              {regions.filter((r) => r.district_id === form.district_id).map((r) => (
-                <option key={r.id} value={r.id}>{r.code} — {r.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block md:col-span-2">
-            <span className={labelCls}>Zone Chairperson</span>
+            <span className={labelCls}>Region Chairperson</span>
             <input className={inputCls} value={form.chairperson_name} onChange={(e) => set('chairperson_name', e.target.value)} />
           </label>
         </div>

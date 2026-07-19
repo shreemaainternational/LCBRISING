@@ -63,6 +63,31 @@ export function districtsPreset(): Omit<QuickAddCardProps, 'title'> {
   };
 }
 
+export function regionsPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 'title'> {
+  const districtOptions = (o.districts ?? []).map((d) => ({
+    value: d.id,
+    label: `${d.code} — ${d.name}`,
+  }));
+  const placeholder = districtOptions.length === 0
+    ? 'District 3232 F1 (default — will be created)'
+    : '— pick a district —';
+
+  return {
+    endpoint: '/api/regions',
+    accent: 'cyan',
+    description: 'Add a new region under a district. A region groups several zones; a Region Chairperson oversees them.',
+    responseKey: 'region',
+    fields: [
+      { name: 'name', label: 'Region Name', type: 'text', required: true, placeholder: 'e.g. Region V' },
+      { name: 'district_id', label: 'District', type: 'select',
+        placeholder,
+        defaultValue: districtOptions[0]?.value ?? '',
+        options: districtOptions },
+      { name: 'region_chairperson_name', label: 'Region Chairperson', type: 'text' },
+    ],
+  };
+}
+
 export function zonesPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 'title'> {
   const districtOptions = (o.districts ?? []).map((d) => ({
     value: d.id,

@@ -25,15 +25,17 @@ export default async function ZonesPage() {
   // to the SSR session when no service-role key is set.
   const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
-  const [zonesRes, districtsRes, clubCountsRes] = await Promise.all([
+  const [zonesRes, districtsRes, regionsRes, clubCountsRes] = await Promise.all([
     supa.from('zones').select('id, code, name, chairperson_name, region_id, district_id')
       .is('deleted_at', null).order('code'),
     supa.from('districts').select('id, code, name').is('deleted_at', null).order('code'),
+    supa.from('regions').select('id, code, name, district_id').is('deleted_at', null).order('code'),
     supa.from('clubs').select('zone_id').is('deleted_at', null),
   ]);
 
   const zones = (zonesRes.data ?? []) as Zone[];
   const districtOptions = (districtsRes.data ?? []) as DistrictRef[];
+  const regionOptions = (regionsRes.data ?? []) as { id: string; code: string; name: string; district_id: string }[];
   const districts: Record<string, DistrictRef> = Object.fromEntries(
     districtOptions.map((d) => [d.id, d]),
   );
@@ -49,6 +51,7 @@ export default async function ZonesPage() {
     chairperson_name: z.chairperson_name,
     district_id: z.district_id,
     district_code: districts[z.district_id]?.code ?? null,
+    region_id: z.region_id,
     club_count: clubsByZone.get(z.id) ?? 0,
   }));
 
@@ -78,7 +81,7 @@ export default async function ZonesPage() {
         <Card>
           <CardHeader><CardTitle>{zoneRows.length} zones</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <ZonesTable zones={zoneRows} districts={districtOptions} />
+            <ZonesTable zones={zoneRows} districts={districtOptions} regions={regionOptions} />
           </CardContent>
         </Card>
       )}
