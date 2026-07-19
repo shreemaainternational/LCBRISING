@@ -52,28 +52,22 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
   // Row selection for bulk actions. Held as a Set of member ids.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const allIds = useMemo(() => members.map((m) => m.id), [members]);
-  const allSelected = selected.size > 0 && selected.size === allIds.length;
-  const someSelected = selected.size > 0 && selected.size < allIds.length;
+  // Prune ids that no longer exist (e.g. after a refresh) during render so the
+  // count stays honest without a state-syncing effect.
+  const selectedLive = useMemo(() => {
+    const live = new Set(allIds);
+    const next = new Set<string>();
+    for (const id of selected) if (live.has(id)) next.add(id);
+    return next;
+  }, [selected, allIds]);
+  const allSelected = selectedLive.size > 0 && selectedLive.size === allIds.length;
+  const someSelected = selectedLive.size > 0 && selectedLive.size < allIds.length;
 
   // Reflect the "some but not all" state on the header checkbox.
   const headerRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (headerRef.current) headerRef.current.indeterminate = someSelected;
   }, [someSelected]);
-
-  // Drop ids that no longer exist after a refresh so the count stays honest.
-  useEffect(() => {
-    setSelected((prev) => {
-      const live = new Set(allIds);
-      let changed = false;
-      const next = new Set<string>();
-      for (const id of prev) {
-        if (live.has(id)) next.add(id);
-        else changed = true;
-      }
-      return changed ? next : prev;
-    });
-  }, [allIds]);
 
   function toggleOne(id: string) {
     setSelected((s) => {
@@ -97,8 +91,8 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
   }
 
   function removeSelected() {
-    if (selected.size === 0) return;
-    const ids = Array.from(selected);
+    if (selectedLive.size === 0) return;
+    const ids = Array.from(selectedLive);
     if (!window.confirm(`Remove ${ids.length} selected member${ids.length === 1 ? '' : 's'} from the roster? This can be restored by an admin.`)) return;
     setError(null);
     start(async () => {
@@ -163,10 +157,10 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
         </p>
       )}
 
-      {selected.size > 0 && (
+      {selectedLive.size > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-navy-100 bg-navy-50/70 px-3 py-2">
           <span className="text-sm font-medium text-navy-800">
-            {selected.size} selected
+            {selectedLive.size} selected
           </span>
           <button
             type="button"
@@ -220,10 +214,10 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
                     <input
                       type="checkbox"
                       aria-label={`Select all members in ${clubName}`}
-                      checked={rows.every((r) => selected.has(r.id))}
+                      checked={rows.every((r) => selectedLive.has(r.id))}
                       ref={(el) => {
                         if (el) {
-                          const sel = rows.filter((r) => selected.has(r.id)).length;
+                          const sel = rows.filter((r) => selectedLive.has(r.id)).length;
                           el.indeterminate = sel > 0 && sel < rows.length;
                         }
                       }}
@@ -236,12 +230,12 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
                   </td>
                 </tr>
                 {rows.map((m) => (
-                  <tr key={m.id} className={`border-t ${selected.has(m.id) ? 'bg-navy-50/40' : ''}`}>
+                  <tr key={m.id} className={`border-t ${selectedLive.has(m.id) ? 'bg-navy-50/40' : ''}`}>
                     <td className="p-3">
                       <input
                         type="checkbox"
                         aria-label={`Select ${m.name ?? m.email ?? 'member'}`}
-                        checked={selected.has(m.id)}
+                        checked={selectedLive.has(m.id)}
                         onChange={() => toggleOne(m.id)}
                         className="h-4 w-4 rounded border-gray-300 accent-navy-700 cursor-pointer align-middle"
                       />
