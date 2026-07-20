@@ -33,6 +33,10 @@
     {
       "path": "/api/cron/sync-worker",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/blog-sync",
+      "schedule": "0 2 * * *"
     }
   ],
   "headers": [

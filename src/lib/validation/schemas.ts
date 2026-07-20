@@ -119,6 +119,7 @@ export const eventSchema = z.object({
   capacity: z.number().int().positive().optional(),
   is_public: z.boolean().default(true),
   cover_url: z.string().url().optional(),
+  category: z.string().max(60).optional(),
 });
 
 export const rsvpSchema = z.object({

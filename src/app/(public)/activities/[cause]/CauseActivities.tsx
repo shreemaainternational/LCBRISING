@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Calendar, MapPin, Users, Images, ImageOff } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
+import { causeForCategory } from '@/lib/causes';
 
 export type CauseActivity = {
   id: string;
@@ -14,9 +15,12 @@ export type CauseActivity = {
   beneficiaries: number | null;
   photos: string[];
   captions: Record<string, string>;
+  /** Raw activities.category — used by the programme tab filters. */
+  category?: string | null;
 };
 
-function toDetail(a: CauseActivity, causeSlug: string): DetailItem {
+function toDetail(a: CauseActivity, causeSlug?: string): DetailItem {
+  const slug = causeSlug ?? causeForCategory(a.category).slug;
   return {
     id: a.id,
     title: a.title,
@@ -30,7 +34,7 @@ function toDetail(a: CauseActivity, causeSlug: string): DetailItem {
     photos: a.photos,
     body: a.description ?? undefined,
     ctas: [{ href: '/donate', label: 'Support this cause', variant: 'gold' }],
-    sharePath: `/activities/${causeSlug}`,
+    sharePath: `/activities/${slug}`,
   };
 }
 
@@ -39,7 +43,7 @@ export function CauseActivities({
   causeSlug,
 }: {
   activities: CauseActivity[];
-  causeSlug: string;
+  causeSlug?: string;
 }) {
   const [open, setOpen] = useState<DetailItem | null>(null);
 

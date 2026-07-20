@@ -4,6 +4,32 @@ import { runSyncJob, type SyncEntity } from '@/lib/sync';
 
 export const dynamic = 'force-dynamic';
 
+/** True when the upload is an Excel workbook (by extension or ZIP magic bytes). */
+function isExcel(file: File, head: Uint8Array): boolean {
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.xlsm')) return true;
+  // .xlsx is a ZIP → starts with "PK\x03\x04"; legacy .xls (OLE2) with 0xD0CF.
+  if (head[0] === 0x50 && head[1] === 0x4b) return true;
+  if (head[0] === 0xd0 && head[1] === 0xcf) return true;
+  return false;
+}
+
+/**
+ * Convert the first worksheet of an Excel workbook to CSV text. Reading a
+ * binary .xlsx with File.text() yields garbage full of NUL bytes (which then
+ * breaks the downstream jsonb insert), so Excel uploads must be decoded with
+ * a real parser before they reach the CSV adapters.
+ */
+async function excelToCsv(file: File): Promise<string> {
+  const XLSX = await import('xlsx');
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: 'array' });
+  const sheetName = wb.SheetNames[0];
+  const ws = sheetName ? wb.Sheets[sheetName] : undefined;
+  if (!ws) return '';
+  return XLSX.utils.sheet_to_csv(ws, { blankrows: false });
+}
+
 const ALLOWED: SyncEntity[] = [
   'members',
   'clubs',
@@ -39,7 +65,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'file_too_large' }, { status: 413 });
   }
 
-  const csv = await file.text();
+  // Decode the upload: Excel workbooks are parsed to CSV, plain CSV is read
+  // as text. We sniff the leading bytes so a mislabelled upload still works.
+  const bytes = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  let csv: string;
+  try {
+    csv = isExcel(file, bytes) ? await excelToCsv(file) : await file.text();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'could not read file';
+    return NextResponse.json({ error: 'file_unreadable', message }, { status: 400 });
+  }
+
   try {
     const { logId, result } = await runSyncJob({
       source: 'csv',

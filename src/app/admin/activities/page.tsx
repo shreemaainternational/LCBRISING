@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
+import { BulkActivityUpload } from '@/components/admin/BulkActivityUpload';
 import { activitiesPreset } from '@/components/admin/quick-add-presets';
 import { Activity as ActivityIcon, Pencil } from 'lucide-react';
 
@@ -11,9 +12,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminActivitiesPage() {
   const supabase = await createClient();
-  const { data: activities } = await supabase
-    .from('activities').select('*').order('date', { ascending: false }).limit(200);
+  const [{ data: activities }, { data: clubs }] = await Promise.all([
+    supabase.from('activities').select('*').order('date', { ascending: false }).limit(200),
+    supabase.from('clubs').select('id, name').is('deleted_at', null).order('name'),
+  ]);
   const preset = activitiesPreset();
+  const clubOptions = clubs ?? [];
 
   return (
     <div>
@@ -22,7 +26,10 @@ export default async function AdminActivitiesPage() {
           <h1 className="text-3xl font-bold text-navy-800 mb-1">Activities</h1>
           <p className="text-gray-600">Service projects and reporting.</p>
         </div>
-        <QuickAddCard title="Service Activity" {...preset} />
+        <div className="flex flex-col sm:flex-row gap-2">
+          <BulkActivityUpload clubs={clubOptions} />
+          <QuickAddCard title="Service Activity" {...preset} />
+        </div>
       </div>
 
       {!activities?.length ? (

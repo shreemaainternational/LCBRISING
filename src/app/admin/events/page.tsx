@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/lib/utils';
@@ -5,12 +6,27 @@ import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { eventsPreset } from '@/components/admin/quick-add-presets';
 import { Calendar } from 'lucide-react';
+import {
+  EVENT_CATEGORY_GROUPS,
+  getEventCategory,
+  getEventCategoryGroup,
+  groupCategorySlugs,
+} from '@/lib/event-categories';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminEventsPage() {
+export default async function AdminEventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ group?: string }>;
+}) {
   const supabase = await createClient();
-  const { data: events } = await supabase.from('events').select('*').order('date', { ascending: false });
+  const { group: groupKey } = await searchParams;
+  const activeGroup = groupKey ? getEventCategoryGroup(groupKey) : undefined;
+
+  let query = supabase.from('events').select('*').order('date', { ascending: false });
+  if (activeGroup) query = query.in('category', groupCategorySlugs(activeGroup));
+  const { data: events } = await query;
   const preset = eventsPreset();
 
   return (
@@ -23,13 +39,34 @@ export default async function AdminEventsPage() {
         <QuickAddCard title="Event" {...preset} />
       </div>
 
+      {/* Category filter */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        <FilterChip href="/admin/events" label="All" active={!activeGroup} />
+        {EVENT_CATEGORY_GROUPS.map((g) => (
+          <FilterChip
+            key={g.key}
+            href={`/admin/events?group=${g.key}`}
+            label={g.title}
+            active={activeGroup?.key === g.key}
+          />
+        ))}
+      </div>
+
       {!events?.length ? (
-        <EmptyState
-          icon={<Calendar size={26} />}
-          title="No events yet"
-          description="Create your first event below. A QR code is auto-issued so attendees can self check-in."
-          cta={<QuickAddCard title="Event" {...preset} />}
-        />
+        activeGroup ? (
+          <Card>
+            <CardContent className="p-8 text-center text-sm text-gray-500">
+              No {activeGroup.title.toLowerCase()} events yet.
+            </CardContent>
+          </Card>
+        ) : (
+          <EmptyState
+            icon={<Calendar size={26} />}
+            title="No events yet"
+            description="Create your first event below. A QR code is auto-issued so attendees can self check-in."
+            cta={<QuickAddCard title="Event" {...preset} />}
+          />
+        )
       ) : (
         <Card>
           <CardHeader><CardTitle>{events.length} events</CardTitle></CardHeader>
@@ -38,6 +75,7 @@ export default async function AdminEventsPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left p-3">Title</th>
+                  <th className="text-left p-3">Category</th>
                   <th className="text-left p-3">When</th>
                   <th className="text-left p-3">Location</th>
                   <th className="text-right p-3">Capacity</th>
@@ -48,6 +86,11 @@ export default async function AdminEventsPage() {
                 {events.map((e) => (
                   <tr key={e.id} className="border-t">
                     <td className="p-3 font-medium">{e.title}</td>
+                    <td className="p-3">
+                      {e.category
+                        ? getEventCategory(e.category)?.label ?? e.category
+                        : '—'}
+                    </td>
                     <td className="p-3">{formatDate(e.date, { hour: '2-digit', minute: '2-digit' })}</td>
                     <td className="p-3">{e.location ?? '—'}</td>
                     <td className="p-3 text-right">{e.capacity ?? '—'}</td>
@@ -60,5 +103,20 @@ export default async function AdminEventsPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+function FilterChip({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
+        active
+          ? 'bg-navy-800 border-navy-800 text-white'
+          : 'bg-white border-gray-200 text-navy-700 hover:border-brand-400 hover:text-brand-600'
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
