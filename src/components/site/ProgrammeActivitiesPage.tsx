@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { ProgrammeActivities } from '@/components/site/ProgrammeActivities';
+import { collectActivityPhotos } from '@/lib/activity-media';
 import type { CauseActivity } from '@/app/(public)/activities/[cause]/CauseActivities';
 import {
   getEventCategoryGroup,
@@ -20,6 +21,7 @@ type ActivityRow = {
   photos: string[] | null;
   before_photos: string[] | null;
   after_photos: string[] | null;
+  videos: string[] | null;
   photo_captions: Record<string, string> | null;
 };
 
@@ -46,7 +48,7 @@ export async function ProgrammeActivitiesPage({
       const { data } = await supabase
         .from('activities')
         .select(
-          'id, title, description, date, location, beneficiaries, category, photos, before_photos, after_photos, photo_captions',
+          'id, title, description, date, location, beneficiaries, category, photos, before_photos, after_photos, videos, photo_captions',
         )
         .in('category', slugs)
         .eq('approval_status', 'approved')
@@ -61,13 +63,7 @@ export async function ProgrammeActivitiesPage({
         location: a.location,
         beneficiaries: a.beneficiaries,
         category: a.category,
-        photos: Array.from(
-          new Set([
-            ...(a.photos ?? []),
-            ...(a.before_photos ?? []),
-            ...(a.after_photos ?? []),
-          ]),
-        ),
+        photos: collectActivityPhotos(a),
         captions: a.photo_captions ?? {},
       }));
     } catch {

@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { formatDate } from '@/lib/utils';
+import { activityCover, type ActivityMediaRow } from '@/lib/activity-media';
 import { HeroSlideshow } from '@/components/site/HeroSlideshow';
 import { StatsBanner } from '@/components/site/StatsBanner';
 import { AboutSection } from '@/components/site/AboutSection';
@@ -67,7 +68,7 @@ async function getRecentActivities() {
     const supabase = await createClient();
     const { data } = await supabase
       .from('activities')
-      .select('id, title, description, beneficiaries, date, location, photos')
+      .select('id, title, description, beneficiaries, date, location, photos, before_photos, after_photos, videos')
       .order('date', { ascending: false })
       .limit(3);
     return data ?? [];
@@ -119,7 +120,7 @@ export default async function HomePage() {
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
             {activities.map((a) => {
-              const cover = (a as { photos?: string[] | null }).photos?.find(Boolean);
+              const cover = activityCover(a as ActivityMediaRow);
               return (
                 <Card key={a.id} className="overflow-hidden">
                   {cover && (
