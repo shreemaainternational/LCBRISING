@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendEmail, emailTemplates } from '@/lib/email';
 import { resolveEmailTemplate, resolveWhatsAppTemplate } from '@/lib/templates';
+import { getAutomationSettings } from '@/lib/automation/settings';
 import { sendWhatsApp, whatsappTemplates } from '@/lib/whatsapp';
 import { renderDonationReceipt } from '@/lib/pdf';
 import { formatDate } from '@/lib/utils';
@@ -664,6 +665,7 @@ export async function enqueueJob(jobType: string, payload: Record<string, unknow
  */
 export async function scheduleDuesReminders() {
   const supabase = createAdminClient();
+  if (!(await getAutomationSettings()).dues_reminders_enabled) return 0;
   const today = new Date();
   const in7 = new Date(today.getTime() + 7 * 86_400_000);
 
@@ -686,9 +688,15 @@ export async function scheduleDuesReminders() {
  */
 export async function scheduleDailyGreetings(): Promise<{ birthday: number; anniversary: number }> {
   const supabase = createAdminClient();
+  const settings = await getAutomationSettings();
+  const enabled: Record<string, boolean> = {
+    daily_birthday_sweep: settings.birthday_greetings_enabled,
+    send_anniversary_sweep: settings.anniversary_greetings_enabled,
+  };
   const since = new Date(Date.now() - 20 * 3_600_000).toISOString();
   const out = { birthday: 0, anniversary: 0 };
   for (const jobType of ['daily_birthday_sweep', 'send_anniversary_sweep'] as const) {
+    if (!enabled[jobType]) continue;
     const { data: recent } = await supabase
       .from('automation_jobs')
       .select('id')
@@ -710,6 +718,7 @@ export async function scheduleDailyGreetings(): Promise<{ birthday: number; anni
  */
 export async function scheduleOfficerDigest(): Promise<number> {
   const supabase = createAdminClient();
+  if (!(await getAutomationSettings()).officer_digest_enabled) return 0;
   const sixDaysAgo = new Date(Date.now() - 6 * 86_400_000).toISOString();
   const { data: recent } = await supabase
     .from('communications')
