@@ -5,6 +5,7 @@ import { formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { BulkActivityUpload } from '@/components/admin/BulkActivityUpload';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import { activitiesPreset } from '@/components/admin/quick-add-presets';
 import { Activity as ActivityIcon, Pencil } from 'lucide-react';
 
@@ -27,6 +28,22 @@ export default async function AdminActivitiesPage() {
           <p className="text-gray-600">Service projects and reporting.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
+          {!!activities?.length && (
+            <ExportCsvButton
+              rows={activities}
+              filename="activities"
+              columns={[
+                { key: 'title', label: 'Title' },
+                { key: 'category', label: 'Category' },
+                { key: 'date', label: 'Date' },
+                { key: 'location', label: 'Location' },
+                { key: 'beneficiaries', label: 'Beneficiaries' },
+                { key: 'service_hours', label: 'Service Hours' },
+                { key: 'amount_raised', label: 'Funds Raised' },
+                { key: 'approval_status', label: 'Status' },
+              ]}
+            />
+          )}
           <BulkActivityUpload clubs={clubOptions} />
           <QuickAddCard title="Service Activity" {...preset} />
         </div>
