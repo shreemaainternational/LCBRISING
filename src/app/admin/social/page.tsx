@@ -26,10 +26,17 @@ export default async function SocialPage() {
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Social</h1>
       <p className="text-gray-600 mb-8">Posts published, queued and scheduled across platforms.</p>
 
+      {integrations.ayrshare && (
+        <p className="mb-3 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
+          Facebook, Instagram &amp; LinkedIn are posting through <strong>Ayrshare</strong>. Manage connected
+          accounts in the Ayrshare dashboard.
+        </p>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-        <ConnStat name="Facebook"  ok={integrations.facebook} />
-        <ConnStat name="Instagram" ok={integrations.instagram} />
-        <ConnStat name="LinkedIn"  ok={integrations.linkedin} />
+        <ConnStat name="Facebook"  ok={integrations.facebook || integrations.ayrshare} via={integrations.ayrshare && !integrations.facebook} />
+        <ConnStat name="Instagram" ok={integrations.instagram || integrations.ayrshare} via={integrations.ayrshare && !integrations.instagram} />
+        <ConnStat name="LinkedIn"  ok={integrations.linkedin || integrations.ayrshare} via={integrations.ayrshare && !integrations.linkedin} />
         <ConnStat name="WhatsApp"  ok={integrations.whatsappBusiness || integrations.twilio} />
         <ConnStat name="OpenAI"    ok={integrations.openai} />
       </div>
@@ -109,12 +116,12 @@ export default async function SocialPage() {
   );
 }
 
-function ConnStat({ name, ok }: { name: string; ok: boolean }) {
+function ConnStat({ name, ok, via }: { name: string; ok: boolean; via?: boolean }) {
   return (
     <div className={`p-3 rounded-md border text-sm ${ok ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
       <div className="font-medium">{name}</div>
       <div className={`text-xs ${ok ? 'text-green-700' : 'text-gray-500'}`}>
-        {ok ? 'Connected' : 'Not configured'}
+        {ok ? (via ? 'Connected · via Ayrshare' : 'Connected') : 'Not configured'}
       </div>
     </div>
   );
