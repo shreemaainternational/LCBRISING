@@ -23,6 +23,7 @@ const NAV: NavItem[] = [
   { href: '/blog', label: 'Newsroom' },
   { href: '/events', label: 'Events' },
   { href: '/media', label: 'Media' },
+  { href: '/gallery', label: 'Gallery' },
   { href: '/contact', label: 'Contact' },
 ];
 
