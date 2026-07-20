@@ -130,6 +130,15 @@ function stat(label: string, value: string) {
   </div></td>`;
 }
 
+/**
+ * Wrap a plain-text template body (as authored in the CRM template editor)
+ * into the branded email shell — escaping HTML and preserving line breaks.
+ */
+export function renderPlainEmail(text: string): string {
+  const safe = escape(text).replace(/\r?\n/g, '<br/>');
+  return layout(`<div>${safe}</div>`);
+}
+
 function layout(body: string) {
   return `<!doctype html><html><body style="font-family:system-ui,sans-serif;background:#f6f6f6;padding:24px">
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;margin:auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05)">
