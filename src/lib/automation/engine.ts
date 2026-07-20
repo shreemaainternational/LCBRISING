@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendEmail, emailTemplates } from '@/lib/email';
-import { resolveEmailTemplate } from '@/lib/templates';
+import { resolveEmailTemplate, resolveWhatsAppTemplate } from '@/lib/templates';
 import { sendWhatsApp, whatsappTemplates } from '@/lib/whatsapp';
 import { renderDonationReceipt } from '@/lib/pdf';
 import { formatDate } from '@/lib/utils';
@@ -49,7 +49,11 @@ const handlers: Record<string, JobHandler> = {
     await logComm(member.email, 'email', 'dues_reminder', emailTpl.subject);
 
     if (member.phone) {
-      const msg = whatsappTemplates.duesReminder(member.name, dues.amount, due);
+      const msg = await resolveWhatsAppTemplate(
+        'dues_reminder',
+        { name: member.name, amount: dues.amount, due_date: due },
+        () => whatsappTemplates.duesReminder(member.name, dues.amount, due),
+      );
       try {
         await sendWhatsApp(member.phone, msg);
         await logComm(member.phone, 'whatsapp', 'dues_reminder', msg);
@@ -116,7 +120,11 @@ const handlers: Record<string, JobHandler> = {
       await logComm(target, 'email', 'event_reminder', tpl.subject);
       if (m?.phone) {
         try {
-          const msg = whatsappTemplates.eventReminder(name, event.title, when, event.location ?? 'TBA');
+          const msg = await resolveWhatsAppTemplate(
+            'event_reminder',
+            { name, event: event.title, when, location: event.location ?? 'TBA' },
+            () => whatsappTemplates.eventReminder(name, event.title, when, event.location ?? 'TBA'),
+          );
           await sendWhatsApp(m.phone, msg);
           await logComm(m.phone, 'whatsapp', 'event_reminder', msg);
         } catch (err) {
@@ -410,7 +418,12 @@ const handlers: Record<string, JobHandler> = {
       const wa = m.whatsapp || m.phone;
       if (wa) {
         try {
-          await sendWhatsApp(wa, whatsappTemplates.eventReminder(m.name, event.title, when, event.location ?? ''));
+          const msg = await resolveWhatsAppTemplate(
+            'meeting_reminder',
+            { name: m.name, event: event.title, when, location: event.location ?? '' },
+            () => whatsappTemplates.eventReminder(m.name, event.title, when, event.location ?? ''),
+          );
+          await sendWhatsApp(wa, msg);
           await logComm(wa, 'whatsapp', 'meeting_reminder', event.title);
         } catch (err) { console.error('meeting WA failed', err); }
       }
@@ -440,7 +453,12 @@ const handlers: Record<string, JobHandler> = {
     const wa = m.whatsapp || m.phone;
     if (wa) {
       try {
-        await sendWhatsApp(wa, `🦁 Congratulations ${m.name}! You've been appointed as ${officer.role} effective ${officer.term_start}.`);
+        const msg = await resolveWhatsAppTemplate(
+          'officer_appointment',
+          { name: m.name, role: officer.role, term_start: officer.term_start },
+          () => `🦁 Congratulations ${m.name}! You've been appointed as ${officer.role} effective ${officer.term_start}.`,
+        );
+        await sendWhatsApp(wa, msg);
         await logComm(wa, 'whatsapp', 'officer_appointment', officer.role);
       } catch (err) { console.error('officer WA failed', err); }
     }
@@ -510,10 +528,12 @@ const handlers: Record<string, JobHandler> = {
     for (const m of members.filter((x) => x.md === md)) {
       if (m.phone) {
         try {
-          await sendWhatsApp(
-            m.phone,
-            `🎂 Happy birthday, ${m.name}! Wishing you health, happiness, and continued service. 🦁 — Lions Club Baroda Rising Star`,
+          const msg = await resolveWhatsAppTemplate(
+            'birthday',
+            { name: m.name },
+            () => `🎂 Happy birthday, ${m.name}! Wishing you health, happiness, and continued service. 🦁 — Lions Club Baroda Rising Star`,
           );
+          await sendWhatsApp(m.phone, msg);
           await logComm(m.phone, 'whatsapp', 'birthday', m.name);
         } catch (err) { console.error('birthday WA failed', err); }
       }
