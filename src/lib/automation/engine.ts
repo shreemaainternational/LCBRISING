@@ -436,6 +436,59 @@ const handlers: Record<string, JobHandler> = {
     }
   },
 
+  /**
+   * Weekly leadership digest — a 7-day summary (activities, lives reached,
+   * funds raised, new members, upcoming events) emailed (and WhatsApp'd)
+   * to every officer-level member.
+   */
+  send_officer_digest: async () => {
+    const supabase = createAdminClient();
+    const now = Date.now();
+    const weekAgoIso = new Date(now - 7 * 86_400_000).toISOString();
+    const in14Iso = new Date(now + 14 * 86_400_000).toISOString();
+
+    const [{ data: acts }, { data: dons }, { count: newMembers }, { data: events }, { data: officers }] =
+      await Promise.all([
+        supabase.from('activities').select('beneficiaries').gte('created_at', weekAgoIso),
+        supabase.from('donations').select('amount').gte('created_at', weekAgoIso),
+        supabase.from('members').select('*', { count: 'exact', head: true }).gte('created_at', weekAgoIso).is('deleted_at', null),
+        supabase.from('events').select('title, date').gte('date', new Date(now).toISOString()).lte('date', in14Iso).order('date').limit(8),
+        supabase
+          .from('members')
+          .select('name, email, phone, whatsapp')
+          .in('role', ['officer', 'treasurer', 'secretary', 'president', 'admin'])
+          .eq('status', 'active')
+          .is('deleted_at', null),
+      ]);
+
+    const beneficiaries = (acts ?? []).reduce((s, a) => s + Number(a.beneficiaries ?? 0), 0);
+    const donations = (dons ?? []).reduce((s, d) => s + Number(d.amount ?? 0), 0);
+    const periodLabel = `${formatDate(weekAgoIso)} – ${formatDate(new Date(now).toISOString())}`;
+    const stats = {
+      periodLabel,
+      activities: (acts ?? []).length,
+      beneficiaries,
+      donations,
+      newMembers: newMembers ?? 0,
+      events: (events ?? []).map((e) => ({ title: e.title as string, when: formatDate(e.date) })),
+    };
+
+    for (const o of officers ?? []) {
+      if (!o.email) continue;
+      const tpl = emailTemplates.officerDigest(o.name, stats);
+      await sendEmail({ to: o.email, ...tpl });
+      await logComm(o.email, 'email', 'officer_digest', tpl.subject);
+      const wa = o.whatsapp || o.phone;
+      if (wa) {
+        try {
+          const msg = `🦁 Weekly digest (${periodLabel}): ${stats.activities} activities · ${beneficiaries.toLocaleString('en-IN')} lives reached · ₹${donations.toLocaleString('en-IN')} raised · ${stats.newMembers} new members. ${stats.events.length} upcoming events.`;
+          await sendWhatsApp(wa, msg);
+          await logComm(wa, 'whatsapp', 'officer_digest', 'weekly');
+        } catch (err) { console.error('digest WA failed', err); }
+      }
+    }
+  },
+
   daily_birthday_sweep: async () => {
     const supabase = createAdminClient();
     const { data: members } = await supabase
@@ -553,6 +606,25 @@ export async function scheduleDuesReminders() {
     await enqueueJob('send_dues_reminder', { dues_id: d.id });
   }
   return dues?.length ?? 0;
+}
+
+/**
+ * Enqueue the weekly officer digest, at most once every 6 days. Safe to
+ * call from a daily/hourly scheduler — the guard checks the communications
+ * log for the last digest and only queues a new one when a week has passed.
+ */
+export async function scheduleOfficerDigest(): Promise<number> {
+  const supabase = createAdminClient();
+  const sixDaysAgo = new Date(Date.now() - 6 * 86_400_000).toISOString();
+  const { data: recent } = await supabase
+    .from('communications')
+    .select('id')
+    .eq('template', 'officer_digest')
+    .gte('sent_at', sixDaysAgo)
+    .limit(1);
+  if (recent && recent.length > 0) return 0;
+  await enqueueJob('send_officer_digest', {});
+  return 1;
 }
 
 /**

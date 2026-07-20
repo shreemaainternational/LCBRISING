@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentMember } from '@/lib/auth';
 import { env } from '@/lib/env';
 import { LogoutButton } from '@/components/admin/LogoutButton';
+import { AdminSearch } from '@/components/admin/AdminSearch';
 import {
   LayoutDashboard, Users, Banknote, HeartHandshake,
   Activity as ActivityIcon, Calendar, Mail, Settings,
@@ -32,6 +33,7 @@ const navItems = [
   { href: '/admin/creative',    label: 'Creative',      icon: Sparkles },
   { href: '/admin/social',      label: 'Social',        icon: Megaphone },
   { href: '/admin/communications', label: 'Comms',      icon: Mail },
+  { href: '/admin/templates',   label: 'Templates',    icon: ScrollText },
   { href: '/admin/notifications', label: 'Push',         icon: Bell },
   { href: '/admin/automation',  label: 'Automation',    icon: Settings },
   { href: '/admin/sync',        label: 'Sync',          icon: RefreshCw },
@@ -93,6 +95,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             backgroundPosition: 'center',
           }}
         />
+        <div className="relative border-b border-gray-200 bg-white/70 backdrop-blur px-6 md:px-10 py-3">
+          <AdminSearch />
+        </div>
         <div className="relative p-6 md:p-10">
           {children}
         </div>
