@@ -1,18 +1,43 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { AutomationToggles } from './AutomationToggles';
+import { AUTOMATION_DEFAULTS, type AutomationSettings } from '@/lib/automation/settings-config';
 
 export const dynamic = 'force-dynamic';
+
+async function loadSettings(): Promise<{ settings: AutomationSettings; unavailable: boolean }> {
+  try {
+    const db = createAdminClient();
+    const { data, error } = await db
+      .from('automation_settings')
+      .select('officer_digest_enabled, birthday_greetings_enabled, anniversary_greetings_enabled, dues_reminders_enabled')
+      .eq('id', 'singleton')
+      .maybeSingle();
+    if (error) return { settings: AUTOMATION_DEFAULTS, unavailable: true };
+    return { settings: { ...AUTOMATION_DEFAULTS, ...(data ?? {}) }, unavailable: false };
+  } catch {
+    return { settings: AUTOMATION_DEFAULTS, unavailable: true };
+  }
+}
 
 export default async function AutomationPage() {
   const supabase = await createClient();
   const { data: jobs } = await supabase
     .from('automation_jobs').select('*').order('created_at', { ascending: false }).limit(100);
+  const { settings, unavailable } = await loadSettings();
 
   return (
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Automation</h1>
       <p className="text-gray-600 mb-8">Scheduled jobs and triggers.</p>
+
+      <Card className="mb-8">
+        <CardHeader><CardTitle>Scheduled automations</CardTitle></CardHeader>
+        <CardContent>
+          <AutomationToggles initial={settings} unavailable={unavailable} />
+        </CardContent>
+      </Card>
 
       <div className="grid md:grid-cols-3 gap-4 mb-8">
         <FlowCard title="On member signup" steps={['CRM entry', 'Welcome email']} />
