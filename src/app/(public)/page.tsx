@@ -121,25 +121,27 @@ export default async function HomePage() {
             {activities.map((a) => {
               const cover = (a as { photos?: string[] | null }).photos?.find(Boolean);
               return (
-                <Card key={a.id} className="overflow-hidden">
-                  {cover && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={cover}
-                      alt={a.title}
-                      loading="lazy"
-                      className="h-44 w-full object-cover"
-                    />
-                  )}
-                  <CardContent className="p-6">
-                    <div className="text-xs text-brand-600 font-medium mb-1">{formatDate(a.date)}</div>
-                    <h3 className="font-semibold text-lg text-navy-800 mb-2">{a.title}</h3>
-                    <p className="text-sm text-gray-600 line-clamp-3">{a.description ?? ''}</p>
-                    <div className="text-xs text-gray-500 mt-4">
-                      {a.beneficiaries} beneficiaries · {a.location ?? 'Vadodara'}
-                    </div>
-                  </CardContent>
-                </Card>
+                <Link key={a.id} href={`/activities/report/${a.id}`} className="group block">
+                  <Card className="overflow-hidden h-full transition-shadow group-hover:shadow-lg">
+                    {cover && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={cover}
+                        alt={a.title}
+                        loading="lazy"
+                        className="h-44 w-full object-cover"
+                      />
+                    )}
+                    <CardContent className="p-6">
+                      <div className="text-xs text-brand-600 font-medium mb-1">{formatDate(a.date)}</div>
+                      <h3 className="font-semibold text-lg text-navy-800 mb-2 group-hover:text-brand-600 transition-colors">{a.title}</h3>
+                      <p className="text-sm text-gray-600 line-clamp-3">{a.description ?? ''}</p>
+                      <div className="text-xs text-gray-500 mt-4">
+                        {a.beneficiaries} beneficiaries · {a.location ?? 'Vadodara'}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
               );
             })}
           </div>

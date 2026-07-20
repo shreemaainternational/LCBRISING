@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 import { getEventCategory } from '@/lib/event-categories';
 
@@ -54,13 +55,18 @@ export function EventCard({
     : 'Community Event';
 
   return (
-    <article
-      className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col ${
+    <Link
+      href={`/events/${event.id}`}
+      className={`group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition-shadow ${
         muted ? 'opacity-80' : ''
       }`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={image} alt={event.title} className="h-44 w-full object-cover" />
+      <img
+        src={image}
+        alt={event.title}
+        className="h-44 w-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+      />
       <div className="p-6 flex flex-col flex-1">
         <span className="inline-block self-start bg-blue-50 text-navy-700 px-3 py-1 rounded-full text-xs font-semibold mb-3">
           {categoryLabel}
@@ -88,6 +94,6 @@ export function EventCard({
           )}
         </div>
       </div>
-    </article>
+    </Link>
   );
 }

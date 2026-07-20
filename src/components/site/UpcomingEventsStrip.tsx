@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Calendar, MapPin, ArrowRight } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/env';
+import { getUpcomingPublicEvents } from '@/lib/events';
 
 type EventRow = {
   id: string;
@@ -12,20 +11,7 @@ type EventRow = {
 };
 
 async function getUpcoming(): Promise<EventRow[]> {
-  if (!isSupabaseConfigured()) return [];
-  try {
-    const supa = await createClient();
-    const { data } = await supa
-      .from('events')
-      .select('id, title, date, location, description')
-      .eq('is_public', true)
-      .gte('date', new Date().toISOString())
-      .order('date')
-      .limit(3);
-    return (data ?? []) as EventRow[];
-  } catch {
-    return [];
-  }
+  return getUpcomingPublicEvents(3);
 }
 
 function formatDateParts(d: string) {
@@ -68,9 +54,10 @@ export async function UpcomingEventsStrip() {
         {events.map((e) => {
           const d = formatDateParts(e.date);
           return (
-            <article
+            <Link
               key={e.id}
-              className="rounded-2xl bg-white border border-gray-200 hover:border-brand-300 hover:shadow-lg transition-all overflow-hidden flex"
+              href={`/events/${e.id}`}
+              className="group rounded-2xl bg-white border border-gray-200 hover:border-brand-300 hover:shadow-lg transition-all overflow-hidden flex"
             >
               {/* Date pill */}
               <div className="bg-navy-800 text-white text-center flex flex-col justify-center px-5 py-4 min-w-[88px]">
@@ -81,7 +68,7 @@ export async function UpcomingEventsStrip() {
 
               {/* Body */}
               <div className="flex-1 p-5">
-                <h3 className="font-semibold text-navy-800 line-clamp-2">{e.title}</h3>
+                <h3 className="font-semibold text-navy-800 line-clamp-2 group-hover:text-brand-600 transition-colors">{e.title}</h3>
                 <div className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                   <Calendar size={12} aria-hidden /> {d.time}
                 </div>
@@ -95,15 +82,12 @@ export async function UpcomingEventsStrip() {
                     {e.description}
                   </p>
                 )}
-                <Link
-                  href={`/events#${e.id}`}
-                  className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700"
-                >
-                  RSVP & details
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 group-hover:text-brand-700">
+                  View full details
                   <ArrowRight size={12} aria-hidden />
-                </Link>
+                </span>
               </div>
-            </article>
+            </Link>
           );
         })}
       </div>
