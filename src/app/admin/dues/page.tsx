@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { DuesTabs } from './DuesTabs';
 import { BillCyclePanel } from './BillCyclePanel';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,10 +66,32 @@ export default async function DuesPage({ searchParams }: Props) {
             collection, score every club&apos;s compliance, and export audit-ready reports.
           </p>
         </div>
-        <Link href={`/api/reports/generate`}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-amber-500 text-white text-sm font-semibold pointer-events-none opacity-50">
-          Generate report ↗
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {!!invoices?.length && (
+            <ExportCsvButton
+              rows={invoices}
+              filename={`dues-${tier}`}
+              label="Dues CSV"
+              columns={[
+                { key: 'invoice_no', label: 'Invoice No' },
+                { key: 'tier', label: 'Tier' },
+                { key: 'period_label', label: 'Period' },
+                { key: 'member', label: 'Member', get: (r) => (r.members as { name?: string } | null)?.name ?? '' },
+                { key: 'club', label: 'Club', get: (r) => (r.clubs as { name?: string } | null)?.name ?? '' },
+                { key: 'amount', label: 'Amount' },
+                { key: 'amount_paid', label: 'Paid' },
+                { key: 'amount_outstanding', label: 'Outstanding' },
+                { key: 'currency', label: 'Currency' },
+                { key: 'status', label: 'Status' },
+                { key: 'due_date', label: 'Due Date' },
+              ]}
+            />
+          )}
+          <Link href={`/api/reports/generate`}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-amber-500 text-white text-sm font-semibold pointer-events-none opacity-50">
+            Generate report ↗
+          </Link>
+        </div>
       </div>
 
       {/* Overall KPI strip */}

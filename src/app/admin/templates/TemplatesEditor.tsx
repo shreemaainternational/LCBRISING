@@ -14,13 +14,17 @@ export type Template = {
 
 type Draft = {
   id?: string;
+  key: string;
   label: string;
   channel: string;
   subject: string;
   body: string;
 };
 
-const EMPTY: Draft = { label: '', channel: 'both', subject: '', body: '' };
+const EMPTY: Draft = { key: '', label: '', channel: 'both', subject: '', body: '' };
+
+// Setting a template's key to one of these overrides that automated email.
+const TRANSACTIONAL_KEYS = ['welcome', 'dues_reminder', 'donation_receipt', 'event_reminder'];
 
 export function TemplatesEditor({ initial }: { initial: Template[] }) {
   const [items, setItems] = useState<Template[]>(initial);
@@ -29,7 +33,7 @@ export function TemplatesEditor({ initial }: { initial: Template[] }) {
   const [saved, setSaved] = useState(false);
 
   function edit(t: Template) {
-    setDraft({ id: t.id, label: t.label, channel: t.channel, subject: t.subject ?? '', body: t.body });
+    setDraft({ id: t.id, key: t.key, label: t.label, channel: t.channel, subject: t.subject ?? '', body: t.body });
     setSaved(false);
   }
 
@@ -133,6 +137,27 @@ export function TemplatesEditor({ initial }: { initial: Template[] }) {
               </select>
             </label>
           </div>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium text-gray-700">
+              Key <span className="font-normal text-gray-400">(optional — leave blank to auto-generate)</span>
+            </span>
+            <input
+              value={draft.key}
+              onChange={(e) => setDraft((d) => ({ ...d, key: e.target.value }))}
+              placeholder="auto"
+              list="transactional-keys"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-400"
+            />
+            <datalist id="transactional-keys">
+              {TRANSACTIONAL_KEYS.map((k) => (
+                <option key={k} value={k} />
+              ))}
+            </datalist>
+            <span className="mt-1 block text-xs text-gray-500">
+              Set the key to <code>welcome</code>, <code>dues_reminder</code>,{' '}
+              <code>donation_receipt</code> or <code>event_reminder</code> to override that automated email.
+            </span>
+          </label>
           <label className="block text-sm">
             <span className="mb-1 block font-medium text-gray-700">Subject (email)</span>
             <input

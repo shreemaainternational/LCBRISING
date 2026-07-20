@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendEmail, emailTemplates } from '@/lib/email';
+import { resolveEmailTemplate } from '@/lib/templates';
 import { sendWhatsApp, whatsappTemplates } from '@/lib/whatsapp';
 import { renderDonationReceipt } from '@/lib/pdf';
 import { formatDate } from '@/lib/utils';
@@ -19,7 +20,8 @@ const handlers: Record<string, JobHandler> = {
     const supabase = createAdminClient();
     const { data: member } = await supabase
       .from('members').select('name').eq('email', email).maybeSingle();
-    const tpl = emailTemplates.welcome(member?.name ?? email);
+    const name = member?.name ?? email;
+    const tpl = await resolveEmailTemplate('welcome', { name }, () => emailTemplates.welcome(name));
     await sendEmail({ to: email, ...tpl });
     await logComm(email, 'email', 'welcome', tpl.subject);
   },
@@ -38,7 +40,11 @@ const handlers: Record<string, JobHandler> = {
     if (!member) return;
 
     const due = formatDate(dues.due_date);
-    const emailTpl = emailTemplates.duesReminder(member.name, dues.amount, due);
+    const emailTpl = await resolveEmailTemplate(
+      'dues_reminder',
+      { name: member.name, amount: dues.amount, due_date: due },
+      () => emailTemplates.duesReminder(member.name, dues.amount, due),
+    );
     await sendEmail({ to: member.email, ...emailTpl });
     await logComm(member.email, 'email', 'dues_reminder', emailTpl.subject);
 
@@ -70,10 +76,10 @@ const handlers: Record<string, JobHandler> = {
       date: donation.created_at,
     });
 
-    const tpl = emailTemplates.donationReceipt(
-      donation.donor_name,
-      donation.amount,
-      donation.receipt_no ?? donation.id,
+    const tpl = await resolveEmailTemplate(
+      'donation_receipt',
+      { name: donation.donor_name, amount: donation.amount, receipt_no: donation.receipt_no ?? donation.id },
+      () => emailTemplates.donationReceipt(donation.donor_name, donation.amount, donation.receipt_no ?? donation.id),
     );
     await sendEmail({
       to: donation.donor_email,
@@ -101,7 +107,11 @@ const handlers: Record<string, JobHandler> = {
       const target = m?.email ?? r.guest_email;
       const name = m?.name ?? 'friend';
       if (!target) continue;
-      const tpl = emailTemplates.eventReminder(name, event.title, when, event.location ?? 'TBA');
+      const tpl = await resolveEmailTemplate(
+        'event_reminder',
+        { name, event: event.title, when, location: event.location ?? 'TBA' },
+        () => emailTemplates.eventReminder(name, event.title, when, event.location ?? 'TBA'),
+      );
       await sendEmail({ to: target, ...tpl });
       await logComm(target, 'email', 'event_reminder', tpl.subject);
       if (m?.phone) {
