@@ -28,6 +28,7 @@ const NAV: NavItem[] = [
   { href: '/impact', label: 'Impact' },
   { href: '/blog', label: 'Newsroom' },
   { href: '/events', label: 'Events', dropdown: 'events' },
+  { href: '/gallery', label: 'Gallery' },
   { href: '/media', label: 'Media' },
   { href: '/contact', label: 'Contact' },
 ];
