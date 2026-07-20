@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { processJobs, scheduleDuesReminders, schedulePaymentReminders, runRecurringInvoices, expireStaleInvoices, scheduleOfficerDigest } from '@/lib/automation/engine';
+import { processJobs, scheduleDuesReminders, schedulePaymentReminders, runRecurringInvoices, expireStaleInvoices, scheduleOfficerDigest, scheduleDailyGreetings } from '@/lib/automation/engine';
 import { verifyCronAuth } from '@/lib/cron-auth';
 
 export const runtime = 'nodejs';
@@ -19,16 +19,18 @@ export async function GET(req: Request) {
   let recurringGenerated = 0;
   let expired = 0;
   let digestQueued = 0;
+  let greetings = { birthday: 0, anniversary: 0 };
   if (schedule) {
     scheduledDues = await scheduleDuesReminders();
     scheduledInvoices = await schedulePaymentReminders();
     recurringGenerated = await runRecurringInvoices();
     expired = await expireStaleInvoices();
     digestQueued = await scheduleOfficerDigest();
+    greetings = await scheduleDailyGreetings();
   }
   const results = await processJobs(50);
   return NextResponse.json({
-    scheduled: { dues: scheduledDues, invoices: scheduledInvoices, recurring_generated: recurringGenerated, expired, officer_digest: digestQueued },
+    scheduled: { dues: scheduledDues, invoices: scheduledInvoices, recurring_generated: recurringGenerated, expired, officer_digest: digestQueued, greetings },
     processed: results.length,
     results,
   });
