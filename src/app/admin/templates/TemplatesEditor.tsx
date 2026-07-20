@@ -23,8 +23,18 @@ type Draft = {
 
 const EMPTY: Draft = { key: '', label: '', channel: 'both', subject: '', body: '' };
 
-// Setting a template's key to one of these overrides that automated email.
-const TRANSACTIONAL_KEYS = ['welcome', 'dues_reminder', 'donation_receipt', 'event_reminder'];
+// Setting a template's key to one of these overrides that automated message.
+// The Channel field decides whether the override applies to email, WhatsApp,
+// or both.
+const TRANSACTIONAL_KEYS = [
+  'welcome',
+  'dues_reminder',
+  'donation_receipt',
+  'event_reminder',
+  'meeting_reminder',
+  'officer_appointment',
+  'birthday',
+];
 
 export function TemplatesEditor({ initial }: { initial: Template[] }) {
   const [items, setItems] = useState<Template[]>(initial);
@@ -154,8 +164,10 @@ export function TemplatesEditor({ initial }: { initial: Template[] }) {
               ))}
             </datalist>
             <span className="mt-1 block text-xs text-gray-500">
-              Set the key to <code>welcome</code>, <code>dues_reminder</code>,{' '}
-              <code>donation_receipt</code> or <code>event_reminder</code> to override that automated email.
+              Set the key to a transactional slot (<code>welcome</code>, <code>dues_reminder</code>,{' '}
+              <code>donation_receipt</code>, <code>event_reminder</code>, <code>meeting_reminder</code>,{' '}
+              <code>officer_appointment</code>, <code>birthday</code>) to override that automated message. The
+              Channel above decides whether it replaces the email, the WhatsApp, or both.
             </span>
           </label>
           <label className="block text-sm">
