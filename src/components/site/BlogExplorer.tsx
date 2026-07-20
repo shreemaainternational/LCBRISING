@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { BookOpen, ExternalLink, Search } from 'lucide-react';
+import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
 
 export type BlogStory = {
   id: string;
@@ -13,6 +14,24 @@ export type BlogStory = {
   url: string;
   source: string;
 };
+
+function toDetail(s: BlogStory): DetailItem {
+  const isLocal = s.url.startsWith('/');
+  return {
+    id: s.id,
+    title: s.title,
+    kicker: `${s.category} · ${s.source}`,
+    dateLabel: s.date,
+    photos: [s.image],
+    body: s.excerpt,
+    ctas: [
+      isLocal
+        ? { href: s.url, label: 'Read full article', variant: 'navy' }
+        : { href: s.url, label: `Read on ${s.source}`, external: true, variant: 'navy' },
+    ],
+    sharePath: isLocal ? s.url : '/blog',
+  };
+}
 
 const CATEGORY_STYLES: Record<string, string> = {
   Humanitarian: 'bg-orange-100 text-orange-700',
@@ -28,6 +47,7 @@ const CATEGORY_STYLES: Record<string, string> = {
 export function BlogExplorer({ stories }: { stories: BlogStory[] }) {
   const [query, setQuery] = useState('');
   const [cause, setCause] = useState('all');
+  const [open, setOpen] = useState<DetailItem | null>(null);
 
   const causes = useMemo(
     () => Array.from(new Set(stories.map((s) => s.category))).sort(),
@@ -99,9 +119,11 @@ export function BlogExplorer({ stories }: { stories: BlogStory[] }) {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
               {filtered.map((s) => (
-                <article
+                <button
                   key={s.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col"
+                  type="button"
+                  onClick={() => setOpen(toDetail(s))}
+                  className="text-left bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group hover:shadow-md transition-shadow"
                 >
                   <div className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -126,28 +148,25 @@ export function BlogExplorer({ stories }: { stories: BlogStory[] }) {
                       </span>
                       <span className="text-xs text-gray-500">{s.date}</span>
                     </div>
-                    <h3 className="font-bold text-lg text-navy-800 mb-2">
+                    <h3 className="font-bold text-lg text-navy-800 mb-2 group-hover:text-brand-600 transition-colors">
                       {s.title}
                     </h3>
                     <p className="text-sm text-gray-600 line-clamp-3 mb-5">
                       {s.excerpt}
                     </p>
-                    <a
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 hover:text-brand-600"
-                    >
-                      Read on LionsClubs.org
+                    <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 group-hover:text-brand-600">
+                      View details
                       <ExternalLink size={14} aria-hidden />
-                    </a>
+                    </span>
                   </div>
-                </article>
+                </button>
               ))}
             </div>
           )}
         </div>
       </section>
+
+      <DetailModal item={open} onClose={() => setOpen(null)} />
     </>
   );
 }

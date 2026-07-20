@@ -25,11 +25,12 @@ async function loadPhotos(): Promise<GalleryPhoto[]> {
       .order('display_order', { ascending: true })
       .order('created_at', { ascending: false })
       .limit(500);
-    return ((data ?? []) as GalleryPhoto[]).map((p) => ({
+    return ((data ?? []) as (GalleryPhoto & { created_at?: string })[]).map((p) => ({
       id: p.id,
       url: p.url,
       title: p.title,
       caption: p.caption,
+      date: p.created_at ?? null,
     }));
   } catch {
     return [];
@@ -54,12 +55,7 @@ export default async function GalleryPage() {
             Photos will appear here soon. Check back shortly!
           </p>
         ) : (
-          <>
-            <p className="mb-6 text-sm text-gray-500">
-              {photos.length} {photos.length === 1 ? 'photo' : 'photos'}
-            </p>
-            <GalleryGrid photos={photos} />
-          </>
+          <GalleryGrid photos={photos} />
         )}
       </section>
     </>

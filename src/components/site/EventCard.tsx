@@ -34,18 +34,26 @@ function fmtTime(iso: string) {
   });
 }
 
+export function eventImage(event: EventRow, fallbackIndex: number) {
+  return (
+    event.cover_url ||
+    EVENT_FALLBACK_IMAGES[fallbackIndex % EVENT_FALLBACK_IMAGES.length]
+  );
+}
+
 export function EventCard({
   event,
   fallbackIndex,
   muted,
+  onOpen,
 }: {
   event: EventRow;
   fallbackIndex: number;
   muted?: boolean;
+  /** When provided, the card becomes a button that opens a detail popup. */
+  onOpen?: (event: EventRow, image: string) => void;
 }) {
-  const image =
-    event.cover_url ||
-    EVENT_FALLBACK_IMAGES[fallbackIndex % EVENT_FALLBACK_IMAGES.length];
+  const image = eventImage(event, fallbackIndex);
   const timeRange = event.end_date
     ? `${fmtTime(event.date)} - ${fmtTime(event.end_date)}`
     : fmtTime(event.date);
@@ -53,19 +61,17 @@ export function EventCard({
     ? getEventCategory(event.category)?.label ?? event.category
     : 'Community Event';
 
-  return (
-    <article
-      className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col ${
-        muted ? 'opacity-80' : ''
-      }`}
-    >
+  const inner = (
+    <>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={image} alt={event.title} className="h-44 w-full object-cover" />
       <div className="p-6 flex flex-col flex-1">
         <span className="inline-block self-start bg-blue-50 text-navy-700 px-3 py-1 rounded-full text-xs font-semibold mb-3">
           {categoryLabel}
         </span>
-        <h3 className="font-bold text-lg text-navy-800 mb-2">{event.title}</h3>
+        <h3 className="font-bold text-lg text-navy-800 mb-2 group-hover:text-brand-600 transition-colors">
+          {event.title}
+        </h3>
         {event.description && (
           <p className="text-sm text-gray-600 line-clamp-2 mb-5">
             {event.description}
@@ -88,6 +94,24 @@ export function EventCard({
           )}
         </div>
       </div>
-    </article>
+    </>
   );
+
+  const className = `bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group ${
+    muted ? 'opacity-80' : ''
+  }`;
+
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpen(event, image)}
+        className={`text-left hover:shadow-md transition-shadow ${className}`}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return <article className={className}>{inner}</article>;
 }

@@ -137,7 +137,7 @@ export default async function CauseActivitiesPage({
       {/* Single-cause activity gallery */}
       <section className="container-page py-14 md:py-16">
         {activities.length > 0 ? (
-          <CauseActivities activities={activities} />
+          <CauseActivities activities={activities} causeSlug={cause.slug} />
         ) : (
           <div className="max-w-xl mx-auto text-center bg-white border border-gray-200 rounded-2xl p-10">
             <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-gray-100 flex items-center justify-center">

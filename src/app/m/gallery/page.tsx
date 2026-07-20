@@ -15,11 +15,12 @@ export default async function MobileGallery() {
     .order('created_at', { ascending: false })
     .limit(500);
 
-  const photos = ((data ?? []) as GalleryPhoto[]).map((p) => ({
+  const photos = ((data ?? []) as (GalleryPhoto & { created_at?: string })[]).map((p) => ({
     id: p.id,
     url: p.url,
     title: p.title,
     caption: p.caption,
+    date: p.created_at ?? null,
   }));
 
   return (
