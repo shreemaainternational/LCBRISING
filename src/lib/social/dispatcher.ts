@@ -2,6 +2,7 @@ import { postToFacebook } from './facebook';
 import { postToInstagram } from './instagram';
 import { postToLinkedIn } from './linkedin';
 import { broadcastWhatsApp } from './whatsapp_broadcast';
+import { isAyrshareConfigured, postToAyrshare } from './ayrshare';
 
 export type Platform = 'facebook' | 'instagram' | 'linkedin' | 'whatsapp';
 
@@ -26,6 +27,15 @@ export async function dispatchToPlatform(
   const caption = composeCaption(input.caption, input.hashtags, platform);
 
   try {
+    // When Ayrshare is configured it is the single gateway for the public
+    // social networks — one connected account per network, no per-platform
+    // Meta / LinkedIn tokens. WhatsApp is a member broadcast, not an
+    // Ayrshare network, so it always uses the dedicated path below.
+    if (isAyrshareConfigured() && (platform === 'facebook' || platform === 'instagram' || platform === 'linkedin')) {
+      const r = await postToAyrshare({ platform, caption, media_urls: input.media_urls });
+      return { platform, ok: true, ...r };
+    }
+
     switch (platform) {
       case 'facebook': {
         const r = await postToFacebook({ caption, media_urls: input.media_urls });
