@@ -34,6 +34,7 @@ const TRANSACTIONAL_KEYS = [
   'meeting_reminder',
   'officer_appointment',
   'birthday',
+  'anniversary',
 ];
 
 export function TemplatesEditor({ initial }: { initial: Template[] }) {
@@ -166,7 +167,7 @@ export function TemplatesEditor({ initial }: { initial: Template[] }) {
             <span className="mt-1 block text-xs text-gray-500">
               Set the key to a transactional slot (<code>welcome</code>, <code>dues_reminder</code>,{' '}
               <code>donation_receipt</code>, <code>event_reminder</code>, <code>meeting_reminder</code>,{' '}
-              <code>officer_appointment</code>, <code>birthday</code>) to override that automated message. The
+              <code>officer_appointment</code>, <code>birthday</code>, <code>anniversary</code>) to override that automated message. The
               Channel above decides whether it replaces the email, the WhatsApp, or both.
             </span>
           </label>

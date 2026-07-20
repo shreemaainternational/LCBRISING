@@ -24,6 +24,7 @@ export const TRANSACTIONAL_KEYS = [
   'meeting_reminder',
   'officer_appointment',
   'birthday',
+  'anniversary',
 ] as const;
 
 /**

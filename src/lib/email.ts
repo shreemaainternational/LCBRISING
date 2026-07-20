@@ -82,6 +82,21 @@ export const emailTemplates = {
       `),
     };
   },
+  anniversary(name: string, years: number) {
+    return {
+      subject: years > 0
+        ? `Happy ${years}-year Lions anniversary, ${name}!`
+        : `Happy Lions anniversary, ${name}!`,
+      html: layout(`
+        <h2>Congratulations, ${escape(name)}! 🎉</h2>
+        <p>Today marks ${years > 0
+          ? `<strong>${years} year${years === 1 ? '' : 's'}</strong> of your`
+          : 'another year of'} service with the Lions Club of Baroda Rising Star.</p>
+        <p>Thank you for everything you do for our community. Here's to many
+        more years of <strong>"We Serve"</strong>. 🦁</p>
+      `),
+    };
+  },
   officerDigest(
     name: string,
     stats: {

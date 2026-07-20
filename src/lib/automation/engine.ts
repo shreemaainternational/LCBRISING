@@ -517,6 +517,47 @@ const handlers: Record<string, JobHandler> = {
     }
   },
 
+  /**
+   * Daily anniversary sweep — greets members on the anniversary of the day
+   * they joined, with a years-of-service count. Honours the 'anniversary'
+   * template override for both channels.
+   */
+  send_anniversary_sweep: async () => {
+    const supabase = createAdminClient();
+    const { data: rows } = await supabase.from('upcoming_anniversaries').select('*');
+    if (!rows) return;
+    const today = new Date();
+    const md = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const yearNow = today.getFullYear();
+
+    for (const m of rows.filter((x) => x.md === md)) {
+      const years = m.joined_year ? Math.max(0, yearNow - Number(m.joined_year)) : 0;
+      if (years < 1) continue; // skip members who joined this same year
+
+      if (m.email) {
+        const tpl = await resolveEmailTemplate(
+          'anniversary',
+          { name: m.name, years },
+          () => emailTemplates.anniversary(m.name, years),
+        );
+        await sendEmail({ to: m.email, ...tpl });
+        await logComm(m.email, 'email', 'anniversary', tpl.subject);
+      }
+      const wa = m.whatsapp || m.phone;
+      if (wa) {
+        try {
+          const msg = await resolveWhatsAppTemplate(
+            'anniversary',
+            { name: m.name, years },
+            () => whatsappTemplates.anniversary(m.name, years),
+          );
+          await sendWhatsApp(wa, msg);
+          await logComm(wa, 'whatsapp', 'anniversary', m.name);
+        } catch (err) { console.error('anniversary WA failed', err); }
+      }
+    }
+  },
+
   daily_birthday_sweep: async () => {
     const supabase = createAdminClient();
     const { data: members } = await supabase
@@ -636,6 +677,30 @@ export async function scheduleDuesReminders() {
     await enqueueJob('send_dues_reminder', { dues_id: d.id });
   }
   return dues?.length ?? 0;
+}
+
+/**
+ * Enqueue the daily birthday + anniversary greeting sweeps. Guarded so each
+ * sweep is enqueued at most once per day even if the scheduler runs more than
+ * once. The handlers themselves match today's date, so this only queues them.
+ */
+export async function scheduleDailyGreetings(): Promise<{ birthday: number; anniversary: number }> {
+  const supabase = createAdminClient();
+  const since = new Date(Date.now() - 20 * 3_600_000).toISOString();
+  const out = { birthday: 0, anniversary: 0 };
+  for (const jobType of ['daily_birthday_sweep', 'send_anniversary_sweep'] as const) {
+    const { data: recent } = await supabase
+      .from('automation_jobs')
+      .select('id')
+      .eq('job_type', jobType)
+      .gte('created_at', since)
+      .limit(1);
+    if (recent && recent.length > 0) continue;
+    await enqueueJob(jobType, {});
+    if (jobType === 'daily_birthday_sweep') out.birthday = 1;
+    else out.anniversary = 1;
+  }
+  return out;
 }
 
 /**
