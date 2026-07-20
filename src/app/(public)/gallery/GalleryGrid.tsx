@@ -1,16 +1,50 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { X, ChevronLeft, ChevronRight, LayoutGrid, CalendarDays } from 'lucide-react';
 
 export type GalleryPhoto = {
   url: string;
   caption: string;
   activity: string;
+  date: string;
 };
 
+type View = 'grid' | 'collage';
+
+type Indexed = GalleryPhoto & { i: number };
+
+function yearOf(iso: string): string {
+  const y = new Date(iso).getFullYear();
+  return Number.isFinite(y) ? String(y) : 'Undated';
+}
+
+function dateLabel(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? ''
+    : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export function GalleryGrid({ photos }: { photos: GalleryPhoto[] }) {
+  const [view, setView] = useState<View>('grid');
   const [index, setIndex] = useState<number | null>(null);
+
+  // Group photos by year (newest first), preserving each photo's global index
+  // so the lightbox can navigate the full set from any view.
+  const groups = useMemo(() => {
+    const map = new Map<string, Indexed[]>();
+    photos.forEach((p, i) => {
+      const key = yearOf(p.date);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push({ ...p, i });
+    });
+    return Array.from(map.entries()).sort((a, b) => {
+      if (a[0] === 'Undated') return 1;
+      if (b[0] === 'Undated') return -1;
+      return Number(b[0]) - Number(a[0]);
+    });
+  }, [photos]);
 
   const move = useCallback(
     (dir: 1 | -1) => {
@@ -39,25 +73,59 @@ export function GalleryGrid({ photos }: { photos: GalleryPhoto[] }) {
 
   return (
     <>
-      <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
-        {photos.map((p, i) => (
-          <button
-            key={`${p.url}-${i}`}
-            type="button"
-            onClick={() => setIndex(i)}
-            className="group mb-4 block w-full break-inside-avoid overflow-hidden rounded-xl border border-gray-200 bg-gray-100 cursor-zoom-in"
-            aria-label={p.caption || p.activity}
+      {/* View switcher */}
+      <div className="flex items-center justify-between gap-3 mb-8 flex-wrap">
+        <p className="text-sm text-gray-500">
+          <strong className="text-navy-800">{photos.length}</strong>{' '}
+          {photos.length === 1 ? 'photo' : 'photos'}
+        </p>
+        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+          <ViewButton active={view === 'grid'} onClick={() => setView('grid')} icon={LayoutGrid}>
+            Full grid
+          </ViewButton>
+          <ViewButton
+            active={view === 'collage'}
+            onClick={() => setView('collage')}
+            icon={CalendarDays}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={p.url}
-              alt={p.caption || p.activity}
-              loading="lazy"
-              className="w-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-            />
-          </button>
-        ))}
+            By date &amp; year
+          </ViewButton>
+        </div>
       </div>
+
+      {view === 'grid' ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {photos.map((p, i) => (
+            <Tile key={`${p.url}-${i}`} photo={p} square onClick={() => setIndex(i)} />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-12">
+          {groups.map(([year, items]) => (
+            <section key={year}>
+              <div className="flex items-center gap-3 mb-5">
+                <CalendarDays size={18} className="text-brand-500" aria-hidden />
+                <h2 className="text-2xl font-bold text-navy-800">{year}</h2>
+                <span className="text-sm text-gray-500">
+                  {items.length} {items.length === 1 ? 'photo' : 'photos'}
+                </span>
+                <span className="h-px flex-1 bg-gray-200" />
+              </div>
+              {/* Masonry collage for the year */}
+              <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 [column-fill:_balance]">
+                {items.map((p) => (
+                  <Tile
+                    key={`${p.url}-${p.i}`}
+                    photo={p}
+                    showDate
+                    onClick={() => setIndex(p.i)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
 
       {active && (
         <div
@@ -113,7 +181,9 @@ export function GalleryGrid({ photos }: { photos: GalleryPhoto[] }) {
             />
             <figcaption className="mt-3 text-center text-white text-sm max-w-2xl">
               <span className="text-white/60 text-xs">
-                {active.activity} · {index! + 1} / {photos.length}
+                {active.activity}
+                {dateLabel(active.date) ? ` · ${dateLabel(active.date)}` : ''} · {index! + 1} /{' '}
+                {photos.length}
               </span>
               {active.caption && <p className="mt-1">{active.caption}</p>}
             </figcaption>
@@ -121,5 +191,66 @@ export function GalleryGrid({ photos }: { photos: GalleryPhoto[] }) {
         </div>
       )}
     </>
+  );
+}
+
+function ViewButton({
+  active,
+  onClick,
+  icon: Icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof LayoutGrid;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold transition-colors ${
+        active ? 'bg-navy-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+      }`}
+    >
+      <Icon size={15} aria-hidden />
+      {children}
+    </button>
+  );
+}
+
+function Tile({
+  photo,
+  square,
+  showDate,
+  onClick,
+}: {
+  photo: GalleryPhoto;
+  square?: boolean;
+  showDate?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group relative block w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-100 cursor-zoom-in ${
+        square ? 'aspect-square' : 'mb-3 break-inside-avoid'
+      }`}
+      aria-label={photo.caption || photo.activity}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photo.url}
+        alt={photo.caption || photo.activity}
+        loading="lazy"
+        className={`w-full ${square ? 'h-full' : ''} object-cover group-hover:scale-[1.03] transition-transform duration-500`}
+      />
+      {showDate && dateLabel(photo.date) && (
+        <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-black/55 text-white text-[10px] font-semibold">
+          {dateLabel(photo.date)}
+        </span>
+      )}
+    </button>
   );
 }

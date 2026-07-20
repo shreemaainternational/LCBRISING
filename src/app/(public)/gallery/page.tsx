@@ -45,6 +45,7 @@ async function loadPhotos(): Promise<GalleryPhoto[]> {
           url,
           caption: a.photo_captions?.[url] ?? '',
           activity: a.title,
+          date: a.date,
         });
       }
     }
