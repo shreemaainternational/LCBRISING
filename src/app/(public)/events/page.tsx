@@ -4,7 +4,6 @@ import { isSupabaseConfigured, env } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { type EventRow } from '@/components/site/EventCard';
 import { EventsBrowser } from '@/components/site/EventsBrowser';
-import { getEventCategory, getEventCategoryGroup } from '@/lib/event-categories';
 
 function eventsJsonLd(events: EventRow[]) {
   const site = env.NEXT_PUBLIC_SITE_URL;
@@ -41,18 +40,7 @@ function eventsJsonLd(events: EventRow[]) {
 export const metadata: Metadata = { title: 'Events', alternates: { canonical: '/events' } };
 export const revalidate = 60;
 
-// The Events sub-menu (Celebrations & Festivals) drives the on-page tabs.
-const CELEBRATION_GROUP = getEventCategoryGroup('celebration');
-
-export default async function EventsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ category?: string }>;
-}) {
-  const { category } = await searchParams;
-  const activeCategory = category ? getEventCategory(category) : undefined;
-  const initialCategory = activeCategory?.slug ?? '';
-
+export default async function EventsPage() {
   let upcoming: EventRow[] = [];
   let past: EventRow[] = [];
   if (isSupabaseConfigured()) {
@@ -89,18 +77,13 @@ export default async function EventsPage({
       )}
       <PageHero
         pillText="EVENTS"
-        headline={activeCategory ? activeCategory.label : 'Upcoming Events'}
-        subtitle="Join us at our upcoming service activities, meetings, and community events. Everyone is welcome!"
+        headline="Our Events"
+        subtitle="Join us at our upcoming service activities, meetings, and community events — and relive our past ones. Everyone is welcome!"
         backgroundImage={PAGE_HERO_BG.events}
       />
 
       <section className="container-page py-16 md:py-20">
-        <EventsBrowser
-          upcoming={upcoming}
-          past={past}
-          tabs={CELEBRATION_GROUP?.items ?? []}
-          initialCategory={initialCategory}
-        />
+        <EventsBrowser upcoming={upcoming} past={past} />
       </section>
     </>
   );
