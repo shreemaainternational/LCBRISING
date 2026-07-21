@@ -20,6 +20,10 @@ function eventToDetail(e: EventRow, image: string): DetailItem {
   const categoryLabel = e.category
     ? getEventCategory(e.category)?.label ?? e.category
     : 'Community Event';
+  // Cover first (the clicked image), then the rest of the gallery, de-duped.
+  const photos = Array.from(
+    new Set([image, ...(e.photos ?? [])].filter(Boolean)),
+  );
   return {
     id: e.id,
     title: e.title,
@@ -29,7 +33,7 @@ function eventToDetail(e: EventRow, image: string): DetailItem {
       { icon: Clock, text: timeRange },
       ...(e.location ? [{ icon: MapPin, text: e.location }] : []),
     ],
-    photos: [image],
+    photos,
     body: e.description ?? undefined,
     sharePath: '/events',
   };

@@ -10,6 +10,7 @@ export type EventRow = {
   location: string | null;
   cover_url: string | null;
   category: string | null;
+  photos: string[] | null;
 };
 
 export const EVENT_FALLBACK_IMAGES = [
