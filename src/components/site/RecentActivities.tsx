@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { MapPin, Users, Images } from 'lucide-react';
+import { MapPin, Images } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
@@ -15,6 +15,8 @@ export type RecentActivity = {
   date: string;
   location: string | null;
   beneficiaries: number | null;
+  lionMembers: number | null;
+  serviceHours: number | null;
   /** Every displayable photo, cover first (already collected on the server). */
   photos: string[];
 };
@@ -24,11 +26,14 @@ function toDetail(a: RecentActivity): DetailItem {
     id: a.id,
     title: a.title,
     dateLabel: formatDate(a.date),
-    meta: [
-      ...(a.location ? [{ icon: MapPin, text: a.location }] : []),
+    meta: a.location ? [{ icon: MapPin, text: a.location }] : [],
+    stats: [
       ...(a.beneficiaries && a.beneficiaries > 0
-        ? [{ icon: Users, text: `${a.beneficiaries.toLocaleString('en-IN')} reached` }]
-        : []),
+        ? [{ label: 'Beneficiaries', value: a.beneficiaries.toLocaleString('en-IN') }] : []),
+      ...(a.lionMembers && a.lionMembers > 0
+        ? [{ label: 'Lion Members', value: a.lionMembers.toLocaleString('en-IN') }] : []),
+      ...(a.serviceHours && a.serviceHours > 0
+        ? [{ label: 'Service Hours', value: a.serviceHours.toLocaleString('en-IN') }] : []),
     ],
     photos: a.photos,
     body: a.description ?? undefined,
@@ -89,8 +94,17 @@ export function RecentActivities({ activities }: { activities: RecentActivity[] 
                       {a.title}
                     </h3>
                     <p className="text-sm text-gray-600 line-clamp-3">{a.description ?? ''}</p>
-                    <div className="text-xs text-gray-500 mt-4">
-                      {a.beneficiaries} beneficiaries · {a.location ?? 'Vadodara'}
+                    <div className="text-xs text-gray-500 mt-4 flex flex-wrap gap-x-3 gap-y-1">
+                      {!!a.beneficiaries && a.beneficiaries > 0 && (
+                        <span>{a.beneficiaries.toLocaleString('en-IN')} beneficiaries</span>
+                      )}
+                      {!!a.lionMembers && a.lionMembers > 0 && (
+                        <span>{a.lionMembers.toLocaleString('en-IN')} Lions</span>
+                      )}
+                      {!!a.serviceHours && a.serviceHours > 0 && (
+                        <span>{a.serviceHours.toLocaleString('en-IN')} hrs</span>
+                      )}
+                      <span>{a.location ?? 'Vadodara'}</span>
                     </div>
                   </CardContent>
                 </Card>

@@ -65,7 +65,7 @@ async function getRecentActivities() {
     const supabase = await createClient();
     const { data } = await supabase
       .from('activities')
-      .select('id, title, description, beneficiaries, date, location, photos, before_photos, after_photos, videos')
+      .select('id, title, description, beneficiaries, lion_members_count, service_hours, date, location, photos, before_photos, after_photos, videos')
       .order('date', { ascending: false })
       .limit(3);
     return (data ?? []).map((a) => ({
@@ -75,6 +75,8 @@ async function getRecentActivities() {
       date: a.date,
       location: a.location,
       beneficiaries: a.beneficiaries,
+      lionMembers: a.lion_members_count,
+      serviceHours: a.service_hours,
       photos: collectActivityPhotos(a as ActivityMediaRow),
     }));
   } catch {
