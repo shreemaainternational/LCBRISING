@@ -1,10 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { Network, Globe } from 'lucide-react';
 import Link from 'next/link';
 import {
-  HierarchyExplorer,
   type CaNode,
   type MdNode,
   type DistrictNode,
@@ -12,6 +10,7 @@ import {
   type ZoneNode,
   type ClubNode,
 } from '@/components/admin/HierarchyExplorer';
+import { HierarchyViews } from '@/components/admin/HierarchyViews';
 import type { ClubMember } from '@/components/admin/ClubMembersPanel';
 
 export const dynamic = 'force-dynamic';
@@ -151,12 +150,7 @@ export default async function HierarchyPage() {
             <Stat label="Clubs" value={totalClubs} />
             <Stat label="Members" value={totalMembers} />
           </div>
-          <Card>
-            <CardHeader><CardTitle className="text-sm">Structure</CardTitle></CardHeader>
-            <CardContent className="p-0">
-              <HierarchyExplorer cas={caNodes} looseMds={looseMds} looseDistricts={looseDistricts} />
-            </CardContent>
-          </Card>
+          <HierarchyViews cas={caNodes} looseMds={looseMds} looseDistricts={looseDistricts} />
         </>
       )}
     </div>
