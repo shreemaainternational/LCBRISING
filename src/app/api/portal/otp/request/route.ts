@@ -3,8 +3,7 @@ import { createHash, randomInt } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/server';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { normalisePhone, phoneVariants } from '@/lib/phone';
-import { sendWhatsApp } from '@/lib/whatsapp';
-import { integrations } from '@/lib/env';
+import { sendWhatsApp, whatsAppConfigured } from '@/lib/whatsapp';
 
 export const runtime = 'nodejs';
 
@@ -21,8 +20,12 @@ export async function POST(req: Request) {
   if (!norm) {
     return NextResponse.json({ error: 'invalid phone' }, { status: 400 });
   }
-  if (!integrations.twilio) {
-    return NextResponse.json({ error: 'WhatsApp not configured on the server' }, { status: 503 });
+  if (!whatsAppConfigured) {
+    // Don't leak server-config internals to the customer.
+    return NextResponse.json(
+      { error: 'WhatsApp sign-in is temporarily unavailable. Please contact the club office.' },
+      { status: 503 },
+    );
   }
 
   const supabase = createAdminClient();
