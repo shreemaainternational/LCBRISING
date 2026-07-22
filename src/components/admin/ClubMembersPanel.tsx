@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, Mail, Phone, BadgeCheck } from 'lucide-react';
+import { Users, Mail, Phone, BadgeCheck, Pencil } from 'lucide-react';
 import { QuickAddCard } from './QuickAddCard';
 import { BulkMemberUpload } from './BulkMemberUpload';
 import { membersPreset } from './quick-add-presets';
@@ -32,10 +32,12 @@ export function ClubMembersPanel({
   club,
   members,
   compact = false,
+  onEditMember,
 }: {
   club: { id: string; name: string };
   members: ClubMember[];
   compact?: boolean;
+  onEditMember?: (m: ClubMember) => void;
 }) {
   // Single-add form pre-selected to this club (club dropdown defaults to it).
   const preset = membersPreset({ clubs: [{ id: club.id, name: club.name }], clubId: club.id });
@@ -70,6 +72,7 @@ export function ClubMembersPanel({
                 <th className="text-left px-3 py-2">Contact</th>
                 <th className="text-left px-3 py-2">Member #</th>
                 <th className="text-left px-3 py-2">Status</th>
+                {onEditMember && <th className="text-right px-3 py-2">Edit</th>}
               </tr>
             </thead>
             <tbody>
@@ -98,6 +101,18 @@ export function ClubMembersPanel({
                       </span>
                     )}
                   </td>
+                  {onEditMember && (
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => onEditMember(m)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-gray-200 text-gray-600 text-[11px] hover:bg-gray-50 hover:text-emerald-700"
+                        title="Edit member"
+                      >
+                        <Pencil size={12} /> Edit
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
