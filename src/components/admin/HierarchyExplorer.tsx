@@ -3,9 +3,10 @@
 import { useState, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, Globe, MapPin, Building2, Users, Layers, Boxes, ExternalLink, Pencil } from 'lucide-react';
+import { ChevronRight, Globe, MapPin, Building2, Users, Layers, Boxes, ExternalLink, Pencil, Plus } from 'lucide-react';
 import { ClubMembersPanel, type ClubMember } from './ClubMembersPanel';
 import { HierarchyEditContext, HierarchyEditModal, type EditEntity } from './HierarchyEditModal';
+import { HierarchyCreateContext, HierarchyCreateModal, type CreateSpec } from './HierarchyCreateModal';
 
 export type ClubNode = {
   id: string; name: string; club_number: string | null;
@@ -38,7 +39,7 @@ function countMembers(d: DistrictNode): number {
 }
 
 function Row({
-  open, onToggle, icon: Icon, iconClass, title, subtitle, type, editEntity, badges, depth, href,
+  open, onToggle, icon: Icon, iconClass, title, subtitle, type, editEntity, createSpec, createLabel, badges, depth, href,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -48,11 +49,14 @@ function Row({
   subtitle?: string;
   type: string;
   editEntity?: EditEntity;
+  createSpec?: CreateSpec;
+  createLabel?: string;
   badges?: React.ReactNode;
   depth: number;
   href?: string;
 }) {
   const openEdit = useContext(HierarchyEditContext);
+  const openCreate = useContext(HierarchyCreateContext);
   return (
     <div
       className="flex items-center gap-2 py-2.5 pr-3 hover:bg-gray-50 cursor-pointer select-none"
@@ -72,6 +76,16 @@ function Row({
         </div>
         {subtitle && <div className="text-xs text-gray-500 truncate">{subtitle}</div>}
       </div>
+      {createSpec && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); openCreate(createSpec); }}
+          className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-emerald-200 text-emerald-700 text-[11px] hover:bg-emerald-50"
+          title={`Add ${createLabel}`}
+        >
+          <Plus size={12} /> {createLabel}
+        </button>
+      )}
       {editEntity && (
         <button
           type="button"
@@ -138,7 +152,7 @@ function ClubBranch({ club, depth }: { club: ClubNode; depth: number }) {
   );
 }
 
-function ZoneBranch({ zone, depth }: { zone: ZoneNode; depth: number }) {
+function ZoneBranch({ zone, depth, districtId }: { zone: ZoneNode; depth: number; districtId: string }) {
   const [open, setOpen] = useState(false);
   const members = zone.clubs.reduce((a, c) => a + c.members.length, 0);
   return (
@@ -152,6 +166,8 @@ function ZoneBranch({ zone, depth }: { zone: ZoneNode; depth: number }) {
         subtitle={zone.code && zone.code !== zone.name ? zone.code : undefined}
         type="Zone"
         editEntity={{ type: 'zone', id: zone.id, code: zone.code, name: zone.name, chairperson_name: zone.chairperson_name }}
+        createSpec={{ childType: 'club', parentLabel: zone.name, district_id: districtId, zone_id: zone.id }}
+        createLabel="Club"
         badges={<><Pill icon={Building2} value={zone.clubs.length} tone="blue" /><Pill icon={Users} value={members} tone="emerald" /></>}
         depth={depth}
       />
@@ -164,7 +180,7 @@ function ZoneBranch({ zone, depth }: { zone: ZoneNode; depth: number }) {
   );
 }
 
-function RegionBranch({ region, depth }: { region: RegionNode; depth: number }) {
+function RegionBranch({ region, depth, districtId }: { region: RegionNode; depth: number; districtId: string }) {
   const [open, setOpen] = useState(false);
   const clubs = region.zones.reduce((a, z) => a + z.clubs.length, 0);
   return (
@@ -178,12 +194,14 @@ function RegionBranch({ region, depth }: { region: RegionNode; depth: number }) 
         subtitle={region.code && region.code !== region.name ? region.code : undefined}
         type="Region"
         editEntity={{ type: 'region', id: region.id, code: region.code, name: region.name, chairperson_name: region.chairperson_name }}
+        createSpec={{ childType: 'zone', parentLabel: region.name, district_id: districtId, region_id: region.id }}
+        createLabel="Zone"
         badges={<><Pill icon={MapPin} value={region.zones.length} tone="amber" /><Pill icon={Building2} value={clubs} tone="blue" /></>}
         depth={depth}
       />
       {open && (
         region.zones.length
-          ? region.zones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} />)
+          ? region.zones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} districtId={districtId} />)
           : <div className="border-t text-xs text-gray-500 py-2.5" style={{ paddingLeft: `${(depth + 1) * 20 + 12}px` }}>No zones in this region.</div>
       )}
     </div>
@@ -204,6 +222,8 @@ function DistrictBranch({ district, depth, defaultOpen }: { district: DistrictNo
         subtitle={[district.name !== district.code ? district.name : null, district.governor_name ? `DG ${district.governor_name}` : null].filter(Boolean).join(' · ') || undefined}
         type="District"
         editEntity={{ type: 'district', id: district.id, code: district.code, name: district.name, governor_name: district.governor_name, lions_year: district.lions_year }}
+        createSpec={{ childType: 'region', parentLabel: `District ${district.code}`, district_id: district.id }}
+        createLabel="Region"
         badges={<>
           <Pill icon={Building2} value={countClubs(district)} tone="blue" />
           <Pill icon={Users} value={countMembers(district)} tone="emerald" />
@@ -213,8 +233,8 @@ function DistrictBranch({ district, depth, defaultOpen }: { district: DistrictNo
       />
       {open && (
         <div>
-          {district.regions.map((r) => <RegionBranch key={r.id} region={r} depth={depth + 1} />)}
-          {district.looseZones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} />)}
+          {district.regions.map((r) => <RegionBranch key={r.id} region={r} depth={depth + 1} districtId={district.id} />)}
+          {district.looseZones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} districtId={district.id} />)}
           {district.looseClubs.map((c) => <ClubBranch key={c.id} club={c} depth={depth + 1} />)}
           {!hasChildren && (
             <div className="border-t text-xs text-gray-500 py-2.5" style={{ paddingLeft: `${(depth + 1) * 20 + 12}px` }}>
@@ -240,6 +260,8 @@ function MdBranch({ md, defaultOpen }: { md: MdNode; defaultOpen: boolean }) {
         subtitle={[md.code && md.code !== md.name ? md.code : null, md.council_chairperson_name ? `CC ${md.council_chairperson_name}` : null].filter(Boolean).join(' · ') || undefined}
         type="Multiple District"
         editEntity={{ type: 'md', id: md.id, name: md.name, code: md.code, country: md.country, council_chairperson_name: md.council_chairperson_name }}
+        createSpec={{ childType: 'district', parentLabel: md.name, multiple_district_id: md.id }}
+        createLabel="District"
         badges={<Pill icon={Globe} value={md.districts.length} tone="blue" />}
         depth={0}
       />
@@ -264,34 +286,44 @@ export function HierarchyExplorer({
 }: { mds?: MdNode[]; looseDistricts?: DistrictNode[]; lionsYear?: string }) {
   const router = useRouter();
   const [editing, setEditing] = useState<EditEntity | null>(null);
+  const [creating, setCreating] = useState<CreateSpec | null>(null);
   const year = lionsYear || currentLionsYear();
   const onlyOne = mds.length + looseDistricts.length === 1;
 
   return (
     <HierarchyEditContext.Provider value={setEditing}>
-      <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-navy-900 text-white">
-          <span className="text-xs font-bold uppercase tracking-wide">Account Name</span>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center rounded bg-white/15 px-2 py-0.5 text-[10px] font-semibold">
-              {year} · Active Structure
-            </span>
-            <span className="w-24 md:w-28 text-right text-xs font-bold uppercase tracking-wide">Type</span>
+      <HierarchyCreateContext.Provider value={setCreating}>
+        <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between gap-2 px-3 py-2 bg-navy-900 text-white">
+            <span className="text-xs font-bold uppercase tracking-wide">Account Name</span>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center rounded bg-white/15 px-2 py-0.5 text-[10px] font-semibold">
+                {year} · Active Structure
+              </span>
+              <span className="w-24 md:w-28 text-right text-xs font-bold uppercase tracking-wide">Type</span>
+            </div>
+          </div>
+          <div>
+            {mds.map((m) => <MdBranch key={m.id} md={m} defaultOpen={onlyOne} />)}
+            {looseDistricts.map((d) => <DistrictBranch key={d.id} district={d} depth={0} defaultOpen={onlyOne} />)}
           </div>
         </div>
-        <div>
-          {mds.map((m) => <MdBranch key={m.id} md={m} defaultOpen={onlyOne} />)}
-          {looseDistricts.map((d) => <DistrictBranch key={d.id} district={d} depth={0} defaultOpen={onlyOne} />)}
-        </div>
-      </div>
 
-      {editing && (
-        <HierarchyEditModal
-          entity={editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); router.refresh(); }}
-        />
-      )}
+        {editing && (
+          <HierarchyEditModal
+            entity={editing}
+            onClose={() => setEditing(null)}
+            onSaved={() => { setEditing(null); router.refresh(); }}
+          />
+        )}
+        {creating && (
+          <HierarchyCreateModal
+            spec={creating}
+            onClose={() => setCreating(null)}
+            onCreated={() => { setCreating(null); router.refresh(); }}
+          />
+        )}
+      </HierarchyCreateContext.Provider>
     </HierarchyEditContext.Provider>
   );
 }
