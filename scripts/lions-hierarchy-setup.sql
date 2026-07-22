@@ -183,6 +183,21 @@ end $$;
 
 
 -- ---------------------------------------------------------------------
+-- 6. Remove the stray placeholder region literally named "Region".
+--    Only soft-deletes it if it has NO active zones (no-orphan rule),
+--    so a real region can never be dropped by mistake. Idempotent.
+-- ---------------------------------------------------------------------
+update public.regions r
+   set deleted_at = now()
+ where r.name = 'Region'
+   and r.deleted_at is null
+   and not exists (
+     select 1 from public.zones z
+      where z.region_id = r.id and z.deleted_at is null
+   );
+
+
+-- ---------------------------------------------------------------------
 -- Quick sanity check (optional — returns counts after running).
 -- ---------------------------------------------------------------------
 select
