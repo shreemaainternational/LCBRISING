@@ -6,9 +6,10 @@ import { createClient } from '@/lib/supabase/client';
 import {
   ChevronRight, ChevronDown, Landmark, Boxes, Globe, Layers, MapPin, Building2,
   Pencil, Plus, Save, RotateCcw, Loader2, AlertTriangle, CheckSquare, Square, X,
-  Trash2, MoveRight,
+  Trash2, MoveRight, Users,
 } from 'lucide-react';
 import type { CaNode, MdNode, DistrictNode, RegionNode, ZoneNode, ClubNode } from './HierarchyExplorer';
+import type { ClubMember } from './ClubMembersPanel';
 import { HierarchyEditModal, type EditEntity } from './HierarchyEditModal';
 
 /* ------------------------------------------------------------------ *
@@ -17,7 +18,7 @@ import { HierarchyEditModal, type EditEntity } from './HierarchyEditModal';
  * with per-row Edit / Move / Remove plus batch reparent.              *
  * ------------------------------------------------------------------ */
 
-type Kind = 'ca' | 'md' | 'district' | 'region' | 'zone' | 'club';
+type Kind = 'ca' | 'md' | 'district' | 'region' | 'zone' | 'club' | 'member';
 type NamedOpt = { id: string; code: string; name: string };
 
 type FlatRow = {
@@ -25,14 +26,14 @@ type FlatRow = {
   kind: Kind;
   id: string;
   name: string;
-  chair: string | null;      // chairperson / officer / governor
+  chair: string | null;      // chairperson / officer / governor / member role
   depth: number;
   districtId: string | null; // owning district (for scoping reparent targets)
   parentId: string | null;   // current parent id (region for zone, zone for club)
   ancestors: string[];       // expandable ancestor keys, for collapse visibility
   hasChildren: boolean;
   // Original nodes (whichever applies) so we can build an EditEntity.
-  ca?: CaNode; md?: MdNode; district?: DistrictNode; region?: RegionNode; zone?: ZoneNode; club?: ClubNode;
+  ca?: CaNode; md?: MdNode; district?: DistrictNode; region?: RegionNode; zone?: ZoneNode; club?: ClubNode; member?: ClubMember;
 };
 
 type Opt = { id: string; label: string; districtId: string };
@@ -44,6 +45,7 @@ const KIND_META: Record<Kind, { label: string; icon: React.ComponentType<{ size?
   region: { label: 'Region', icon: Layers, cls: 'text-purple-500' },
   zone: { label: 'Zone', icon: MapPin, cls: 'text-amber-500' },
   club: { label: 'Lions Club', icon: Building2, cls: 'text-blue-500' },
+  member: { label: 'Member', icon: Users, cls: 'text-emerald-600' },
 };
 
 const DELETE_ENDPOINT: Record<Kind, (id: string) => string> = {
@@ -53,6 +55,7 @@ const DELETE_ENDPOINT: Record<Kind, (id: string) => string> = {
   region: (id) => `/api/regions/${id}`,
   zone: (id) => `/api/zones/${id}`,
   club: (id) => `/api/crm/clubs/${id}`,
+  member: (id) => `/api/crm/members/${id}`,
 };
 
 function collectDistricts(cas: CaNode[], looseMds: MdNode[], looseDistricts: DistrictNode[]): DistrictNode[] {
@@ -68,11 +71,19 @@ function collectDistricts(cas: CaNode[], looseMds: MdNode[], looseDistricts: Dis
 function buildRows(cas: CaNode[], looseMds: MdNode[], looseDistricts: DistrictNode[]): FlatRow[] {
   const rows: FlatRow[] = [];
   const pushClub = (c: ClubNode, depth: number, districtId: string, anc: string[]) => {
+    const key = `club:${c.id}`;
     rows.push({
-      key: `club:${c.id}`, kind: 'club', id: c.id, name: c.name,
+      key, kind: 'club', id: c.id, name: c.name,
       chair: c.club_number ? `LCI #${c.club_number}` : null,
-      depth, districtId, parentId: c.zone_id, ancestors: anc, hasChildren: false, club: c,
+      depth, districtId, parentId: c.zone_id, ancestors: anc, hasChildren: c.members.length > 0, club: c,
     });
+    for (const m of c.members) {
+      rows.push({
+        key: `member:${m.id}`, kind: 'member', id: m.id, name: m.name,
+        chair: m.lions_role || m.role || (m.lions_member_id ? `LCI ${m.lions_member_id}` : null),
+        depth: depth + 1, districtId, parentId: c.id, ancestors: [...anc, key], hasChildren: false, member: m,
+      });
+    }
   };
   const pushZone = (z: ZoneNode, depth: number, districtId: string, anc: string[]) => {
     const key = `zone:${z.id}`;
@@ -272,6 +283,7 @@ export function RegionZoneConsole({
       case 'region': return { type: 'region', id: row.id, code: row.region!.code, name: row.region!.name, chairperson_name: row.region!.chairperson_name };
       case 'zone': return { type: 'zone', id: row.id, code: row.zone!.code, name: row.zone!.name, chairperson_name: row.zone!.chairperson_name, region_id: row.zone!.region_id, regions: regionsByDistrict.get(row.districtId ?? '') ?? [], clubs: clubsByDistrict.get(row.districtId ?? '') ?? [] };
       case 'club': return { type: 'club', id: row.id, name: row.club!.name, club_number: row.club!.club_number, city: row.club!.city, state: row.club!.state, zone_id: row.club!.zone_id, zones: zonesByDistrict.get(row.districtId ?? '') ?? [] };
+      case 'member': return { type: 'member', id: row.id, name: row.member!.name, email: row.member!.email, phone: row.member!.phone, status: row.member!.status };
     }
   }
 
