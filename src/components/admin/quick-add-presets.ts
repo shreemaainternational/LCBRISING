@@ -10,6 +10,8 @@ interface PresetOptions {
   clubs?: { id: string; name: string }[];
   members?: { id: string; name: string; email: string }[];
   districts?: { id: string; code: string; name: string }[];
+  /** Pre-select a club in the members form (e.g. when adding within a club). */
+  clubId?: string;
 }
 
 export function membersPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 'title'> {
@@ -37,7 +39,7 @@ export function membersPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 't
         { value: 'lapsed', label: 'Lapsed' },
         { value: 'suspended', label: 'Suspended' },
       ] },
-      { name: 'club_id', label: 'Club', type: 'select',
+      { name: 'club_id', label: 'Club', type: 'select', defaultValue: o.clubId,
         options: (o.clubs ?? []).map((c) => ({ value: c.id, label: c.name })) },
       { name: 'birthday', label: 'Birthday', type: 'date' },
       { name: 'lions_member_id', label: 'Membership Number', type: 'text', required: true, hint: 'LCI membership number (required)' },
@@ -58,6 +60,59 @@ export function districtsPreset(): Omit<QuickAddCardProps, 'title'> {
       { name: 'cabinet_secretary_name', label: 'Cabinet Secretary', type: 'text' },
       { name: 'cabinet_treasurer_name', label: 'Cabinet Treasurer', type: 'text' },
       { name: 'lions_year', label: 'Lions Year', type: 'text', placeholder: '2025-26' },
+    ],
+  };
+}
+
+export function constitutionalAreasPreset(): Omit<QuickAddCardProps, 'title'> {
+  return {
+    endpoint: '/api/constitutional-areas',
+    accent: 'blue',
+    description: 'Create a constitutional area — the top of the Lions federation (e.g. ISAAME). Multiple districts roll up into it.',
+    responseKey: 'constitutional_area',
+    fields: [
+      { name: 'name', label: 'Constitutional Area Name', type: 'text', required: true, placeholder: 'e.g. ISAAME' },
+      { name: 'code', label: 'Code', type: 'text', placeholder: 'e.g. CA-ISAAME' },
+    ],
+  };
+}
+
+export function multipleDistrictsPreset(): Omit<QuickAddCardProps, 'title'> {
+  return {
+    endpoint: '/api/multiple-districts',
+    accent: 'blue',
+    description: 'Create a multiple district — the federation grouping above districts (e.g. MD 323). A Council Chairperson oversees it.',
+    responseKey: 'multiple_district',
+    fields: [
+      { name: 'name', label: 'Multiple District Name', type: 'text', required: true, placeholder: 'e.g. Multiple District 323' },
+      { name: 'code', label: 'Code', type: 'text', placeholder: 'e.g. 323' },
+      { name: 'country', label: 'Country', type: 'text', defaultValue: 'India' },
+      { name: 'council_chairperson_name', label: 'Council Chairperson', type: 'text' },
+    ],
+  };
+}
+
+export function regionsPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 'title'> {
+  const districtOptions = (o.districts ?? []).map((d) => ({
+    value: d.id,
+    label: `${d.code} — ${d.name}`,
+  }));
+  const placeholder = districtOptions.length === 0
+    ? 'District 3232 F1 (default — will be created)'
+    : '— pick a district —';
+
+  return {
+    endpoint: '/api/regions',
+    accent: 'cyan',
+    description: 'Add a new region under a district. A region groups several zones; a Region Chairperson oversees them.',
+    responseKey: 'region',
+    fields: [
+      { name: 'name', label: 'Region Name', type: 'text', required: true, placeholder: 'e.g. Region V' },
+      { name: 'district_id', label: 'District', type: 'select',
+        placeholder,
+        defaultValue: districtOptions[0]?.value ?? '',
+        options: districtOptions },
+      { name: 'region_chairperson_name', label: 'Region Chairperson', type: 'text' },
     ],
   };
 }

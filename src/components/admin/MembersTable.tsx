@@ -46,34 +46,46 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
   const router = useRouter();
   const [editing, setEditing] = useState<MemberRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+
+  /** Inline reassign a member to another club (or Unassigned). */
+  function moveMember(m: MemberRow, clubId: string) {
+    if ((m.club_id ?? '') === clubId) return;
+    setError(null);
+    setMovingId(m.id);
+    start(async () => {
+      try {
+        const res = await fetch(`/api/crm/members/${m.id}`, {
+          method: 'PATCH', headers: await authHeaders(), body: JSON.stringify({ club_id: clubId || null }),
+        });
+        if (!res.ok) { const j = await res.json().catch(() => ({})); setError(typeof j.error === 'string' ? j.error : `Move failed (${res.status})`); return; }
+        router.refresh();
+      } catch { setError('Network error while moving.'); }
+      finally { setMovingId(null); }
+    });
+  }
 
   // Row selection for bulk actions. Held as a Set of member ids.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const allIds = useMemo(() => members.map((m) => m.id), [members]);
-  const allSelected = selected.size > 0 && selected.size === allIds.length;
-  const someSelected = selected.size > 0 && selected.size < allIds.length;
+  // Prune ids that no longer exist (e.g. after a refresh) during render so the
+  // count stays honest without a state-syncing effect.
+  const selectedLive = useMemo(() => {
+    const live = new Set(allIds);
+    const next = new Set<string>();
+    for (const id of selected) if (live.has(id)) next.add(id);
+    return next;
+  }, [selected, allIds]);
+  const allSelected = selectedLive.size > 0 && selectedLive.size === allIds.length;
+  const someSelected = selectedLive.size > 0 && selectedLive.size < allIds.length;
 
   // Reflect the "some but not all" state on the header checkbox.
   const headerRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (headerRef.current) headerRef.current.indeterminate = someSelected;
   }, [someSelected]);
-
-  // Drop ids that no longer exist after a refresh so the count stays honest.
-  useEffect(() => {
-    setSelected((prev) => {
-      const live = new Set(allIds);
-      let changed = false;
-      const next = new Set<string>();
-      for (const id of prev) {
-        if (live.has(id)) next.add(id);
-        else changed = true;
-      }
-      return changed ? next : prev;
-    });
-  }, [allIds]);
 
   function toggleOne(id: string) {
     setSelected((s) => {
@@ -97,8 +109,8 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
   }
 
   function removeSelected() {
-    if (selected.size === 0) return;
-    const ids = Array.from(selected);
+    if (selectedLive.size === 0) return;
+    const ids = Array.from(selectedLive);
     if (!window.confirm(`Remove ${ids.length} selected member${ids.length === 1 ? '' : 's'} from the roster? This can be restored by an admin.`)) return;
     setError(null);
     start(async () => {
@@ -163,10 +175,10 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
         </p>
       )}
 
-      {selected.size > 0 && (
+      {selectedLive.size > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-navy-100 bg-navy-50/70 px-3 py-2">
           <span className="text-sm font-medium text-navy-800">
-            {selected.size} selected
+            {selectedLive.size} selected
           </span>
           <button
             type="button"
@@ -220,10 +232,10 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
                     <input
                       type="checkbox"
                       aria-label={`Select all members in ${clubName}`}
-                      checked={rows.every((r) => selected.has(r.id))}
+                      checked={rows.every((r) => selectedLive.has(r.id))}
                       ref={(el) => {
                         if (el) {
-                          const sel = rows.filter((r) => selected.has(r.id)).length;
+                          const sel = rows.filter((r) => selectedLive.has(r.id)).length;
                           el.indeterminate = sel > 0 && sel < rows.length;
                         }
                       }}
@@ -236,12 +248,12 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
                   </td>
                 </tr>
                 {rows.map((m) => (
-                  <tr key={m.id} className={`border-t ${selected.has(m.id) ? 'bg-navy-50/40' : ''}`}>
+                  <tr key={m.id} className={`border-t ${selectedLive.has(m.id) ? 'bg-navy-50/40' : ''}`}>
                     <td className="p-3">
                       <input
                         type="checkbox"
                         aria-label={`Select ${m.name ?? m.email ?? 'member'}`}
-                        checked={selected.has(m.id)}
+                        checked={selectedLive.has(m.id)}
                         onChange={() => toggleOne(m.id)}
                         className="h-4 w-4 rounded border-gray-300 accent-navy-700 cursor-pointer align-middle"
                       />
@@ -255,6 +267,18 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
                     <td className="p-3 text-gray-500">{m.joined_at ?? '—'}</td>
                     <td className="p-3">
                       <div className="flex items-center justify-end gap-1.5">
+                        <select
+                          value={m.club_id ?? ''}
+                          onChange={(e) => moveMember(m, e.target.value)}
+                          disabled={pending && movingId === m.id}
+                          title="Move to another club"
+                          aria-label="Move member to club"
+                          className="max-w-[9rem] px-2 py-1.5 rounded-md border border-gray-200 text-xs bg-white text-gray-700 disabled:opacity-60"
+                        >
+                          <option value="">Unassigned</option>
+                          {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                        {pending && movingId === m.id && <Loader2 size={13} className="animate-spin text-gray-400" />}
                         <button
                           type="button"
                           onClick={() => { setError(null); setEditing(m); }}

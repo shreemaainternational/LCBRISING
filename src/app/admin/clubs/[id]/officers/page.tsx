@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import AppointForm from './AppointForm';
 
 export const dynamic = 'force-dynamic';
@@ -44,7 +44,7 @@ export default async function ClubOfficersPage({
   params: Promise<{ id: string }>;
 }) {
   const { id: clubId } = await params;
-  const supa = await createClient();
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
   const [clubRes, officersRes] = await Promise.all([
     supa

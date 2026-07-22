@@ -26,7 +26,7 @@ type ParsedRow = {
 
 type RowResult = {
   row: number;
-  status: 'inserted' | 'skipped' | 'failed' | 'valid';
+  status: 'inserted' | 'updated' | 'skipped' | 'failed' | 'valid';
   name?: string;
   email?: string;
   reason?: string;
@@ -35,6 +35,7 @@ type RowResult = {
 type BulkResponse = {
   total?: number;
   inserted?: number;
+  updated?: number;
   skipped?: number;
   failed?: number;
   to_insert?: number;
@@ -128,7 +129,14 @@ const LIONS_FIELDS: Record<string, string[]> = {
   membership_type: ['membershipfulltype'],
 };
 
-export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
+export function BulkMemberUpload({
+  clubs = [], defaultClubId, defaultClubName,
+}: {
+  clubs?: ClubOption[];
+  /** When set, sheet rows that don't name a club attach to this club. */
+  defaultClubId?: string;
+  defaultClubName?: string;
+}) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -146,6 +154,9 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
   const invalidRows = rows?.filter((r) => r.error) ?? [];
 
   function resolveClub(nameOrId: string): { club_id: string | null; club_label: string | null } {
+    // Scoped upload (within a club): every row belongs to that club, whatever
+    // the sheet's own club column says.
+    if (defaultClubId) return { club_id: defaultClubId, club_label: defaultClubName ?? null };
     if (!nameOrId) return { club_id: null, club_label: null };
     if (UUID_RE.test(nameOrId) && clubById.has(nameOrId)) {
       return { club_id: nameOrId, club_label: clubById.get(nameOrId)!.name };
@@ -202,8 +213,10 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
 
       let error: string | undefined;
       if (!name || name.length < 2) error = 'Name is required';
-      else if (!email || !EMAIL_RE.test(email)) error = 'No valid email in export';
       else if (!memberId) error = 'Membership number is required';
+      // Into-a-club uploads accept an email-less row (it updates an existing
+      // member matched by membership number); a plain roster still needs email.
+      else if (!defaultClubId && (!email || !EMAIL_RE.test(email))) error = 'No valid email in export';
 
       out.push({
         row: i + 1, name, email, phone, whatsapp, role: 'member', status,
@@ -246,8 +259,10 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
 
       let error: string | undefined;
       if (!name || name.length < 2) error = 'Name is required (min 2 chars)';
-      else if (!email || !EMAIL_RE.test(email)) error = 'Valid email required';
       else if (!lionsMemberId) error = 'Membership number is required';
+      // Into-a-club uploads accept an email-less row (it updates an existing
+      // member matched by membership number); a plain roster still needs email.
+      else if (!defaultClubId && (!email || !EMAIL_RE.test(email))) error = 'Valid email required';
 
       out.push({
         row: i + 1, name, email,
@@ -341,7 +356,9 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       const res = await fetch('/api/crm/members/bulk', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ members: payloadRows() }),
+        // Scoped upload: tell the server to force every row onto this club and
+        // re-assign members that already exist instead of skipping them.
+        body: JSON.stringify({ members: payloadRows(), ...(defaultClubId ? { club_id: defaultClubId } : {}) }),
       });
       const j = (await res.json().catch(() => ({}))) as BulkResponse;
       if (!res.ok) {
@@ -378,6 +395,12 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
             <Sparkles size={14} className="text-emerald-500" />
             Bulk member upload — Lions International export or Excel / CSV
           </h3>
+          {defaultClubName && (
+            <p className="text-xs text-emerald-800 bg-emerald-100 rounded px-2 py-1 mt-1 inline-block">
+              Every row will be added to <strong>{defaultClubName}</strong> (the sheet&rsquo;s own Club column is ignored).
+              Members who already exist are re-assigned to this club and updated from the sheet.
+            </p>
+          )}
           <p className="text-xs text-gray-600 mt-0.5">
             Upload the <strong>Lions International &ldquo;Member Contact Information&rdquo;</strong> Excel export as-is
             {' '}(from MyLion / the Lion Portal) — the banner, grouping and footer rows are handled automatically.
@@ -494,10 +517,12 @@ export function BulkMemberUpload({ clubs = [] }: { clubs?: ClubOption[] }) {
       {result && !result.error && (
         <div className="mt-4 border rounded-md p-3 bg-green-50 text-sm">
           <div className="inline-flex items-center gap-1.5 text-green-800 font-medium">
-            <CheckCircle2 size={15} /> Imported {result.inserted ?? 0} member(s)
+            <CheckCircle2 size={15} /> Imported {result.inserted ?? 0}
+            {(result.updated ?? 0) > 0 && <> · updated {result.updated}</>} member(s)
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-gray-700">
+          <div className="grid grid-cols-4 gap-2 mt-2 text-xs text-gray-700">
             <div>Inserted: <strong>{result.inserted ?? 0}</strong></div>
+            <div>Updated: <strong>{result.updated ?? 0}</strong></div>
             <div>Skipped: <strong>{result.skipped ?? 0}</strong></div>
             <div>Failed: <strong>{result.failed ?? 0}</strong></div>
           </div>

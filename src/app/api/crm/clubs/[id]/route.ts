@@ -1,25 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
-import { clubSchema } from '@/lib/validation/schemas';
+import { resolveDefaultDistrictCode } from '@/lib/default-district';
 import { writeAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 // Trusted admin reads/writes (gated by requirePermission at each call site).
-// Prefer the service-role client so queries bypass RLS on databases where the
-// federation RLS migration has not been applied; fall back to the SSR session.
+// Prefer the service-role client so writes bypass RLS on installs where the
+// federation RLS policies aren't fully applied; fall back to the SSR session.
 function clubDb() {
   return process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : null;
 }
+
+// Editable fields only — no zod defaults, so an omitted field is never
+// coerced onto the row (a plain clubSchema.partial() would force
+// country='India' / district='' on every edit).
+const clubUpdateSchema = z.object({
+  name: z.string().min(2).max(200).optional(),
+  club_number: z.string().max(64).nullable().optional(),
+  district_id: z.string().uuid().nullable().optional(),
+  region_id: z.string().uuid().nullable().optional(),
+  zone_id: z.string().uuid().nullable().optional(),
+  city: z.string().max(120).nullable().optional(),
+  state: z.string().max(120).nullable().optional(),
+  country: z.string().max(120).nullable().optional(),
+  charter_date: z.string().max(40).nullable().optional(),
+});
 
 async function fetchClub(id: string) {
   const supa = clubDb() ?? await createClient();
   const { data } = await supa
     .from('clubs')
-    .select('id, name, club_number, district_id, zone_id, region_id, district, city, state, country, charter_date')
+    .select('id, name, club_number, district, district_id, zone_id, region_id, city, state, country, charter_date')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle();
@@ -37,7 +53,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const parsed = clubSchema.partial().safeParse(await req.json().catch(() => ({})));
+  const parsed = clubUpdateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: 'invalid_input', detail: parsed.error.flatten() }, { status: 400 });
   }
@@ -45,27 +61,30 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const before = await fetchClub(id);
   if (!before) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-  const actor = await requirePermission('club.update', {
-    district_id: (parsed.data.district_id ?? before.district_id) ?? null,
-  });
+  const actor = await requirePermission('club.update', { district_id: before.district_id ?? null });
   if (isGuardFailure(actor)) return actor;
 
-  // Only patch fields the caller actually sent — blank optional fields become
-  // NULL, but never overwrite the required text `district` column with ''.
-  const updates: Record<string, unknown> = {};
+  // Only write the keys actually supplied.
+  const payload: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(parsed.data)) {
-    if (k === 'district' && (v === '' || v == null)) continue;
-    updates[k] = v === '' ? null : v;
+    if (v !== undefined) payload[k] = v === '' ? null : v;
+  }
+  // Keep the legacy clubs.district text in sync when the district changes.
+  if (typeof payload.district_id === 'string') {
+    payload.district = await resolveDefaultDistrictCode(payload.district_id);
+  }
+  if (Object.keys(payload).length === 0) {
+    return NextResponse.json({ club: before });
   }
 
   const supa = clubDb() ?? await createClient();
-  const { data, error } = await supa
-    .from('clubs')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
+  const { data, error } = await supa.from('clubs').update(payload).eq('id', id).select().single();
+  if (error) {
+    const msg = (error as { code?: string }).code === '23505'
+      ? 'A club with that LCI number already exists.'
+      : describeSupabaseError(error.message);
+    return NextResponse.json({ error: msg }, { status: (error as { code?: string }).code === '23505' ? 409 : 500 });
+  }
 
   await writeAudit({
     action: 'club.update',
@@ -73,7 +92,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     entity_id: id,
     actor_user_id: actor.user_id,
     actor_member_id: actor.member_id ?? null,
-    diff: { before, after: updates },
+    diff: { before, after: payload },
   });
 
   return NextResponse.json({ club: data });
@@ -88,6 +107,21 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (isGuardFailure(actor)) return actor;
 
   const supa = clubDb() ?? await createClient();
+
+  // Lions hierarchy: don't orphan members — block while any are still in the
+  // club. Move or drop them first.
+  const { count } = await supa
+    .from('members')
+    .select('id', { count: 'exact', head: true })
+    .eq('club_id', id)
+    .is('deleted_at', null);
+  if ((count ?? 0) > 0) {
+    return NextResponse.json(
+      { error: `Can't remove this club — ${count} member(s) are still assigned. Move or remove them first.` },
+      { status: 409 },
+    );
+  }
+
   const { error } = await supa
     .from('clubs')
     .update({ deleted_at: new Date().toISOString() })

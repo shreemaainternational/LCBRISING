@@ -38,7 +38,9 @@ function friendlyError(message: string): string {
 
 export async function GET() {
   try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
-  const supa = await createClient();
+  // Prefer the service-role client so the read survives databases where the
+  // `zones`/`members` RLS policies recurse; fall back to the SSR session.
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
   const { data, error } = await supa.from('zones').select('*').is('deleted_at', null).order('name');
   if (error) return NextResponse.json({ error: friendlyError(error.message) }, { status: 500 });
   return NextResponse.json({ zones: data ?? [] });
@@ -100,7 +102,11 @@ export async function POST(req: Request) {
   if (!first.error && first.data) return NextResponse.json({ zone: first.data }, { status: 201 });
 
   const firstMsg = first.error?.message ?? '';
-  const isAuthFail = /invalid api key|jwt/i.test(firstMsg) || /row.level security|new row violates|permission denied/i.test(firstMsg);
+  const isAuthFail = /invalid api key|jwt/i.test(firstMsg)
+    || /row.level security|new row violates|permission denied/i.test(firstMsg)
+    // The recursive `members` RLS policy surfaces as this string, not an
+    // RLS-denied message, so the fallback must trigger on it too.
+    || /infinite recursion detected in policy/i.test(firstMsg);
 
   // 2) Fall back to the admin client only when RLS/auth blocked us
   //    and a service role is configured.

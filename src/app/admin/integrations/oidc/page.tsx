@@ -3,24 +3,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createAdminClient } from '@/lib/supabase/server';
 import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
+import { loadLionsPortalSettings } from '@/lib/oidc/lions-portal-runtime';
 import { isOidcConfigured } from '@/lib/oidc';
 import { isLionsApiConfigured } from '@/lib/oidc/lions';
+import { isLionsPortalConfigured } from '@/lib/oidc/lions-portal';
 import { env } from '@/lib/env';
 import {
-  ArrowLeft, Shield, CheckCircle2, XCircle, Globe, AlertCircle, Plug,
+  ArrowLeft, Shield, CheckCircle2, XCircle, Globe, AlertCircle, Plug, KeyRound,
 } from 'lucide-react';
 import { OidcSetupForm } from './OidcSetupForm';
 import { LionsApiSetupForm } from './LionsApiSetupForm';
+import { LionsPortalSetupForm } from './LionsPortalSetupForm';
 
 export const dynamic = 'force-dynamic';
 
 export default async function OidcSetupPage() {
   await loadOidcSettings(true);
   await loadLionsApiSettings(true);
+  await loadLionsPortalSettings(true);
   const db = createAdminClient();
-  const [{ data: row }, { data: apiRow }] = await Promise.all([
+  const [{ data: row }, { data: apiRow }, { data: portalRow }] = await Promise.all([
     db.from('lions_oidc_settings').select('*').eq('id', 'singleton').maybeSingle(),
     db.from('lions_api_settings').select('*').eq('id', 'singleton').maybeSingle(),
+    db.from('lions_portal_credentials').select('*').eq('id', 'singleton').maybeSingle(),
   ]);
 
   // never leak secrets to the form
@@ -30,8 +35,15 @@ export default async function OidcSetupPage() {
     api_key: apiRow.api_key ? '__REDACTED__' : null,
     access_token: apiRow.access_token ? '__REDACTED__' : null,
   } : null;
+  const portalInitial = portalRow ? {
+    ...portalRow,
+    username: portalRow.username ? '__REDACTED__' : null,
+    password: portalRow.password ? '__REDACTED__' : null,
+    session_token: undefined,
+  } : null;
   const configured = isOidcConfigured();
   const apiConfigured = isLionsApiConfigured();
+  const portalConfigured = isLionsPortalConfigured();
   const defaultRedirect = `${env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')}/api/auth/oidc/callback`;
 
   return (
@@ -96,6 +108,23 @@ export default async function OidcSetupPage() {
         </CardHeader>
         <CardContent>
           <LionsApiSetupForm initial={apiInitial} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <span className={portalConfigured ? 'text-emerald-600' : 'text-gray-400'}><KeyRound size={16} /></span>
+            District Governor portal login (district sync)
+            <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full ml-auto ${
+              portalConfigured ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+            }`}>
+              {portalConfigured ? 'Active' : 'Not configured'}
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LionsPortalSetupForm initial={portalInitial} />
         </CardContent>
       </Card>
 
