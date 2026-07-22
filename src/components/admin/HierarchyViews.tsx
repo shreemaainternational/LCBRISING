@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { SlidersHorizontal, ListTree } from 'lucide-react';
 import { HierarchyExplorer, type CaNode, type MdNode, type DistrictNode } from './HierarchyExplorer';
+import type { ClubMember } from './ClubMembersPanel';
 import { RegionZoneConsole } from './RegionZoneConsole';
 
 /**
@@ -11,8 +12,8 @@ import { RegionZoneConsole } from './RegionZoneConsole';
  *  • Tree    — expandable explorer with inline Add / Edit at every level.
  */
 export function HierarchyViews({
-  cas = [], looseMds = [], looseDistricts = [],
-}: { cas?: CaNode[]; looseMds?: MdNode[]; looseDistricts?: DistrictNode[] }) {
+  cas = [], looseMds = [], looseDistricts = [], unassignedMembers = [],
+}: { cas?: CaNode[]; looseMds?: MdNode[]; looseDistricts?: DistrictNode[]; unassignedMembers?: ClubMember[] }) {
   const [tab, setTab] = useState<'console' | 'tree'>('console');
   return (
     <div className="space-y-3">
@@ -21,7 +22,7 @@ export function HierarchyViews({
         <TabBtn active={tab === 'tree'} onClick={() => setTab('tree')} icon={ListTree}>Tree</TabBtn>
       </div>
       {tab === 'console'
-        ? <RegionZoneConsole cas={cas} looseMds={looseMds} looseDistricts={looseDistricts} />
+        ? <RegionZoneConsole cas={cas} looseMds={looseMds} looseDistricts={looseDistricts} unassignedMembers={unassignedMembers} />
         : <HierarchyExplorer cas={cas} looseMds={looseMds} looseDistricts={looseDistricts} />}
     </div>
   );

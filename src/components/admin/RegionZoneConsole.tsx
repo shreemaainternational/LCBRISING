@@ -18,7 +18,8 @@ import { HierarchyEditModal, type EditEntity } from './HierarchyEditModal';
  * with per-row Edit / Move / Remove plus batch reparent.              *
  * ------------------------------------------------------------------ */
 
-type Kind = 'ca' | 'md' | 'district' | 'region' | 'zone' | 'club' | 'member';
+type Kind = 'ca' | 'md' | 'district' | 'region' | 'zone' | 'club' | 'member' | 'unassigned';
+type MoveKind = 'zone' | 'club' | 'member';
 type NamedOpt = { id: string; code: string; name: string };
 
 type FlatRow = {
@@ -46,9 +47,10 @@ const KIND_META: Record<Kind, { label: string; icon: React.ComponentType<{ size?
   zone: { label: 'Zone', icon: MapPin, cls: 'text-amber-500' },
   club: { label: 'Lions Club', icon: Building2, cls: 'text-blue-500' },
   member: { label: 'Member', icon: Users, cls: 'text-emerald-600' },
+  unassigned: { label: '', icon: AlertTriangle, cls: 'text-amber-500' },
 };
 
-const DELETE_ENDPOINT: Record<Kind, (id: string) => string> = {
+const DELETE_ENDPOINT: Partial<Record<Kind, (id: string) => string>> = {
   ca: (id) => `/api/constitutional-areas/${id}`,
   md: (id) => `/api/multiple-districts/${id}`,
   district: (id) => `/api/crm/districts/${id}`,
@@ -68,7 +70,7 @@ function collectDistricts(cas: CaNode[], looseMds: MdNode[], looseDistricts: Dis
 }
 
 /** Build the full flat row list (all nodes, before collapse filtering). */
-function buildRows(cas: CaNode[], looseMds: MdNode[], looseDistricts: DistrictNode[]): FlatRow[] {
+function buildRows(cas: CaNode[], looseMds: MdNode[], looseDistricts: DistrictNode[], unassignedMembers: ClubMember[] = []): FlatRow[] {
   const rows: FlatRow[] = [];
   const pushClub = (c: ClubNode, depth: number, districtId: string, anc: string[]) => {
     const key = `club:${c.id}`;
@@ -131,6 +133,22 @@ function buildRows(cas: CaNode[], looseMds: MdNode[], looseDistricts: DistrictNo
   });
   looseMds.forEach((m) => pushMd(m, 0, []));
   looseDistricts.forEach((d) => pushDistrict(d, 0, []));
+
+  // Unassigned members — a top-level bucket for members with no club.
+  if (unassignedMembers.length) {
+    const bucketKey = 'unassigned:root';
+    rows.push({
+      key: bucketKey, kind: 'unassigned', id: 'root', name: `Unassigned Members (${unassignedMembers.length})`,
+      chair: null, depth: 0, districtId: null, parentId: null, ancestors: [], hasChildren: true,
+    });
+    for (const m of unassignedMembers) {
+      rows.push({
+        key: `member:${m.id}`, kind: 'member', id: m.id, name: m.name,
+        chair: m.lions_role || m.role || (m.lions_member_id ? `LCI ${m.lions_member_id}` : null),
+        depth: 1, districtId: null, parentId: null, ancestors: [bucketKey], hasChildren: false, member: m,
+      });
+    }
+  }
   return rows;
 }
 
@@ -144,10 +162,10 @@ async function authHeaders(): Promise<Record<string, string>> {
 }
 
 export function RegionZoneConsole({
-  cas = [], looseMds = [], looseDistricts = [],
-}: { cas?: CaNode[]; looseMds?: MdNode[]; looseDistricts?: DistrictNode[] }) {
+  cas = [], looseMds = [], looseDistricts = [], unassignedMembers = [],
+}: { cas?: CaNode[]; looseMds?: MdNode[]; looseDistricts?: DistrictNode[]; unassignedMembers?: ClubMember[] }) {
   const router = useRouter();
-  const allRows = useMemo(() => buildRows(cas, looseMds, looseDistricts), [cas, looseMds, looseDistricts]);
+  const allRows = useMemo(() => buildRows(cas, looseMds, looseDistricts, unassignedMembers), [cas, looseMds, looseDistricts, unassignedMembers]);
   const districtNodes = useMemo(() => collectDistricts(cas, looseMds, looseDistricts), [cas, looseMds, looseDistricts]);
 
   // District-scoped rich option lists for the edit modal's re-parent selects.
@@ -189,7 +207,7 @@ export function RegionZoneConsole({
   const [staged, setStaged] = useState<Map<string, string | null>>(new Map());
 
   // Reparent picker — moves an explicit set of rows of one kind.
-  const [picker, setPicker] = useState<null | { kind: 'zone' | 'club'; rows: FlatRow[] }>(null);
+  const [picker, setPicker] = useState<null | { kind: MoveKind; rows: FlatRow[] }>(null);
 
   // Inline edit modal.
   const [editing, setEditing] = useState<EditEntity | null>(null);
@@ -207,6 +225,11 @@ export function RegionZoneConsole({
     () => allRows.filter((r) => r.kind === 'zone').map((r) => ({ id: r.id, label: r.name, districtId: r.districtId! })),
     [allRows],
   );
+  const clubOpts: Opt[] = useMemo(
+    () => allRows.filter((r) => r.kind === 'club').map((r) => ({ id: r.id, label: r.name, districtId: r.districtId! })),
+    [allRows],
+  );
+  const optsFor = (kind: MoveKind): Opt[] => (kind === 'zone' ? regionOpts : kind === 'club' ? zoneOpts : clubOpts);
 
   // Visible rows: hide anything whose ancestor is collapsed.
   const visible = useMemo(
@@ -227,7 +250,7 @@ export function RegionZoneConsole({
   }
 
   /** Open the reparent picker for an explicit set of rows (batch or single). */
-  function openReparent(kind: 'zone' | 'club', rows: FlatRow[]) {
+  function openReparent(kind: MoveKind, rows: FlatRow[]) {
     setError(null);
     if (rows.length === 0) { setError(`Select one or more ${kind}s first (tick the checkboxes).`); return; }
     const districts = new Set(rows.map((r) => r.districtId));
@@ -259,8 +282,8 @@ export function RegionZoneConsole({
       let ok = 0; const fails: string[] = [];
       for (const [key, targetId] of staged.entries()) {
         const [kind, id] = key.split(':');
-        const endpoint = kind === 'zone' ? `/api/zones/${id}` : `/api/crm/clubs/${id}`;
-        const body = kind === 'zone' ? { region_id: targetId } : { zone_id: targetId };
+        const endpoint = kind === 'zone' ? `/api/zones/${id}` : kind === 'member' ? `/api/crm/members/${id}` : `/api/crm/clubs/${id}`;
+        const body = kind === 'zone' ? { region_id: targetId } : kind === 'member' ? { club_id: targetId } : { zone_id: targetId };
         try {
           const res = await fetch(endpoint, { method: 'PATCH', headers, body: JSON.stringify(body) });
           if (res.ok) ok++;
@@ -284,17 +307,20 @@ export function RegionZoneConsole({
       case 'zone': return { type: 'zone', id: row.id, code: row.zone!.code, name: row.zone!.name, chairperson_name: row.zone!.chairperson_name, region_id: row.zone!.region_id, regions: regionsByDistrict.get(row.districtId ?? '') ?? [], clubs: clubsByDistrict.get(row.districtId ?? '') ?? [] };
       case 'club': return { type: 'club', id: row.id, name: row.club!.name, club_number: row.club!.club_number, city: row.club!.city, state: row.club!.state, zone_id: row.club!.zone_id, zones: zonesByDistrict.get(row.districtId ?? '') ?? [] };
       case 'member': return { type: 'member', id: row.id, name: row.member!.name, email: row.member!.email, phone: row.member!.phone, status: row.member!.status };
+      default: return null;
     }
   }
 
   /** Remove (soft-delete) a node. Server enforces no-orphan guards. */
   function remove(row: FlatRow) {
+    const endpoint = DELETE_ENDPOINT[row.kind];
+    if (!endpoint) return;
     const meta = KIND_META[row.kind];
     if (!window.confirm(`Remove ${meta.label.toLowerCase()} “${row.name}”? This can be restored by an admin.`)) return;
     setError(null); setSaved(null);
     start(async () => {
       try {
-        const res = await fetch(DELETE_ENDPOINT[row.kind](row.id), { method: 'DELETE', headers: await authHeaders() });
+        const res = await fetch(endpoint(row.id), { method: 'DELETE', headers: await authHeaders() });
         if (res.ok) { setSaved(`Removed “${row.name}”.`); router.refresh(); }
         else { const j = await res.json().catch(() => ({})); setError(typeof j.error === 'string' ? j.error : `Remove failed (${res.status}).`); }
       } catch { setError('Network error while removing.'); }
@@ -316,7 +342,8 @@ export function RegionZoneConsole({
     if (!staged.has(row.key)) return null;
     const target = staged.get(row.key)!;
     if (target === null) return 'detach';
-    const opt = (row.kind === 'zone' ? regionOpts : zoneOpts).find((o) => o.id === target);
+    const pool = row.kind === 'zone' ? regionOpts : row.kind === 'member' ? clubOpts : zoneOpts;
+    const opt = pool.find((o) => o.id === target);
     return opt ? `→ ${opt.label}` : '→ (moved)';
   };
 
@@ -407,12 +434,21 @@ export function RegionZoneConsole({
                     <MoveRight size={14} />
                   </IconBtn>
                 )}
-                <IconBtn title="Edit" onClick={() => { const e = editEntityFor(row); if (e) setEditing(e); }} disabled={pending} className="text-gray-600 hover:bg-gray-100 hover:text-emerald-700">
-                  <Pencil size={14} />
-                </IconBtn>
-                <IconBtn title="Remove" onClick={() => remove(row)} disabled={pending} className="text-gray-500 hover:bg-red-50 hover:text-red-600">
-                  <Trash2 size={14} />
-                </IconBtn>
+                {row.kind === 'member' && (
+                  <IconBtn title="Move to club" onClick={() => openReparent('member', [row])} disabled={pending} className="text-emerald-600 hover:bg-emerald-50">
+                    <MoveRight size={14} />
+                  </IconBtn>
+                )}
+                {row.kind !== 'unassigned' && (
+                  <>
+                    <IconBtn title="Edit" onClick={() => { const e = editEntityFor(row); if (e) setEditing(e); }} disabled={pending} className="text-gray-600 hover:bg-gray-100 hover:text-emerald-700">
+                      <Pencil size={14} />
+                    </IconBtn>
+                    <IconBtn title="Remove" onClick={() => remove(row)} disabled={pending} className="text-gray-500 hover:bg-red-50 hover:text-red-600">
+                      <Trash2 size={14} />
+                    </IconBtn>
+                  </>
+                )}
               </div>
 
               <span className="w-24 md:w-28 shrink-0 text-right text-xs font-medium text-gray-500">{meta.label}</span>
@@ -438,7 +474,7 @@ export function RegionZoneConsole({
         <ReparentPicker
           kind={picker.kind}
           selectionDistrict={picker.rows[0]?.districtId ?? null}
-          options={(picker.kind === 'zone' ? regionOpts : zoneOpts)}
+          options={optsFor(picker.kind)}
           count={picker.rows.length}
           onClose={() => setPicker(null)}
           onApply={applyReparent}
@@ -490,7 +526,7 @@ function IconBtn({
 function ReparentPicker({
   kind, selectionDistrict, options, count, onClose, onApply,
 }: {
-  kind: 'zone' | 'club';
+  kind: MoveKind;
   selectionDistrict: string | null;
   options: Opt[];
   count: number;
@@ -498,8 +534,9 @@ function ReparentPicker({
   onApply: (targetId: string | null) => void;
 }) {
   const [target, setTarget] = useState<string>('');
-  const scoped = options.filter((o) => o.districtId === selectionDistrict);
-  const parentLabel = kind === 'zone' ? 'region' : 'zone';
+  // Scope targets to the selection's district; unassigned members (no district) see all.
+  const scoped = selectionDistrict ? options.filter((o) => o.districtId === selectionDistrict) : options;
+  const parentLabel = kind === 'zone' ? 'region' : kind === 'club' ? 'zone' : 'club';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-md bg-white rounded-xl shadow-xl" onClick={(e) => e.stopPropagation()}>

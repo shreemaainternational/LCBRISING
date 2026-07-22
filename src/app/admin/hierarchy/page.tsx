@@ -31,16 +31,18 @@ export default async function HierarchyPage() {
       .is('deleted_at', null).order('name'),
   ]);
 
-  // Members grouped by club.
+  // Members grouped by club; members with no club go to the "unassigned" bucket.
   const membersByClub = new Map<string, ClubMember[]>();
+  const unassignedMembers: ClubMember[] = [];
   for (const m of members ?? []) {
-    if (!m.club_id) continue;
-    const arr = membersByClub.get(m.club_id) ?? [];
-    arr.push({
+    const cm: ClubMember = {
       id: m.id, name: m.name, email: m.email ?? null, phone: m.phone ?? null,
       role: m.role ?? null, lions_role: m.lions_role ?? null,
       lions_member_id: m.lions_member_id ?? null, status: m.status ?? null,
-    });
+    };
+    if (!m.club_id) { unassignedMembers.push(cm); continue; }
+    const arr = membersByClub.get(m.club_id) ?? [];
+    arr.push(cm);
     membersByClub.set(m.club_id, arr);
   }
 
@@ -150,7 +152,7 @@ export default async function HierarchyPage() {
             <Stat label="Clubs" value={totalClubs} />
             <Stat label="Members" value={totalMembers} />
           </div>
-          <HierarchyViews cas={caNodes} looseMds={looseMds} looseDistricts={looseDistricts} />
+          <HierarchyViews cas={caNodes} looseMds={looseMds} looseDistricts={looseDistricts} unassignedMembers={unassignedMembers} />
         </>
       )}
     </div>
