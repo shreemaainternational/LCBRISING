@@ -5,6 +5,7 @@ import { Network, Globe } from 'lucide-react';
 import Link from 'next/link';
 import {
   HierarchyExplorer,
+  type CaNode,
   type MdNode,
   type DistrictNode,
   type RegionNode,
@@ -20,8 +21,9 @@ export default async function HierarchyPage() {
   // so the tree survives databases where the `members` RLS policy recurses.
   const db = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
-  const [{ data: mds }, { data: districts }, { data: regions }, { data: zones }, { data: clubs }, { data: members }] = await Promise.all([
-    db.from('multiple_districts').select('id, code, name, country, council_chairperson_name').is('deleted_at', null).order('code'),
+  const [{ data: cas }, { data: mds }, { data: districts }, { data: regions }, { data: zones }, { data: clubs }, { data: members }] = await Promise.all([
+    db.from('constitutional_areas').select('id, code, name').is('deleted_at', null).order('code'),
+    db.from('multiple_districts').select('id, code, name, country, council_chairperson_name, constitutional_area_id').is('deleted_at', null).order('code'),
     db.from('districts').select('id, code, name, governor_name, lions_year, multiple_district_id').is('deleted_at', null).order('code'),
     db.from('regions').select('id, code, name, chairperson_name, district_id').is('deleted_at', null).order('code'),
     db.from('zones').select('id, code, name, chairperson_name, district_id, region_id').is('deleted_at', null).order('code'),
@@ -98,11 +100,26 @@ export default async function HierarchyPage() {
       looseDistricts.push(d);
     }
   }
-  const mdNodes: MdNode[] = (mds ?? []).map((m) => ({
+  const mdNodesFull: (MdNode & { constitutional_area_id: string | null })[] = (mds ?? []).map((m) => ({
     id: m.id, code: m.code, name: m.name, country: m.country ?? null,
     council_chairperson_name: m.council_chairperson_name ?? null,
+    constitutional_area_id: (m as { constitutional_area_id?: string | null }).constitutional_area_id ?? null,
     districts: districtsByMd.get(m.id) ?? [],
-  })).filter((m) => m.districts.length > 0);
+  }));
+
+  // Group multiple districts under their constitutional area; MDs with none stay loose.
+  const mdsByCa = new Map<string, MdNode[]>();
+  const looseMds: MdNode[] = [];
+  for (const m of mdNodesFull) {
+    if (m.constitutional_area_id) {
+      const arr = mdsByCa.get(m.constitutional_area_id) ?? []; arr.push(m); mdsByCa.set(m.constitutional_area_id, arr);
+    } else {
+      looseMds.push(m);
+    }
+  }
+  const caNodes: CaNode[] = (cas ?? []).map((c) => ({
+    id: c.id, code: c.code, name: c.name, mds: mdsByCa.get(c.id) ?? [],
+  }));
 
   const totalMembers = (members ?? []).length;
   const totalClubs = (clubs ?? []).length;
@@ -114,7 +131,7 @@ export default async function HierarchyPage() {
           <Network size={26} className="text-emerald-600" /> Federation Hierarchy
         </h1>
         <p className="text-gray-600">
-          Drill down Multiple District → District → Region → Zone → Club → Members. Expand any node,
+          Drill down Constitutional Area → Multiple District → District → Region → Zone → Club → Members. Expand any node,
           and use <strong>Edit</strong> to update it inline. Expand a club to see its roster and add
           members (single or bulk).
         </p>
@@ -137,7 +154,7 @@ export default async function HierarchyPage() {
           <Card>
             <CardHeader><CardTitle className="text-sm">Structure</CardTitle></CardHeader>
             <CardContent className="p-0">
-              <HierarchyExplorer mds={mdNodes} looseDistricts={looseDistricts} />
+              <HierarchyExplorer cas={caNodes} looseMds={looseMds} looseDistricts={looseDistricts} />
             </CardContent>
           </Card>
         </>

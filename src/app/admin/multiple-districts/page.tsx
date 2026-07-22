@@ -14,16 +14,18 @@ type Md = {
   name: string;
   country: string | null;
   council_chairperson_name: string | null;
+  constitutional_area_id: string | null;
 };
 
 export default async function MultipleDistrictsPage() {
   // Read via the service-role client (this page is gated by the admin layout).
   const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
-  const [{ data: mds }, { data: districts }] = await Promise.all([
-    supa.from('multiple_districts').select('id, code, name, country, council_chairperson_name')
+  const [{ data: mds }, { data: districts }, { data: cas }] = await Promise.all([
+    supa.from('multiple_districts').select('id, code, name, country, council_chairperson_name, constitutional_area_id')
       .is('deleted_at', null).order('code'),
     supa.from('districts').select('multiple_district_id').is('deleted_at', null),
+    supa.from('constitutional_areas').select('id, code, name').is('deleted_at', null).order('code'),
   ]);
 
   const districtCount = new Map<string, number>();
@@ -31,12 +33,14 @@ export default async function MultipleDistrictsPage() {
     if (d.multiple_district_id) districtCount.set(d.multiple_district_id, (districtCount.get(d.multiple_district_id) ?? 0) + 1);
   }
 
+  const caOptions = (cas ?? []) as { id: string; code: string; name: string }[];
   const rows: MdRow[] = ((mds ?? []) as Md[]).map((m) => ({
     id: m.id,
     code: m.code,
     name: m.name,
     country: m.country,
     council_chairperson_name: m.council_chairperson_name,
+    constitutional_area_id: m.constitutional_area_id ?? null,
     district_count: districtCount.get(m.id) ?? 0,
   }));
 
@@ -66,7 +70,7 @@ export default async function MultipleDistrictsPage() {
         <Card>
           <CardHeader><CardTitle>{rows.length} multiple districts</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <MultipleDistrictsTable rows={rows} />
+            <MultipleDistrictsTable rows={rows} cas={caOptions} />
           </CardContent>
         </Card>
       )}

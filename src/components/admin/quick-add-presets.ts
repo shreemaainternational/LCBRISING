@@ -64,6 +64,19 @@ export function districtsPreset(): Omit<QuickAddCardProps, 'title'> {
   };
 }
 
+export function constitutionalAreasPreset(): Omit<QuickAddCardProps, 'title'> {
+  return {
+    endpoint: '/api/constitutional-areas',
+    accent: 'blue',
+    description: 'Create a constitutional area — the top of the Lions federation (e.g. ISAAME). Multiple districts roll up into it.',
+    responseKey: 'constitutional_area',
+    fields: [
+      { name: 'name', label: 'Constitutional Area Name', type: 'text', required: true, placeholder: 'e.g. ISAAME' },
+      { name: 'code', label: 'Code', type: 'text', placeholder: 'e.g. CA-ISAAME' },
+    ],
+  };
+}
+
 export function multipleDistrictsPreset(): Omit<QuickAddCardProps, 'title'> {
   return {
     endpoint: '/api/multiple-districts',

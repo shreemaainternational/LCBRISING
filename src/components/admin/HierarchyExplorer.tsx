@@ -3,7 +3,7 @@
 import { useState, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, Globe, MapPin, Building2, Users, Layers, Boxes, ExternalLink, Pencil, Plus } from 'lucide-react';
+import { ChevronRight, Globe, MapPin, Building2, Users, Layers, Boxes, Landmark, ExternalLink, Pencil, Plus } from 'lucide-react';
 import { ClubMembersPanel, type ClubMember } from './ClubMembersPanel';
 import { HierarchyEditContext, HierarchyEditModal, type EditEntity } from './HierarchyEditModal';
 import { HierarchyCreateContext, HierarchyCreateModal, type CreateSpec } from './HierarchyCreateModal';
@@ -27,6 +27,7 @@ export type MdNode = {
   id: string; code: string; name: string; country: string | null; council_chairperson_name: string | null;
   districts: DistrictNode[];
 };
+export type CaNode = { id: string; code: string; name: string; mds: MdNode[] };
 
 function countClubs(d: DistrictNode): number {
   const inZones = (zs: ZoneNode[]) => zs.reduce((a, z) => a + z.clubs.length, 0);
@@ -247,7 +248,7 @@ function DistrictBranch({ district, depth, defaultOpen }: { district: DistrictNo
   );
 }
 
-function MdBranch({ md, defaultOpen }: { md: MdNode; defaultOpen: boolean }) {
+function MdBranch({ md, depth = 0, defaultOpen }: { md: MdNode; depth?: number; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border-t first:border-t-0">
@@ -263,12 +264,39 @@ function MdBranch({ md, defaultOpen }: { md: MdNode; defaultOpen: boolean }) {
         createSpec={{ childType: 'district', parentLabel: md.name, multiple_district_id: md.id }}
         createLabel="District"
         badges={<Pill icon={Globe} value={md.districts.length} tone="blue" />}
-        depth={0}
+        depth={depth}
       />
       {open && (
         md.districts.length
-          ? md.districts.map((d) => <DistrictBranch key={d.id} district={d} depth={1} defaultOpen={md.districts.length === 1} />)
-          : <div className="border-t text-xs text-gray-500 py-2.5" style={{ paddingLeft: '32px' }}>No districts under this multiple district.</div>
+          ? md.districts.map((d) => <DistrictBranch key={d.id} district={d} depth={depth + 1} defaultOpen={md.districts.length === 1} />)
+          : <div className="border-t text-xs text-gray-500 py-2.5" style={{ paddingLeft: `${(depth + 1) * 20 + 12}px` }}>No districts under this multiple district.</div>
+      )}
+    </div>
+  );
+}
+
+function CaBranch({ ca, defaultOpen }: { ca: CaNode; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border-t first:border-t-0">
+      <Row
+        open={open}
+        onToggle={() => setOpen((o) => !o)}
+        icon={Landmark}
+        iconClass="text-rose-600"
+        title={ca.name}
+        subtitle={ca.code && ca.code !== ca.name ? ca.code : undefined}
+        type="Constitutional Area"
+        editEntity={{ type: 'ca', id: ca.id, name: ca.name, code: ca.code }}
+        createSpec={{ childType: 'md', parentLabel: ca.name, constitutional_area_id: ca.id }}
+        createLabel="Multiple District"
+        badges={<Pill icon={Boxes} value={ca.mds.length} tone="blue" />}
+        depth={0}
+      />
+      {open && (
+        ca.mds.length
+          ? ca.mds.map((m) => <MdBranch key={m.id} md={m} depth={1} defaultOpen={ca.mds.length === 1} />)
+          : <div className="border-t text-xs text-gray-500 py-2.5" style={{ paddingLeft: '32px' }}>No multiple districts under this constitutional area.</div>
       )}
     </div>
   );
@@ -282,13 +310,13 @@ function currentLionsYear(): string {
 }
 
 export function HierarchyExplorer({
-  mds = [], looseDistricts = [], lionsYear,
-}: { mds?: MdNode[]; looseDistricts?: DistrictNode[]; lionsYear?: string }) {
+  cas = [], looseMds = [], looseDistricts = [], lionsYear,
+}: { cas?: CaNode[]; looseMds?: MdNode[]; looseDistricts?: DistrictNode[]; lionsYear?: string }) {
   const router = useRouter();
   const [editing, setEditing] = useState<EditEntity | null>(null);
   const [creating, setCreating] = useState<CreateSpec | null>(null);
   const year = lionsYear || currentLionsYear();
-  const onlyOne = mds.length + looseDistricts.length === 1;
+  const onlyOne = cas.length + looseMds.length + looseDistricts.length === 1;
 
   return (
     <HierarchyEditContext.Provider value={setEditing}>
@@ -304,7 +332,8 @@ export function HierarchyExplorer({
             </div>
           </div>
           <div>
-            {mds.map((m) => <MdBranch key={m.id} md={m} defaultOpen={onlyOne} />)}
+            {cas.map((c) => <CaBranch key={c.id} ca={c} defaultOpen={onlyOne} />)}
+            {looseMds.map((m) => <MdBranch key={m.id} md={m} defaultOpen={onlyOne} />)}
             {looseDistricts.map((d) => <DistrictBranch key={d.id} district={d} depth={0} defaultOpen={onlyOne} />)}
           </div>
         </div>

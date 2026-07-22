@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 
 /** A node the hierarchy explorer can edit inline. */
 export type EditEntity =
+  | { type: 'ca'; id: string; name: string; code: string }
   | { type: 'md'; id: string; name: string; code: string; country: string | null; council_chairperson_name: string | null }
   | { type: 'district'; id: string; code: string; name: string; governor_name: string | null; lions_year: string | null }
   | { type: 'region'; id: string; code: string; name: string; chairperson_name: string | null }
@@ -17,7 +18,7 @@ export type EditEntity =
 export const HierarchyEditContext = createContext<(e: EditEntity) => void>(() => {});
 
 const TYPE_LABEL: Record<EditEntity['type'], string> = {
-  md: 'multiple district', district: 'district', region: 'region',
+  ca: 'constitutional area', md: 'multiple district', district: 'district', region: 'region',
   zone: 'zone', club: 'club', member: 'member',
 };
 
@@ -35,6 +36,7 @@ async function authHeaders(): Promise<Record<string, string>> {
 /** Endpoint + payload builder per entity type. */
 function endpointFor(e: EditEntity): string {
   switch (e.type) {
+    case 'ca': return `/api/constitutional-areas/${e.id}`;
     case 'md': return `/api/multiple-districts/${e.id}`;
     case 'district': return `/api/crm/districts/${e.id}`;
     case 'region': return `/api/regions/${e.id}`;
@@ -48,6 +50,9 @@ type Field = { key: string; label: string; type?: 'text' | 'select'; options?: s
 
 function fieldsFor(e: EditEntity): Field[] {
   switch (e.type) {
+    case 'ca': return [
+      { key: 'name', label: 'Name', required: true }, { key: 'code', label: 'Code' },
+    ];
     case 'md': return [
       { key: 'name', label: 'Name', required: true }, { key: 'code', label: 'Code' },
       { key: 'country', label: 'Country' }, { key: 'council_chairperson_name', label: 'Council Chairperson' },

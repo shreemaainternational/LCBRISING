@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 
 /** Describes a child to create under a given parent node. */
 export type CreateSpec =
+  | { childType: 'md'; parentLabel: string; constitutional_area_id: string }
   | { childType: 'district'; parentLabel: string; multiple_district_id: string }
   | { childType: 'region'; parentLabel: string; district_id: string }
   | { childType: 'zone'; parentLabel: string; district_id: string; region_id: string }
@@ -15,7 +16,7 @@ export type CreateSpec =
 export const HierarchyCreateContext = createContext<(c: CreateSpec) => void>(() => {});
 
 const CHILD_LABEL: Record<CreateSpec['childType'], string> = {
-  district: 'District', region: 'Region', zone: 'Zone', club: 'Club',
+  md: 'Multiple District', district: 'District', region: 'Region', zone: 'Zone', club: 'Club',
 };
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -31,6 +32,12 @@ type Field = { key: string; label: string; required?: boolean; placeholder?: str
 
 function fieldsFor(t: CreateSpec['childType']): Field[] {
   switch (t) {
+    case 'md': return [
+      { key: 'name', label: 'Multiple District Name', required: true, placeholder: 'e.g. Multiple District 323' },
+      { key: 'code', label: 'Code', placeholder: 'e.g. 323' },
+      { key: 'country', label: 'Country' },
+      { key: 'council_chairperson_name', label: 'Council Chairperson' },
+    ];
     case 'district': return [
       { key: 'code', label: 'District Code', required: true, placeholder: 'e.g. 3232 F1' },
       { key: 'name', label: 'District Name', required: true },
@@ -58,6 +65,7 @@ function fieldsFor(t: CreateSpec['childType']): Field[] {
 
 function endpointFor(t: CreateSpec['childType']): string {
   switch (t) {
+    case 'md': return '/api/multiple-districts';
     case 'district': return '/api/crm/districts';
     case 'region': return '/api/regions';
     case 'zone': return '/api/zones';
@@ -68,6 +76,7 @@ function endpointFor(t: CreateSpec['childType']): string {
 /** Parent ids to merge into the POST body. */
 function parentPayload(spec: CreateSpec): Record<string, unknown> {
   switch (spec.childType) {
+    case 'md': return { constitutional_area_id: spec.constitutional_area_id };
     case 'district': return { multiple_district_id: spec.multiple_district_id };
     case 'region': return { district_id: spec.district_id };
     case 'zone': return { district_id: spec.district_id, region_id: spec.region_id };
