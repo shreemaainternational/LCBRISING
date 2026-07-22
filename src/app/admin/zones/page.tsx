@@ -39,6 +39,7 @@ export default async function ZonesPage() {
   const districts: Record<string, DistrictRef> = Object.fromEntries(
     districtOptions.map((d) => [d.id, d]),
   );
+  const regionCodeById = new Map(regionOptions.map((r) => [r.id, r.code]));
   const clubsByZone = new Map<string, number>();
   for (const c of (clubCountsRes.data ?? []) as { zone_id: string | null }[]) {
     if (c.zone_id) clubsByZone.set(c.zone_id, (clubsByZone.get(c.zone_id) ?? 0) + 1);
@@ -52,6 +53,7 @@ export default async function ZonesPage() {
     district_id: z.district_id,
     district_code: districts[z.district_id]?.code ?? null,
     region_id: z.region_id,
+    region_code: z.region_id ? regionCodeById.get(z.region_id) ?? null : null,
     club_count: clubsByZone.get(z.id) ?? 0,
   }));
 

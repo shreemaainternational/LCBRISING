@@ -15,6 +15,7 @@ export type ZoneRow = {
   district_id: string;
   district_code: string | null;
   region_id: string | null;
+  region_code: string | null;
   club_count: number;
 };
 
@@ -42,6 +43,7 @@ export function ZonesTable({ zones, districts, regions = [] }: { zones: ZoneRow[
             <th className="text-left p-3">Code</th>
             <th className="text-left p-3">Name</th>
             <th className="text-left p-3">District</th>
+            <th className="text-left p-3">Region</th>
             <th className="text-left p-3">Chairperson</th>
             <th className="text-right p-3">Clubs</th>
             <th className="text-right p-3">Actions</th>
@@ -55,6 +57,7 @@ export function ZonesTable({ zones, districts, regions = [] }: { zones: ZoneRow[
               </td>
               <td className="p-3 font-medium">{z.name}</td>
               <td className="p-3 text-gray-600">{z.district_code ?? '—'}</td>
+              <td className="p-3 text-gray-600">{z.region_code ?? '—'}</td>
               <td className="p-3">{z.chairperson_name ?? '—'}</td>
               <td className="p-3 text-right">{z.club_count}</td>
               <td className="p-3">
