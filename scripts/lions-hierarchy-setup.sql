@@ -198,6 +198,56 @@ update public.regions r
 
 
 -- ---------------------------------------------------------------------
+-- 7. De-duplicate regions that share a name within a district
+--    (e.g. two "Region 5" rows). Keeps ONE region per (district, name) —
+--    preferring the one that has a chairperson, then the oldest — moves
+--    every zone and club from the duplicates onto the keeper, then
+--    soft-deletes the now-empty duplicates. Idempotent.
+-- ---------------------------------------------------------------------
+do $$
+declare
+  grp record;
+  keeper uuid;
+begin
+  for grp in
+    select district_id, name
+      from public.regions
+     where deleted_at is null
+     group by district_id, name
+    having count(*) > 1
+  loop
+    -- Choose the survivor: a region with a chairperson wins, else the oldest.
+    select id into keeper
+      from public.regions
+     where district_id = grp.district_id and name = grp.name and deleted_at is null
+     order by (chairperson_name is not null) desc, created_at asc, id asc
+     limit 1;
+
+    -- Re-point children of the duplicates onto the keeper.
+    update public.zones
+       set region_id = keeper
+     where region_id in (
+       select id from public.regions
+        where district_id = grp.district_id and name = grp.name
+          and deleted_at is null and id <> keeper);
+
+    update public.clubs
+       set region_id = keeper
+     where region_id in (
+       select id from public.regions
+        where district_id = grp.district_id and name = grp.name
+          and deleted_at is null and id <> keeper);
+
+    -- Retire the duplicates.
+    update public.regions
+       set deleted_at = now()
+     where district_id = grp.district_id and name = grp.name
+       and deleted_at is null and id <> keeper;
+  end loop;
+end $$;
+
+
+-- ---------------------------------------------------------------------
 -- Quick sanity check (optional — returns counts after running).
 -- ---------------------------------------------------------------------
 select
