@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useState, useTransition } from 'react';
-import { X, Loader2, Save, AlertCircle } from 'lucide-react';
+import { X, Loader2, Save, AlertCircle, Building2, Search, CheckSquare, Square } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 /** A node the hierarchy explorer can edit inline. */
@@ -11,7 +11,9 @@ export type EditEntity =
   | { type: 'district'; id: string; code: string; name: string; governor_name: string | null; lions_year: string | null }
   | { type: 'region'; id: string; code: string; name: string; chairperson_name: string | null }
   | { type: 'zone'; id: string; code: string; name: string; chairperson_name: string | null;
-      region_id: string | null; regions: { id: string; code: string; name: string }[] }
+      region_id: string | null; regions: { id: string; code: string; name: string }[];
+      /** All clubs in the zone's district — for the assign-clubs checklist. */
+      clubs?: { id: string; name: string; club_number: string | null; zone_id: string | null }[] }
   | { type: 'club'; id: string; name: string; club_number: string | null; city: string | null; state: string | null;
       zone_id: string | null; zones: { id: string; code: string; name: string }[] }
   | { type: 'member'; id: string; name: string; email: string | null; phone: string | null; status: string | null };
@@ -99,6 +101,12 @@ export function HierarchyEditModal({
     for (const { key } of fields) f[key] = String((entity as Record<string, unknown>)[key] ?? '');
     return f;
   });
+  // Zone editor: which clubs are assigned to THIS zone (checklist).
+  const zoneClubs = entity.type === 'zone' ? entity.clubs ?? [] : [];
+  const [assigned, setAssigned] = useState<Set<string>>(
+    () => new Set(zoneClubs.filter((c) => c.zone_id === entity.id).map((c) => c.id)),
+  );
+  const [clubFilter, setClubFilter] = useState('');
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -112,11 +120,31 @@ export function HierarchyEditModal({
 
     start(async () => {
       try {
+        const headers = await authHeaders();
         const res = await fetch(endpointFor(entity), {
-          method: 'PATCH', headers: await authHeaders(), body: JSON.stringify(payload),
+          method: 'PATCH', headers, body: JSON.stringify(payload),
         });
         const j = await res.json().catch(() => ({}));
         if (!res.ok) { setError(typeof j.error === 'string' ? j.error : `Save failed (${res.status})`); return; }
+
+        // Zone editor: sync club → zone assignments that changed.
+        if (entity.type === 'zone' && entity.clubs?.length) {
+          const changes: { id: string; zone_id: string | null }[] = [];
+          for (const c of entity.clubs) {
+            const nowAssigned = assigned.has(c.id);
+            const wasThisZone = c.zone_id === entity.id;
+            if (nowAssigned && !wasThisZone) changes.push({ id: c.id, zone_id: entity.id });     // assign / move in
+            else if (!nowAssigned && wasThisZone) changes.push({ id: c.id, zone_id: null });      // unassign
+          }
+          const fails: string[] = [];
+          for (const ch of changes) {
+            const r = await fetch(`/api/crm/clubs/${ch.id}`, {
+              method: 'PATCH', headers, body: JSON.stringify({ zone_id: ch.zone_id }),
+            });
+            if (!r.ok) { const cj = await r.json().catch(() => ({})); fails.push(typeof cj.error === 'string' ? cj.error : `club ${ch.id}`); }
+          }
+          if (fails.length) { setError(`Zone saved, but ${fails.length} club assignment(s) failed: ${fails[0]}`); return; }
+        }
         onSaved();
       } catch { setError('Network error while saving.'); }
     });
@@ -149,6 +177,53 @@ export function HierarchyEditModal({
             </label>
           ))}
         </div>
+
+        {/* Zone editor: assign clubs to this zone. */}
+        {entity.type === 'zone' && zoneClubs.length > 0 && (() => {
+          const q = clubFilter.trim().toLowerCase();
+          const shown = q
+            ? zoneClubs.filter((c) => c.name.toLowerCase().includes(q) || (c.club_number ?? '').includes(q))
+            : zoneClubs;
+          return (
+            <div className="px-5 pb-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-gray-700 inline-flex items-center gap-1.5">
+                  <Building2 size={13} className="text-blue-500" /> Clubs in this zone
+                  <span className="text-gray-400 font-normal">({assigned.size} assigned)</span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setAssigned(new Set(zoneClubs.map((c) => c.id)))}
+                    className="text-[11px] font-semibold text-emerald-700 hover:underline">Select all</button>
+                  <button type="button" onClick={() => setAssigned(new Set())}
+                    className="text-[11px] font-semibold text-gray-500 hover:underline">Clear</button>
+                </div>
+              </div>
+              <div className="relative mb-2">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input value={clubFilter} onChange={(e) => setClubFilter(e.target.value)} placeholder="Filter clubs…"
+                  className="w-full pl-8 pr-3 py-1.5 border rounded-md text-sm bg-white" />
+              </div>
+              <div className="max-h-56 overflow-auto rounded-md border divide-y">
+                {shown.map((c) => {
+                  const on = assigned.has(c.id);
+                  const elsewhere = !on && c.zone_id != null && c.zone_id !== entity.id;
+                  return (
+                    <button type="button" key={c.id}
+                      onClick={() => setAssigned((s) => { const n = new Set(s); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); return n; })}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm ${on ? 'bg-emerald-50' : 'hover:bg-gray-50'}`}>
+                      {on ? <CheckSquare size={16} className="text-emerald-600 shrink-0" /> : <Square size={16} className="text-gray-400 shrink-0" />}
+                      <span className="min-w-0 flex-1 truncate font-medium text-navy-800">{c.name}</span>
+                      {c.club_number && <span className="text-[11px] text-gray-400 shrink-0">#{c.club_number}</span>}
+                      {elsewhere && <span className="text-[10px] text-amber-600 shrink-0" title="Currently in another zone — assigning moves it here">moves</span>}
+                    </button>
+                  );
+                })}
+                {shown.length === 0 && <div className="px-3 py-3 text-xs text-gray-500">No clubs match.</div>}
+              </div>
+              <p className="mt-1.5 text-[11px] text-gray-400">Ticking a club assigns it to this zone; a club already in another zone is moved here. Changes save with the zone.</p>
+            </div>
+          );
+        })()}
 
         {error && (
           <p className="px-5 pb-2 inline-flex items-center gap-1.5 text-sm text-red-700">

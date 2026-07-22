@@ -159,7 +159,7 @@ function ClubBranch({ club, depth, districtZones }: { club: ClubNode; depth: num
   );
 }
 
-function ZoneBranch({ zone, depth, districtId, districtRegions, districtZones }: { zone: ZoneNode; depth: number; districtId: string; districtRegions: Opt[]; districtZones: Opt[] }) {
+function ZoneBranch({ zone, depth, districtId, districtRegions, districtZones, districtClubs }: { zone: ZoneNode; depth: number; districtId: string; districtRegions: Opt[]; districtZones: Opt[]; districtClubs: { id: string; name: string; club_number: string | null; zone_id: string | null }[] }) {
   const forceOpen = useContext(ForceOpenContext);
   const [open, setOpen] = useState(forceOpen ?? false);
   const members = zone.clubs.reduce((a, c) => a + c.members.length, 0);
@@ -173,7 +173,7 @@ function ZoneBranch({ zone, depth, districtId, districtRegions, districtZones }:
         title={zone.name}
         subtitle={zone.code && zone.code !== zone.name ? zone.code : undefined}
         type="Zone"
-        editEntity={{ type: 'zone', id: zone.id, code: zone.code, name: zone.name, chairperson_name: zone.chairperson_name, region_id: zone.region_id, regions: districtRegions }}
+        editEntity={{ type: 'zone', id: zone.id, code: zone.code, name: zone.name, chairperson_name: zone.chairperson_name, region_id: zone.region_id, regions: districtRegions, clubs: districtClubs }}
         createSpec={{ childType: 'club', parentLabel: zone.name, district_id: districtId, zone_id: zone.id }}
         createLabel="Club"
         badges={<><Pill icon={Building2} value={zone.clubs.length} tone="blue" /><Pill icon={Users} value={members} tone="emerald" /></>}
@@ -188,7 +188,7 @@ function ZoneBranch({ zone, depth, districtId, districtRegions, districtZones }:
   );
 }
 
-function RegionBranch({ region, depth, districtId, districtRegions, districtZones }: { region: RegionNode; depth: number; districtId: string; districtRegions: Opt[]; districtZones: Opt[] }) {
+function RegionBranch({ region, depth, districtId, districtRegions, districtZones, districtClubs }: { region: RegionNode; depth: number; districtId: string; districtRegions: Opt[]; districtZones: Opt[]; districtClubs: { id: string; name: string; club_number: string | null; zone_id: string | null }[] }) {
   const forceOpen = useContext(ForceOpenContext);
   const [open, setOpen] = useState(forceOpen ?? false);
   const clubs = region.zones.reduce((a, z) => a + z.clubs.length, 0);
@@ -210,7 +210,7 @@ function RegionBranch({ region, depth, districtId, districtRegions, districtZone
       />
       {open && (
         region.zones.length
-          ? region.zones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} districtId={districtId} districtRegions={districtRegions} districtZones={districtZones} />)
+          ? region.zones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} districtId={districtId} districtRegions={districtRegions} districtZones={districtZones} districtClubs={districtClubs} />)
           : <div className="border-t text-xs text-gray-500 py-2.5" style={{ paddingLeft: `${(depth + 1) * 20 + 12}px` }}>No zones in this region.</div>
       )}
     </div>
@@ -224,6 +224,11 @@ function DistrictBranch({ district, depth, defaultOpen }: { district: DistrictNo
   const districtRegions: Opt[] = district.regions.map((r) => ({ id: r.id, code: r.code, name: r.name }));
   const districtZones: Opt[] = [...district.regions.flatMap((r) => r.zones), ...district.looseZones]
     .map((z) => ({ id: z.id, code: z.code, name: z.name }));
+  const districtClubs = [
+    ...district.regions.flatMap((r) => r.zones.flatMap((z) => z.clubs)),
+    ...district.looseZones.flatMap((z) => z.clubs),
+    ...district.looseClubs,
+  ].map((c) => ({ id: c.id, name: c.name, club_number: c.club_number, zone_id: c.zone_id }));
   // Consistency: if regions exist every zone needs a region; if zones exist every club needs a zone.
   const orphanZones = district.regions.length ? district.looseZones.length : 0;
   const orphanClubs = districtZones.length ? district.looseClubs.length : 0;
@@ -250,7 +255,7 @@ function DistrictBranch({ district, depth, defaultOpen }: { district: DistrictNo
       />
       {open && (
         <div>
-          {district.regions.map((r) => <RegionBranch key={r.id} region={r} depth={depth + 1} districtId={district.id} districtRegions={districtRegions} districtZones={districtZones} />)}
+          {district.regions.map((r) => <RegionBranch key={r.id} region={r} depth={depth + 1} districtId={district.id} districtRegions={districtRegions} districtZones={districtZones} districtClubs={districtClubs} />)}
           {(orphanZones > 0 || orphanClubs > 0) && (
             <div className="border-t bg-amber-50 text-[11px] text-amber-800 py-2 flex items-start gap-1.5" style={{ paddingLeft: indent, paddingRight: 12 }}>
               <AlertTriangle size={12} className="mt-0.5 shrink-0" />
@@ -263,7 +268,7 @@ function DistrictBranch({ district, depth, defaultOpen }: { district: DistrictNo
               </span>
             </div>
           )}
-          {district.looseZones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} districtId={district.id} districtRegions={districtRegions} districtZones={districtZones} />)}
+          {district.looseZones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} districtId={district.id} districtRegions={districtRegions} districtZones={districtZones} districtClubs={districtClubs} />)}
           {district.looseClubs.map((c) => <ClubBranch key={c.id} club={c} depth={depth + 1} districtZones={districtZones} />)}
           {!hasChildren && (
             <div className="border-t text-xs text-gray-500 py-2.5" style={{ paddingLeft: indent }}>

@@ -153,6 +153,19 @@ export function RegionZoneConsole({
     }
     return m;
   }, [districtNodes]);
+  // All clubs per district (for the zone editor's assign-clubs checklist).
+  const clubsByDistrict = useMemo(() => {
+    const m = new Map<string, { id: string; name: string; club_number: string | null; zone_id: string | null }[]>();
+    for (const d of districtNodes) {
+      const cs = [
+        ...d.regions.flatMap((r) => r.zones.flatMap((z) => z.clubs)),
+        ...d.looseZones.flatMap((z) => z.clubs),
+        ...d.looseClubs,
+      ].map((c) => ({ id: c.id, name: c.name, club_number: c.club_number, zone_id: c.zone_id }));
+      m.set(d.id, cs);
+    }
+    return m;
+  }, [districtNodes]);
 
   // Expandable node keys (everything with children). Default: all expanded.
   const expandableKeys = useMemo(() => allRows.filter((r) => r.hasChildren).map((r) => r.key), [allRows]);
@@ -257,7 +270,7 @@ export function RegionZoneConsole({
       case 'md': return { type: 'md', id: row.id, name: row.md!.name, code: row.md!.code, country: row.md!.country, council_chairperson_name: row.md!.council_chairperson_name };
       case 'district': return { type: 'district', id: row.id, code: row.district!.code, name: row.district!.name, governor_name: row.district!.governor_name, lions_year: row.district!.lions_year };
       case 'region': return { type: 'region', id: row.id, code: row.region!.code, name: row.region!.name, chairperson_name: row.region!.chairperson_name };
-      case 'zone': return { type: 'zone', id: row.id, code: row.zone!.code, name: row.zone!.name, chairperson_name: row.zone!.chairperson_name, region_id: row.zone!.region_id, regions: regionsByDistrict.get(row.districtId ?? '') ?? [] };
+      case 'zone': return { type: 'zone', id: row.id, code: row.zone!.code, name: row.zone!.name, chairperson_name: row.zone!.chairperson_name, region_id: row.zone!.region_id, regions: regionsByDistrict.get(row.districtId ?? '') ?? [], clubs: clubsByDistrict.get(row.districtId ?? '') ?? [] };
       case 'club': return { type: 'club', id: row.id, name: row.club!.name, club_number: row.club!.club_number, city: row.club!.city, state: row.club!.state, zone_id: row.club!.zone_id, zones: zonesByDistrict.get(row.districtId ?? '') ?? [] };
     }
   }
