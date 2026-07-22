@@ -18,6 +18,9 @@ function friendlyError(message: string): string {
   if (/invalid api key/i.test(message)) {
     return 'Database auth failed. Set SUPABASE_SERVICE_ROLE_KEY, or apply migration 0037_federation_rls.sql so admin members can write via their own session.';
   }
+  if (/infinite recursion/i.test(message)) {
+    return 'The members table RLS policy is recursing. Apply migration 0059_fix_members_rls_recursion.sql, or set SUPABASE_SERVICE_ROLE_KEY so admin writes bypass RLS.';
+  }
   if (/row.level security|new row violates|permission denied/i.test(message)) {
     return 'Row-level security blocked the insert. Apply migration 0037_federation_rls.sql, sign in as an "admin" member, or set SUPABASE_SERVICE_ROLE_KEY.';
   }
@@ -67,22 +70,21 @@ export async function POST(req: Request) {
     payload.code = `${base}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
   }
 
-  const supa = await createClient();
-  const first = await supa.from('multiple_districts').insert(payload).select().single();
-  if (!first.error && first.data) return NextResponse.json({ multiple_district: first.data }, { status: 201 });
-
-  const firstMsg = first.error?.message ?? '';
-  const isAuthFail = /invalid api key|jwt/i.test(firstMsg) || /row.level security|new row violates|permission denied/i.test(firstMsg);
-  if (isAuthFail && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  // Prefer the service-role client when available (admin-gated write, bypasses
+  // the recursive members RLS policy).
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
       const admin = createAdminClient();
-      const second = await admin.from('multiple_districts').insert(payload).select().single();
-      if (!second.error && second.data) return NextResponse.json({ multiple_district: second.data }, { status: 201 });
-      return NextResponse.json({ error: friendlyError(second.error?.message ?? 'unknown_error') }, { status: 500 });
+      const { data, error } = await admin.from('multiple_districts').insert(payload).select().single();
+      if (!error && data) return NextResponse.json({ multiple_district: data }, { status: 201 });
+      return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown_error') }, { status: 500 });
     } catch (e) {
       return NextResponse.json({ error: friendlyError(String(e)) }, { status: 500 });
     }
   }
 
-  return NextResponse.json({ error: friendlyError(firstMsg || 'unknown_error') }, { status: 500 });
+  const supa = await createClient();
+  const { data, error } = await supa.from('multiple_districts').insert(payload).select().single();
+  if (!error && data) return NextResponse.json({ multiple_district: data }, { status: 201 });
+  return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown_error') }, { status: 500 });
 }
