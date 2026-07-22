@@ -1,11 +1,16 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/server';
+import { getCurrentMember, isAdminRole } from '@/lib/auth';
 import { GalleryGrid, type GalleryPhoto } from '@/components/site/GalleryGrid';
+import { GalleryBulkUpload } from '@/components/admin/GalleryBulkUpload';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MobileGallery() {
+  const member = await getCurrentMember();
+  const canUpload = member ? isAdminRole(member.role) : false;
+
   const { data } = await createAdminClient()
     .from('photos')
     .select('id, url, title, caption, category, display_order, created_at')
@@ -36,9 +41,19 @@ export default async function MobileGallery() {
         </p>
       </div>
 
+      {/* Admins/officers can add photos straight from their phone — they merge
+          into the same gallery shown in the CRM and on the public website. */}
+      {canUpload && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-navy-800 mb-3">Add photos</h2>
+          <GalleryBulkUpload />
+        </div>
+      )}
+
       {photos.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 text-center text-sm text-gray-500 shadow-sm">
-          No photos yet. They&apos;ll appear here once the team uploads them.
+          No photos yet.{' '}
+          {canUpload ? 'Use “Add photos” above to upload your first batch.' : 'They’ll appear here once the team uploads them.'}
         </div>
       ) : (
         <div className="bg-white rounded-2xl p-3 shadow-sm">
