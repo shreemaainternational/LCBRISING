@@ -142,6 +142,47 @@ update public.clubs
 
 
 -- ---------------------------------------------------------------------
+-- 5. Merge Zone 1 and Zone 2 under Region 5.
+--    Parents the loose "Zone 1" / "Zone I" and "Zone 2" / "Zone II"
+--    (with their clubs) under Region 5 in District 3232 F1. Idempotent.
+-- ---------------------------------------------------------------------
+do $$
+declare
+  did uuid;
+  r5  uuid;
+begin
+  select id into did from public.districts
+   where code = '3232 F1' and deleted_at is null limit 1;
+  if did is null then
+    select id into did from public.districts
+     where deleted_at is null order by code limit 1;
+  end if;
+  if did is null then
+    raise notice 'No district found — skipping Region 5 merge.';
+    return;
+  end if;
+
+  -- Find Region 5 in that district (by name or code); create it if absent.
+  select id into r5 from public.regions
+   where district_id = did and deleted_at is null
+     and (name = 'Region 5' or code in ('R5','5')) limit 1;
+  if r5 is null then
+    insert into public.regions (district_id, code, name)
+    values (did, 'R5', 'Region 5')
+    on conflict (district_id, code) do update set name = excluded.name
+    returning id into r5;
+  end if;
+
+  -- Parent the two zones (any of the common spellings) under Region 5.
+  update public.zones
+     set region_id = r5
+   where district_id = did
+     and deleted_at is null
+     and name in ('Zone 1', 'Zone I', 'Zone 2', 'Zone II');
+end $$;
+
+
+-- ---------------------------------------------------------------------
 -- Quick sanity check (optional — returns counts after running).
 -- ---------------------------------------------------------------------
 select
