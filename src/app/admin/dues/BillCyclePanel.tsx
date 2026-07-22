@@ -24,7 +24,7 @@ interface BillReport {
 export function BillCyclePanel({ tier, rateCards }: Props) {
   const router = useRouter();
   const [code, setCode] = useState<string>('');
-  const [fxRate, setFxRate] = useState<string>(tier === 'international' ? '83.5' : '');
+  const [fxRate, setFxRate] = useState<string>(tier === 'international' ? '94.348698' : '');
   const [force, setForce] = useState(false);
   const [applyLateFees, setApplyLateFees] = useState(true);
   const [pending, start] = useTransition();
@@ -90,8 +90,11 @@ export function BillCyclePanel({ tier, rateCards }: Props) {
         {tier === 'international' && (
           <label className="block">
             <span className="block text-xs font-semibold text-gray-700 mb-1">USD → INR rate</span>
-            <input type="number" step="0.01" value={fxRate} onChange={(e) => setFxRate(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md text-sm bg-white" placeholder="e.g. 83.50" />
+            <input type="number" step="0.000001" value={fxRate} onChange={(e) => setFxRate(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md text-sm bg-white" placeholder="e.g. 94.348698" />
+            <span className="block text-[11px] text-gray-500 mt-1">
+              INR amount = USD × rate + 18% GST (per the rate card).
+            </span>
           </label>
         )}
         <div className="flex flex-col gap-2 pt-1">
