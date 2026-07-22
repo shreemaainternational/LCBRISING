@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/server';
 import { refundCreateSchema } from '@/lib/validation/schemas';
-import { sendWhatsApp } from '@/lib/whatsapp';
+import { sendWhatsApp, whatsAppConfigured } from '@/lib/whatsapp';
 import { sendEmail } from '@/lib/email';
 import { env, integrations } from '@/lib/env';
 
@@ -89,7 +89,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   });
 
   if (data.status === 'processed' && inv) {
-    if (inv.customer_phone && integrations.twilio) {
+    if (inv.customer_phone && whatsAppConfigured) {
       try {
         await sendWhatsApp(
           inv.customer_phone,

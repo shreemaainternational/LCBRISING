@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, MapPin, Users, Images, ImageOff } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, HeartHandshake, Images, ImageOff } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
 import { causeForCategory } from '@/lib/causes';
@@ -13,11 +13,25 @@ export type CauseActivity = {
   date: string;
   location: string | null;
   beneficiaries: number | null;
+  lionMembers: number | null;
+  serviceHours: number | null;
   photos: string[];
   captions: Record<string, string>;
   /** Raw activities.category — used by the programme tab filters. */
   category?: string | null;
 };
+
+/** Beneficiaries / Lion members / Service hours as highlight figures. */
+function activityStats(a: CauseActivity): { label: string; value: string }[] {
+  return [
+    ...(a.beneficiaries && a.beneficiaries > 0
+      ? [{ label: 'Beneficiaries', value: a.beneficiaries.toLocaleString('en-IN') }] : []),
+    ...(a.lionMembers && a.lionMembers > 0
+      ? [{ label: 'Lion Members', value: a.lionMembers.toLocaleString('en-IN') }] : []),
+    ...(a.serviceHours && a.serviceHours > 0
+      ? [{ label: 'Service Hours', value: a.serviceHours.toLocaleString('en-IN') }] : []),
+  ];
+}
 
 function toDetail(a: CauseActivity, causeSlug?: string): DetailItem {
   const slug = causeSlug ?? causeForCategory(a.category).slug;
@@ -25,12 +39,8 @@ function toDetail(a: CauseActivity, causeSlug?: string): DetailItem {
     id: a.id,
     title: a.title,
     dateLabel: formatDate(a.date),
-    meta: [
-      ...(a.location ? [{ icon: MapPin, text: a.location }] : []),
-      ...(a.beneficiaries && a.beneficiaries > 0
-        ? [{ icon: Users, text: `${a.beneficiaries.toLocaleString('en-IN')} reached` }]
-        : []),
-    ],
+    meta: a.location ? [{ icon: MapPin, text: a.location }] : [],
+    stats: activityStats(a),
     photos: a.photos,
     body: a.description ?? undefined,
     ctas: [{ href: '/donate', label: 'Support this cause', variant: 'gold' }],
@@ -100,6 +110,16 @@ export function CauseActivities({
                   {!!a.beneficiaries && a.beneficiaries > 0 && (
                     <span className="inline-flex items-center gap-1">
                       <Users size={13} aria-hidden /> {a.beneficiaries.toLocaleString('en-IN')} reached
+                    </span>
+                  )}
+                  {!!a.lionMembers && a.lionMembers > 0 && (
+                    <span className="inline-flex items-center gap-1">
+                      <HeartHandshake size={13} aria-hidden /> {a.lionMembers.toLocaleString('en-IN')} Lions
+                    </span>
+                  )}
+                  {!!a.serviceHours && a.serviceHours > 0 && (
+                    <span className="inline-flex items-center gap-1">
+                      <Clock size={13} aria-hidden /> {a.serviceHours.toLocaleString('en-IN')} hrs
                     </span>
                   )}
                 </div>
