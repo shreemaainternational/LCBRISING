@@ -64,6 +64,21 @@ export function districtsPreset(): Omit<QuickAddCardProps, 'title'> {
   };
 }
 
+export function multipleDistrictsPreset(): Omit<QuickAddCardProps, 'title'> {
+  return {
+    endpoint: '/api/multiple-districts',
+    accent: 'blue',
+    description: 'Create a multiple district — the federation grouping above districts (e.g. MD 323). A Council Chairperson oversees it.',
+    responseKey: 'multiple_district',
+    fields: [
+      { name: 'name', label: 'Multiple District Name', type: 'text', required: true, placeholder: 'e.g. Multiple District 323' },
+      { name: 'code', label: 'Code', type: 'text', placeholder: 'e.g. 323' },
+      { name: 'country', label: 'Country', type: 'text', defaultValue: 'India' },
+      { name: 'council_chairperson_name', label: 'Council Chairperson', type: 'text' },
+    ],
+  };
+}
+
 export function regionsPreset(o: PresetOptions = {}): Omit<QuickAddCardProps, 'title'> {
   const districtOptions = (o.districts ?? []).map((d) => ({
     value: d.id,

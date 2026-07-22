@@ -15,8 +15,11 @@ export type DistrictRow = {
   cabinet_secretary_name: string | null;
   cabinet_treasurer_name: string | null;
   lions_year: string | null;
+  multiple_district_id?: string | null;
   club_count: number;
 };
+
+type MdOption = { id: string; code: string; name: string };
 
 async function authHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -27,7 +30,7 @@ async function authHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
-export function DistrictsTable({ districts }: { districts: DistrictRow[] }) {
+export function DistrictsTable({ districts, mds = [] }: { districts: DistrictRow[]; mds?: MdOption[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState<DistrictRow | null>(null);
 
@@ -75,6 +78,7 @@ export function DistrictsTable({ districts }: { districts: DistrictRow[] }) {
       {editing && (
         <EditDistrictModal
           district={editing}
+          mds={mds}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); router.refresh(); }}
         />
@@ -84,11 +88,12 @@ export function DistrictsTable({ districts }: { districts: DistrictRow[] }) {
 }
 
 function EditDistrictModal({
-  district, onClose, onSaved,
-}: { district: DistrictRow; onClose: () => void; onSaved: () => void }) {
+  district, mds, onClose, onSaved,
+}: { district: DistrictRow; mds: MdOption[]; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({
     code: district.code ?? '',
     name: district.name ?? '',
+    multiple_district_id: district.multiple_district_id ?? '',
     governor_name: district.governor_name ?? '',
     cabinet_secretary_name: district.cabinet_secretary_name ?? '',
     cabinet_treasurer_name: district.cabinet_treasurer_name ?? '',
@@ -108,6 +113,7 @@ function EditDistrictModal({
     const payload = {
       code: form.code.trim(),
       name: form.name.trim(),
+      multiple_district_id: form.multiple_district_id || null,
       governor_name: form.governor_name.trim() || null,
       cabinet_secretary_name: form.cabinet_secretary_name.trim() || null,
       cabinet_treasurer_name: form.cabinet_treasurer_name.trim() || null,
@@ -146,6 +152,13 @@ function EditDistrictModal({
           <label className="block">
             <span className={labelCls}>District Name <span className="text-red-500">*</span></span>
             <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Multiple District</span>
+            <select className={inputCls} value={form.multiple_district_id} onChange={(e) => set('multiple_district_id', e.target.value)}>
+              <option value="">— none —</option>
+              {mds.map((m) => <option key={m.id} value={m.id}>{m.code} — {m.name}</option>)}
+            </select>
           </label>
           <label className="block">
             <span className={labelCls}>Governor</span>

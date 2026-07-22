@@ -8,7 +8,7 @@ import {
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell, Plug, Building2, ShieldCheck,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon, Images,
-  KeyRound, Command, Stethoscope, BookOpen, ChevronDown, Network, Map as MapIcon,
+  KeyRound, Command, Stethoscope, BookOpen, ChevronDown, Network, Map as MapIcon, Layers,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -31,9 +31,10 @@ const NAV: Item[] = [
   {
     group: 'District',
     icon: Globe,
-    // Full Lions hierarchy: District → Region → Zone → Club → Member.
+    // Full Lions hierarchy: Multiple District → District → Region → Zone → Club → Member.
     children: [
       { href: '/admin/hierarchy', label: 'Hierarchy', icon: Network },
+      { href: '/admin/multiple-districts', label: 'Multiple Districts', icon: Layers },
       { href: '/admin/districts', label: 'Districts', icon: Globe },
       { href: '/admin/regions',   label: 'Regions',   icon: MapIcon },
       { href: '/admin/zones',     label: 'Zones',     icon: MapPin },

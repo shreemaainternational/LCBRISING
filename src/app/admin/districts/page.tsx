@@ -19,10 +19,11 @@ export default async function DistrictsPage() {
     .is('deleted_at', null)
     .order('code');
 
-  const { data: clubCounts } = await supa
-    .from('clubs')
-    .select('district_id')
-    .is('deleted_at', null);
+  const [{ data: clubCounts }, { data: mdRows }] = await Promise.all([
+    supa.from('clubs').select('district_id').is('deleted_at', null),
+    supa.from('multiple_districts').select('id, code, name').is('deleted_at', null).order('code'),
+  ]);
+  const mds = (mdRows ?? []) as { id: string; code: string; name: string }[];
 
   const clubsByDistrict = new Map<string, number>();
   for (const c of clubCounts ?? []) {
@@ -39,6 +40,7 @@ export default async function DistrictsPage() {
     cabinet_secretary_name: d.cabinet_secretary_name ?? null,
     cabinet_treasurer_name: d.cabinet_treasurer_name ?? null,
     lions_year: d.lions_year ?? null,
+    multiple_district_id: d.multiple_district_id ?? null,
     club_count: clubsByDistrict.get(d.id) ?? 0,
   }));
   const preset = districtsPreset();
@@ -69,7 +71,7 @@ export default async function DistrictsPage() {
             <CardTitle>{rows.length} districts</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <DistrictsTable districts={rows} />
+            <DistrictsTable districts={rows} mds={mds} />
           </CardContent>
         </Card>
       )}
