@@ -6,12 +6,9 @@ import { useState } from 'react';
 import { ChevronDown, Menu, Phone, X, ArrowRight } from 'lucide-react';
 import { env } from '@/lib/env';
 import { CAUSES } from '@/lib/causes';
-import {
-  PROGRAMME_GROUPS,
-  getEventCategoryGroup,
-} from '@/lib/event-categories';
+import { PROGRAMME_GROUPS } from '@/lib/event-categories';
 
-type DropdownKind = 'services' | 'events';
+type DropdownKind = 'services';
 
 type NavItem = {
   href: string;
@@ -26,14 +23,11 @@ const NAV: NavItem[] = [
   { href: '/stories', label: 'Stories' },
   { href: '/campaigns', label: 'Campaigns' },
   { href: '/blog', label: 'Newsroom' },
-  { href: '/events', label: 'Events', dropdown: 'events' },
+  { href: '/events', label: 'Events' },
   { href: '/media', label: 'Media' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/contact', label: 'Contact' },
 ];
-
-// The celebration/festival categories now live under the Events menu.
-const CELEBRATION_GROUP = getEventCategoryGroup('celebration');
 
 const DISTRICT_LINE = 'District 3232 F1  |  Region V  |  Zone I';
 const CONTACT_PHONE = '+91-9712299333';
@@ -94,12 +88,6 @@ export function PublicNav() {
             {NAV.map((item) =>
               item.dropdown === 'services' ? (
                 <ServiceActivitiesDropdown
-                  key={item.href}
-                  item={item}
-                  active={isActive(item.href)}
-                />
-              ) : item.dropdown === 'events' ? (
-                <EventsDropdown
                   key={item.href}
                   item={item}
                   active={isActive(item.href)}
@@ -183,27 +171,6 @@ export function PublicNav() {
                         >
                           <group.icon size={14} className="text-brand-400 flex-shrink-0" aria-hidden />
                           {group.title}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {item.dropdown === 'events' && CELEBRATION_GROUP && (
-                  <div className="ml-3 mb-2">
-                    <div className="py-1 text-[10px] font-semibold tracking-[0.15em] text-brand-300">
-                      {CELEBRATION_GROUP.title.toUpperCase()}
-                    </div>
-                    <div className="grid grid-cols-2 gap-1">
-                      {CELEBRATION_GROUP.items.map((sub) => (
-                        <Link
-                          key={sub.slug}
-                          href={`/events?category=${sub.slug}`}
-                          className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
-                          onClick={() => setOpen(false)}
-                        >
-                          <CELEBRATION_GROUP.icon size={14} className="text-brand-400 flex-shrink-0" aria-hidden />
-                          {sub.label}
                         </Link>
                       ))}
                     </div>
@@ -306,39 +273,6 @@ function ServiceActivitiesDropdown({
         className="flex items-center justify-center gap-1.5 border-t border-white/10 px-4 py-3 text-sm font-semibold text-brand-300 hover:bg-white/5"
       >
         View All Activities
-        <ArrowRight size={14} aria-hidden />
-      </Link>
-    </DropdownShell>
-  );
-}
-
-function EventsDropdown({ item, active }: { item: NavItem; active: boolean }) {
-  return (
-    <DropdownShell item={item} active={active}>
-      {CELEBRATION_GROUP && (
-        <>
-          <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
-            {CELEBRATION_GROUP.title.toUpperCase()}
-          </div>
-          <div className="pb-2">
-            {CELEBRATION_GROUP.items.map((sub) => (
-              <Link
-                key={sub.slug}
-                href={`/events?category=${sub.slug}`}
-                className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
-              >
-                <CELEBRATION_GROUP.icon size={16} className="text-brand-400 flex-shrink-0" aria-hidden />
-                {sub.label}
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
-      <Link
-        href="/events"
-        className="flex items-center justify-center gap-1.5 border-t border-white/10 px-4 py-3 text-sm font-semibold text-brand-300 hover:bg-white/5"
-      >
-        View All Events
         <ArrowRight size={14} aria-hidden />
       </Link>
     </DropdownShell>
