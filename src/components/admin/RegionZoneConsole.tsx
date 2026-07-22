@@ -182,6 +182,17 @@ export function RegionZoneConsole({
     }
     return m;
   }, [districtNodes]);
+  // Every member across the system (for the club editor's assign-members dropdown).
+  const allMembers = useMemo(() => {
+    const out: { id: string; name: string; club_id: string | null; club_name: string | null }[] = [];
+    for (const d of districtNodes) {
+      const clubs = [...d.regions.flatMap((r) => r.zones.flatMap((z) => z.clubs)), ...d.looseZones.flatMap((z) => z.clubs), ...d.looseClubs];
+      for (const c of clubs) for (const m of c.members) out.push({ id: m.id, name: m.name, club_id: c.id, club_name: c.name });
+    }
+    for (const m of unassignedMembers) out.push({ id: m.id, name: m.name, club_id: null, club_name: null });
+    return out;
+  }, [districtNodes, unassignedMembers]);
+
   // All clubs per district (for the zone editor's assign-clubs checklist).
   const clubsByDistrict = useMemo(() => {
     const m = new Map<string, { id: string; name: string; club_number: string | null; zone_id: string | null }[]>();
@@ -305,7 +316,7 @@ export function RegionZoneConsole({
       case 'district': return { type: 'district', id: row.id, code: row.district!.code, name: row.district!.name, governor_name: row.district!.governor_name, lions_year: row.district!.lions_year };
       case 'region': return { type: 'region', id: row.id, code: row.region!.code, name: row.region!.name, chairperson_name: row.region!.chairperson_name };
       case 'zone': return { type: 'zone', id: row.id, code: row.zone!.code, name: row.zone!.name, chairperson_name: row.zone!.chairperson_name, region_id: row.zone!.region_id, regions: regionsByDistrict.get(row.districtId ?? '') ?? [], clubs: clubsByDistrict.get(row.districtId ?? '') ?? [] };
-      case 'club': return { type: 'club', id: row.id, name: row.club!.name, club_number: row.club!.club_number, city: row.club!.city, state: row.club!.state, zone_id: row.club!.zone_id, zones: zonesByDistrict.get(row.districtId ?? '') ?? [] };
+      case 'club': return { type: 'club', id: row.id, name: row.club!.name, club_number: row.club!.club_number, city: row.club!.city, state: row.club!.state, zone_id: row.club!.zone_id, zones: zonesByDistrict.get(row.districtId ?? '') ?? [], members: allMembers };
       case 'member': return { type: 'member', id: row.id, name: row.member!.name, email: row.member!.email, phone: row.member!.phone, status: row.member!.status };
       default: return null;
     }

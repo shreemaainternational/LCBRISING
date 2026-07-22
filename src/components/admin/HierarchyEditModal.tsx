@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useState, useTransition } from 'react';
-import { X, Loader2, Save, AlertCircle, Building2, Search, CheckSquare, Square } from 'lucide-react';
+import { X, Loader2, Save, AlertCircle, Building2, Search, CheckSquare, Square, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 /** A node the hierarchy explorer can edit inline. */
@@ -15,7 +15,9 @@ export type EditEntity =
       /** All clubs in the zone's district — for the assign-clubs checklist. */
       clubs?: { id: string; name: string; club_number: string | null; zone_id: string | null }[] }
   | { type: 'club'; id: string; name: string; club_number: string | null; city: string | null; state: string | null;
-      zone_id: string | null; zones: { id: string; code: string; name: string }[] }
+      zone_id: string | null; zones: { id: string; code: string; name: string }[];
+      /** All members — for the assign-members dropdown in the club editor. */
+      members?: { id: string; name: string; club_id: string | null; club_name: string | null }[] }
   | { type: 'member'; id: string; name: string; email: string | null; phone: string | null; status: string | null };
 
 /** Provided by the explorer; opens the edit modal for a node. */
@@ -107,6 +109,12 @@ export function HierarchyEditModal({
     () => new Set(zoneClubs.filter((c) => c.zone_id === entity.id).map((c) => c.id)),
   );
   const [clubFilter, setClubFilter] = useState('');
+  // Club editor: which members are assigned to THIS club (dropdown + list).
+  const clubMembers = entity.type === 'club' ? entity.members ?? [] : [];
+  const [assignedMembers, setAssignedMembers] = useState<Set<string>>(
+    () => new Set(clubMembers.filter((m) => m.club_id === entity.id).map((m) => m.id)),
+  );
+  const [memberToAdd, setMemberToAdd] = useState('');
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -144,6 +152,25 @@ export function HierarchyEditModal({
             if (!r.ok) { const cj = await r.json().catch(() => ({})); fails.push(typeof cj.error === 'string' ? cj.error : `club ${ch.id}`); }
           }
           if (fails.length) { setError(`Zone saved, but ${fails.length} club assignment(s) failed: ${fails[0]}`); return; }
+        }
+
+        // Club editor: sync member → club assignments that changed.
+        if (entity.type === 'club' && entity.members?.length) {
+          const changes: { id: string; club_id: string | null }[] = [];
+          for (const m of entity.members) {
+            const nowIn = assignedMembers.has(m.id);
+            const wasThis = m.club_id === entity.id;
+            if (nowIn && !wasThis) changes.push({ id: m.id, club_id: entity.id });   // add / move in
+            else if (!nowIn && wasThis) changes.push({ id: m.id, club_id: null });    // remove
+          }
+          const fails: string[] = [];
+          for (const ch of changes) {
+            const r = await fetch(`/api/crm/members/${ch.id}`, {
+              method: 'PATCH', headers, body: JSON.stringify({ club_id: ch.club_id }),
+            });
+            if (!r.ok) { const cj = await r.json().catch(() => ({})); fails.push(typeof cj.error === 'string' ? cj.error : `member ${ch.id}`); }
+          }
+          if (fails.length) { setError(`Club saved, but ${fails.length} member assignment(s) failed: ${fails[0]}`); return; }
         }
         onSaved();
       } catch { setError('Network error while saving.'); }
@@ -221,6 +248,60 @@ export function HierarchyEditModal({
                 {shown.length === 0 && <div className="px-3 py-3 text-xs text-gray-500">No clubs match.</div>}
               </div>
               <p className="mt-1.5 text-[11px] text-gray-400">Ticking a club assigns it to this zone; a club already in another zone is moved here. Changes save with the zone.</p>
+            </div>
+          );
+        })()}
+
+        {/* Club editor: assign members via a dropdown listing all members. */}
+        {entity.type === 'club' && clubMembers.length > 0 && (() => {
+          const byId = new Map(clubMembers.map((m) => [m.id, m]));
+          const current = [...assignedMembers].map((id) => byId.get(id)).filter(Boolean) as typeof clubMembers;
+          const addable = clubMembers
+            .filter((m) => !assignedMembers.has(m.id))
+            .sort((a, b) => a.name.localeCompare(b.name));
+          return (
+            <div className="px-5 pb-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-gray-700 inline-flex items-center gap-1.5">
+                  <Users size={13} className="text-emerald-600" /> Members in this club
+                  <span className="text-gray-400 font-normal">({current.length})</span>
+                </span>
+                {current.length > 0 && (
+                  <button type="button" onClick={() => setAssignedMembers(new Set())} className="text-[11px] font-semibold text-gray-500 hover:underline">Remove all</button>
+                )}
+              </div>
+
+              {/* dropdown: pick any member to add to this club */}
+              <select className={inputCls} value={memberToAdd}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (id) setAssignedMembers((s) => new Set(s).add(id));
+                  setMemberToAdd('');
+                }}>
+                <option value="">+ Add member to this club…</option>
+                {addable.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}{m.club_id && m.club_id !== entity.id ? ` — in ${m.club_name ?? 'another club'} (moves)` : m.club_id ? '' : ' — unassigned'}
+                  </option>
+                ))}
+              </select>
+
+              {/* current members with remove */}
+              <div className="mt-2 max-h-56 overflow-auto rounded-md border divide-y">
+                {current.length === 0 && <div className="px-3 py-3 text-xs text-gray-500">No members assigned yet — add from the dropdown above.</div>}
+                {current.map((m) => (
+                  <div key={m.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+                    <Users size={14} className="text-emerald-600 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate font-medium text-navy-800">{m.name}</span>
+                    {m.club_id && m.club_id !== entity.id && <span className="text-[10px] text-amber-600 shrink-0" title={`Currently in ${m.club_name ?? 'another club'} — moves here on save`}>moves</span>}
+                    <button type="button" onClick={() => setAssignedMembers((s) => { const n = new Set(s); n.delete(m.id); return n; })}
+                      className="shrink-0 text-gray-400 hover:text-red-600" title="Remove from club" aria-label="Remove from club">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] text-gray-400">Adding a member assigns them to this club; a member already in another club is moved here. Changes save with the club.</p>
             </div>
           );
         })()}
