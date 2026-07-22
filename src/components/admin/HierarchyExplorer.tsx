@@ -36,7 +36,7 @@ function countMembers(d: DistrictNode): number {
 }
 
 function Row({
-  open, onToggle, icon: Icon, iconClass, title, subtitle, badges, depth, href,
+  open, onToggle, icon: Icon, iconClass, title, subtitle, type, badges, depth, href,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -44,6 +44,8 @@ function Row({
   iconClass: string;
   title: string;
   subtitle?: string;
+  /** Lions "Type" column value: District / Region / Zone / Lions Club. */
+  type: string;
   badges?: React.ReactNode;
   depth: number;
   href?: string;
@@ -67,7 +69,8 @@ function Row({
         </div>
         {subtitle && <div className="text-xs text-gray-500 truncate">{subtitle}</div>}
       </div>
-      {badges && <div className="flex items-center gap-1.5 shrink-0">{badges}</div>}
+      {badges && <div className="hidden md:flex items-center gap-1.5 shrink-0">{badges}</div>}
+      <span className="w-24 md:w-28 shrink-0 text-xs font-medium text-gray-500 text-right">{type}</span>
     </div>
   );
 }
@@ -101,6 +104,7 @@ function ClubBranch({ club, depth }: { club: ClubNode; depth: number }) {
         iconClass="text-blue-500"
         title={club.name}
         subtitle={club.club_number ? `LCI #${club.club_number}` : undefined}
+        type="Lions Club"
         badges={<Pill icon={Users} value={club.members.length} tone="emerald" />}
         depth={depth}
         href={`/admin/clubs/${club.id}`}
@@ -124,8 +128,9 @@ function ZoneBranch({ zone, depth }: { zone: ZoneNode; depth: number }) {
         onToggle={() => setOpen((o) => !o)}
         icon={MapPin}
         iconClass="text-amber-500"
-        title={`Zone ${zone.name}`}
+        title={zone.name}
         subtitle={zone.code && zone.code !== zone.name ? zone.code : undefined}
+        type="Zone"
         badges={<><Pill icon={Building2} value={zone.clubs.length} tone="blue" /><Pill icon={Users} value={members} tone="emerald" /></>}
         depth={depth}
       />
@@ -148,8 +153,9 @@ function RegionBranch({ region, depth }: { region: RegionNode; depth: number }) 
         onToggle={() => setOpen((o) => !o)}
         icon={Layers}
         iconClass="text-purple-500"
-        title={`Region ${region.name}`}
+        title={region.name}
         subtitle={region.code && region.code !== region.name ? region.code : undefined}
+        type="Region"
         badges={<><Pill icon={MapPin} value={region.zones.length} tone="amber" /><Pill icon={Building2} value={clubs} tone="blue" /></>}
         depth={depth}
       />
@@ -174,6 +180,7 @@ function DistrictBranch({ district, defaultOpen }: { district: DistrictNode; def
         iconClass="text-emerald-600"
         title={`District ${district.code}`}
         subtitle={[district.name !== district.code ? district.name : null, district.governor_name ? `DG ${district.governor_name}` : null].filter(Boolean).join(' · ') || undefined}
+        type="District"
         badges={<>
           <Pill icon={Building2} value={countClubs(district)} tone="blue" />
           <Pill icon={Users} value={countMembers(district)} tone="emerald" />
@@ -197,12 +204,31 @@ function DistrictBranch({ district, defaultOpen }: { district: DistrictNode; def
   );
 }
 
-export function HierarchyExplorer({ districts }: { districts: DistrictNode[] }) {
+/** Current Lions year (runs 1 Jul – 30 Jun), e.g. "2026-2027". */
+function currentLionsYear(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  return now.getMonth() >= 6 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+}
+
+export function HierarchyExplorer({ districts, lionsYear }: { districts: DistrictNode[]; lionsYear?: string }) {
+  const year = lionsYear || currentLionsYear();
   return (
-    <div className="rounded-xl border bg-white shadow-sm divide-y">
-      {districts.map((d, i) => (
-        <DistrictBranch key={d.id} district={d} defaultOpen={districts.length === 1 || i === 0} />
-      ))}
+    <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-navy-900 text-white">
+        <span className="text-xs font-bold uppercase tracking-wide">Account Name</span>
+        <div className="flex items-center gap-3">
+          <span className="inline-flex items-center rounded bg-white/15 px-2 py-0.5 text-[10px] font-semibold">
+            {year} · Active Structure
+          </span>
+          <span className="w-24 md:w-28 text-right text-xs font-bold uppercase tracking-wide">Type</span>
+        </div>
+      </div>
+      <div className="divide-y">
+        {districts.map((d, i) => (
+          <DistrictBranch key={d.id} district={d} defaultOpen={districts.length === 1 || i === 0} />
+        ))}
+      </div>
     </div>
   );
 }
