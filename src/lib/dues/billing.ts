@@ -49,6 +49,7 @@ interface RateCard {
   cadence: 'monthly' | 'quarterly' | 'half_yearly' | 'annual' | 'one_time';
   amount: number;
   currency: string;
+  gst_pct: number | null;
   late_fee_pct: number | null;
   grace_days: number | null;
   applies_to_club_id: string | null;
@@ -185,6 +186,8 @@ async function runClubLevelTier(
 
   const perCapita = /per.capita/i.test(rc.name) || /per_capita/i.test(rc.code);
 
+  const gstPct = Number(rc.gst_pct ?? 0);
+
   for (const c of clubs) {
     let amount = rc.amount;
     if (perCapita) {
@@ -192,7 +195,16 @@ async function runClubLevelTier(
         .eq('club_id', c.id).eq('status', 'active').is('deleted_at', null);
       amount = rc.amount * (count ?? 0);
     }
-    const amountInr = rc.currency === 'USD' && opts.fxRate ? Math.round(amount * opts.fxRate * 100) / 100 : null;
+    // INR value = (currency amount × FX) grossed up by GST.
+    //   • USD international dues: convert then add GST (e.g. 50 USD × 94.35 × 1.18).
+    //   • INR dues with GST: gross up the flat amount.
+    //   • INR dues without GST: leave amount_inr null (compliance falls back to `amount`).
+    let amountInr: number | null = null;
+    if (rc.currency === 'USD' && opts.fxRate) {
+      amountInr = Math.round(amount * opts.fxRate * (1 + gstPct / 100) * 100) / 100;
+    } else if (gstPct > 0) {
+      amountInr = Math.round(amount * (1 + gstPct / 100) * 100) / 100;
+    }
 
     await insertInvoiceIfMissing(db, {
       tier: rc.tier,

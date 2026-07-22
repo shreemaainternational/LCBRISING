@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, type ReactElement } from 'react';
-import { Link as LinkIcon, Check } from 'lucide-react';
+import { useState, useSyncExternalStore, type ReactElement } from 'react';
+import { Link as LinkIcon, Check, Mail, Share2 } from 'lucide-react';
 
 type Target = { label: string; href: string; icon: ReactElement };
 
@@ -44,6 +44,20 @@ function buildTargets(url: string, title: string): Target[] {
         </svg>
       ),
     },
+    {
+      label: 'Telegram',
+      href: `https://t.me/share/url?url=${enc(url)}&text=${enc(title)}`,
+      icon: (
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden>
+          <path d="M21.94 4.3l-3.32 15.66c-.25 1.1-.9 1.38-1.82.86l-5.04-3.71-2.43 2.34c-.27.27-.5.5-1.02.5l.36-5.14L18.03 6.7c.4-.36-.09-.56-.63-.2L6.83 13.4l-4.98-1.56c-1.08-.34-1.1-1.08.23-1.6L20.53 2.9c.9-.34 1.69.2 1.4 1.4z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Email',
+      href: `mailto:?subject=${enc(title)}&body=${enc(`${title}\n\n${url}`)}`,
+      icon: <Mail size={15} aria-hidden />,
+    },
   ];
 }
 
@@ -57,11 +71,34 @@ export function ShareBar({
   className?: string;
 }) {
   const [copied, setCopied] = useState(false);
+  // Detect the Web Share API. useSyncExternalStore returns the server snapshot
+  // (false) during SSR and hydration, then the real value — no mismatch.
+  const canNativeShare = useSyncExternalStore(
+    () => () => {},
+    () => typeof navigator !== 'undefined' && typeof navigator.share === 'function',
+    () => false,
+  );
   const targets = buildTargets(url, title);
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       <span className="text-xs uppercase tracking-wider text-gray-500 mr-1">Share</span>
+      {canNativeShare && (
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await navigator.share({ title, text: title, url });
+            } catch {
+              /* user dismissed the share sheet — ignore */
+            }
+          }}
+          aria-label="Share…"
+          className="h-9 w-9 inline-flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:text-navy-800 hover:border-navy-800 transition"
+        >
+          <Share2 size={15} aria-hidden />
+        </button>
+      )}
       {targets.map(({ label, href, icon }) => (
         <a
           key={label}
