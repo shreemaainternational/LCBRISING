@@ -27,6 +27,13 @@ export const whatsappTemplates = {
   eventReminder(name: string, eventTitle: string, when: string, location: string) {
     return `🦁 Lions Club Baroda Rising Star\n\nHi ${name}, reminder for "${eventTitle}" on ${when} at ${location}. See you there!`;
   },
+  anniversary(name: string, years: number) {
+    return `🦁 Lions Club Baroda Rising Star\n\nCongratulations ${name}! 🎉 ${
+      years > 0
+        ? `Today marks ${years} year${years === 1 ? '' : 's'} of your service with us.`
+        : 'Happy anniversary of your Lions journey!'
+    } Thank you for living "We Serve".`;
+  },
   paymentRequest(name: string, amount: number, invoiceNo: string, payUrl: string) {
     return [
       '🦁 Lions Club Baroda Rising Star',

@@ -106,6 +106,13 @@ const schema = z.object({
   LINKEDIN_ACCESS_TOKEN: z.string().optional(),
   LINKEDIN_ORGANIZATION_URN: z.string().optional(),
 
+  // --- Ayrshare (single-key gateway to FB / IG / LinkedIn / X / TikTok …) ---
+  // When set, social posts route through Ayrshare instead of per-platform
+  // Meta / LinkedIn credentials. Connect each network once in the Ayrshare
+  // dashboard. PROFILE_KEY is only needed for Business-plan multi-profile.
+  AYRSHARE_API_KEY: z.string().optional(),
+  AYRSHARE_PROFILE_KEY: z.string().optional(),
+
   // --- WhatsApp Business (Cloud API alt to Twilio) ---
   WHATSAPP_BUSINESS_PHONE_ID: z.string().optional(),
   WHATSAPP_BUSINESS_TOKEN: z.string().optional(),
@@ -218,6 +225,8 @@ const parsed = schema.parse({
   LINKEDIN_CLIENT_SECRET: process.env.LINKEDIN_CLIENT_SECRET,
   LINKEDIN_ACCESS_TOKEN: process.env.LINKEDIN_ACCESS_TOKEN,
   LINKEDIN_ORGANIZATION_URN: process.env.LINKEDIN_ORGANIZATION_URN,
+  AYRSHARE_API_KEY: process.env.AYRSHARE_API_KEY,
+  AYRSHARE_PROFILE_KEY: process.env.AYRSHARE_PROFILE_KEY,
   WHATSAPP_BUSINESS_PHONE_ID: process.env.WHATSAPP_BUSINESS_PHONE_ID,
   WHATSAPP_BUSINESS_TOKEN: process.env.WHATSAPP_BUSINESS_TOKEN,
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
@@ -340,6 +349,7 @@ export const integrations = {
   facebook: Boolean(parsed.META_ACCESS_TOKEN && parsed.FACEBOOK_PAGE_ID),
   instagram: Boolean(parsed.META_ACCESS_TOKEN && parsed.INSTAGRAM_BUSINESS_ID),
   linkedin: Boolean(parsed.LINKEDIN_ACCESS_TOKEN && parsed.LINKEDIN_ORGANIZATION_URN),
+  ayrshare: Boolean(parsed.AYRSHARE_API_KEY),
   whatsappBusiness: Boolean(parsed.WHATSAPP_BUSINESS_TOKEN && parsed.WHATSAPP_BUSINESS_PHONE_ID),
   cloudinary: Boolean(parsed.CLOUDINARY_CLOUD_NAME && parsed.CLOUDINARY_API_KEY && parsed.CLOUDINARY_API_SECRET),
   upi: Boolean(parsed.UPI_VPA),

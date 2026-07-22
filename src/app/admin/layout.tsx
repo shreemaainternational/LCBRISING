@@ -3,6 +3,7 @@ import { getCurrentMember } from '@/lib/auth';
 import { env } from '@/lib/env';
 import { LogoutButton } from '@/components/admin/LogoutButton';
 import { AdminSidebarNav } from '@/components/admin/AdminSidebarNav';
+import { AdminSearch } from '@/components/admin/AdminSearch';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const member = await getCurrentMember();
@@ -42,6 +43,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             backgroundPosition: 'center',
           }}
         />
+        <div className="relative border-b border-gray-200 bg-white/70 backdrop-blur px-6 md:px-10 py-3">
+          <AdminSearch />
+        </div>
         <div className="relative p-6 md:p-10">
           {children}
         </div>

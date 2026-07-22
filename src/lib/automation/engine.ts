@@ -1,5 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendEmail, emailTemplates } from '@/lib/email';
+import { resolveEmailTemplate, resolveWhatsAppTemplate } from '@/lib/templates';
+import { getAutomationSettings } from '@/lib/automation/settings';
 import { sendWhatsApp, whatsappTemplates } from '@/lib/whatsapp';
 import { renderDonationReceipt } from '@/lib/pdf';
 import { formatDate } from '@/lib/utils';
@@ -19,7 +21,8 @@ const handlers: Record<string, JobHandler> = {
     const supabase = createAdminClient();
     const { data: member } = await supabase
       .from('members').select('name').eq('email', email).maybeSingle();
-    const tpl = emailTemplates.welcome(member?.name ?? email);
+    const name = member?.name ?? email;
+    const tpl = await resolveEmailTemplate('welcome', { name }, () => emailTemplates.welcome(name));
     await sendEmail({ to: email, ...tpl });
     await logComm(email, 'email', 'welcome', tpl.subject);
   },
@@ -38,12 +41,20 @@ const handlers: Record<string, JobHandler> = {
     if (!member) return;
 
     const due = formatDate(dues.due_date);
-    const emailTpl = emailTemplates.duesReminder(member.name, dues.amount, due);
+    const emailTpl = await resolveEmailTemplate(
+      'dues_reminder',
+      { name: member.name, amount: dues.amount, due_date: due },
+      () => emailTemplates.duesReminder(member.name, dues.amount, due),
+    );
     await sendEmail({ to: member.email, ...emailTpl });
     await logComm(member.email, 'email', 'dues_reminder', emailTpl.subject);
 
     if (member.phone) {
-      const msg = whatsappTemplates.duesReminder(member.name, dues.amount, due);
+      const msg = await resolveWhatsAppTemplate(
+        'dues_reminder',
+        { name: member.name, amount: dues.amount, due_date: due },
+        () => whatsappTemplates.duesReminder(member.name, dues.amount, due),
+      );
       try {
         await sendWhatsApp(member.phone, msg);
         await logComm(member.phone, 'whatsapp', 'dues_reminder', msg);
@@ -70,10 +81,10 @@ const handlers: Record<string, JobHandler> = {
       date: donation.created_at,
     });
 
-    const tpl = emailTemplates.donationReceipt(
-      donation.donor_name,
-      donation.amount,
-      donation.receipt_no ?? donation.id,
+    const tpl = await resolveEmailTemplate(
+      'donation_receipt',
+      { name: donation.donor_name, amount: donation.amount, receipt_no: donation.receipt_no ?? donation.id },
+      () => emailTemplates.donationReceipt(donation.donor_name, donation.amount, donation.receipt_no ?? donation.id),
     );
     await sendEmail({
       to: donation.donor_email,
@@ -101,12 +112,20 @@ const handlers: Record<string, JobHandler> = {
       const target = m?.email ?? r.guest_email;
       const name = m?.name ?? 'friend';
       if (!target) continue;
-      const tpl = emailTemplates.eventReminder(name, event.title, when, event.location ?? 'TBA');
+      const tpl = await resolveEmailTemplate(
+        'event_reminder',
+        { name, event: event.title, when, location: event.location ?? 'TBA' },
+        () => emailTemplates.eventReminder(name, event.title, when, event.location ?? 'TBA'),
+      );
       await sendEmail({ to: target, ...tpl });
       await logComm(target, 'email', 'event_reminder', tpl.subject);
       if (m?.phone) {
         try {
-          const msg = whatsappTemplates.eventReminder(name, event.title, when, event.location ?? 'TBA');
+          const msg = await resolveWhatsAppTemplate(
+            'event_reminder',
+            { name, event: event.title, when, location: event.location ?? 'TBA' },
+            () => whatsappTemplates.eventReminder(name, event.title, when, event.location ?? 'TBA'),
+          );
           await sendWhatsApp(m.phone, msg);
           await logComm(m.phone, 'whatsapp', 'event_reminder', msg);
         } catch (err) {
@@ -400,7 +419,12 @@ const handlers: Record<string, JobHandler> = {
       const wa = m.whatsapp || m.phone;
       if (wa) {
         try {
-          await sendWhatsApp(wa, whatsappTemplates.eventReminder(m.name, event.title, when, event.location ?? ''));
+          const msg = await resolveWhatsAppTemplate(
+            'meeting_reminder',
+            { name: m.name, event: event.title, when, location: event.location ?? '' },
+            () => whatsappTemplates.eventReminder(m.name, event.title, when, event.location ?? ''),
+          );
+          await sendWhatsApp(wa, msg);
           await logComm(wa, 'whatsapp', 'meeting_reminder', event.title);
         } catch (err) { console.error('meeting WA failed', err); }
       }
@@ -430,9 +454,108 @@ const handlers: Record<string, JobHandler> = {
     const wa = m.whatsapp || m.phone;
     if (wa) {
       try {
-        await sendWhatsApp(wa, `🦁 Congratulations ${m.name}! You've been appointed as ${officer.role} effective ${officer.term_start}.`);
+        const msg = await resolveWhatsAppTemplate(
+          'officer_appointment',
+          { name: m.name, role: officer.role, term_start: officer.term_start },
+          () => `🦁 Congratulations ${m.name}! You've been appointed as ${officer.role} effective ${officer.term_start}.`,
+        );
+        await sendWhatsApp(wa, msg);
         await logComm(wa, 'whatsapp', 'officer_appointment', officer.role);
       } catch (err) { console.error('officer WA failed', err); }
+    }
+  },
+
+  /**
+   * Weekly leadership digest — a 7-day summary (activities, lives reached,
+   * funds raised, new members, upcoming events) emailed (and WhatsApp'd)
+   * to every officer-level member.
+   */
+  send_officer_digest: async () => {
+    const supabase = createAdminClient();
+    const now = Date.now();
+    const weekAgoIso = new Date(now - 7 * 86_400_000).toISOString();
+    const in14Iso = new Date(now + 14 * 86_400_000).toISOString();
+
+    const [{ data: acts }, { data: dons }, { count: newMembers }, { data: events }, { data: officers }] =
+      await Promise.all([
+        supabase.from('activities').select('beneficiaries').gte('created_at', weekAgoIso),
+        supabase.from('donations').select('amount').gte('created_at', weekAgoIso),
+        supabase.from('members').select('*', { count: 'exact', head: true }).gte('created_at', weekAgoIso).is('deleted_at', null),
+        supabase.from('events').select('title, date').gte('date', new Date(now).toISOString()).lte('date', in14Iso).order('date').limit(8),
+        supabase
+          .from('members')
+          .select('name, email, phone, whatsapp')
+          .in('role', ['officer', 'treasurer', 'secretary', 'president', 'admin'])
+          .eq('status', 'active')
+          .is('deleted_at', null),
+      ]);
+
+    const beneficiaries = (acts ?? []).reduce((s, a) => s + Number(a.beneficiaries ?? 0), 0);
+    const donations = (dons ?? []).reduce((s, d) => s + Number(d.amount ?? 0), 0);
+    const periodLabel = `${formatDate(weekAgoIso)} – ${formatDate(new Date(now).toISOString())}`;
+    const stats = {
+      periodLabel,
+      activities: (acts ?? []).length,
+      beneficiaries,
+      donations,
+      newMembers: newMembers ?? 0,
+      events: (events ?? []).map((e) => ({ title: e.title as string, when: formatDate(e.date) })),
+    };
+
+    for (const o of officers ?? []) {
+      if (!o.email) continue;
+      const tpl = emailTemplates.officerDigest(o.name, stats);
+      await sendEmail({ to: o.email, ...tpl });
+      await logComm(o.email, 'email', 'officer_digest', tpl.subject);
+      const wa = o.whatsapp || o.phone;
+      if (wa) {
+        try {
+          const msg = `🦁 Weekly digest (${periodLabel}): ${stats.activities} activities · ${beneficiaries.toLocaleString('en-IN')} lives reached · ₹${donations.toLocaleString('en-IN')} raised · ${stats.newMembers} new members. ${stats.events.length} upcoming events.`;
+          await sendWhatsApp(wa, msg);
+          await logComm(wa, 'whatsapp', 'officer_digest', 'weekly');
+        } catch (err) { console.error('digest WA failed', err); }
+      }
+    }
+  },
+
+  /**
+   * Daily anniversary sweep — greets members on the anniversary of the day
+   * they joined, with a years-of-service count. Honours the 'anniversary'
+   * template override for both channels.
+   */
+  send_anniversary_sweep: async () => {
+    const supabase = createAdminClient();
+    const { data: rows } = await supabase.from('upcoming_anniversaries').select('*');
+    if (!rows) return;
+    const today = new Date();
+    const md = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const yearNow = today.getFullYear();
+
+    for (const m of rows.filter((x) => x.md === md)) {
+      const years = m.joined_year ? Math.max(0, yearNow - Number(m.joined_year)) : 0;
+      if (years < 1) continue; // skip members who joined this same year
+
+      if (m.email) {
+        const tpl = await resolveEmailTemplate(
+          'anniversary',
+          { name: m.name, years },
+          () => emailTemplates.anniversary(m.name, years),
+        );
+        await sendEmail({ to: m.email, ...tpl });
+        await logComm(m.email, 'email', 'anniversary', tpl.subject);
+      }
+      const wa = m.whatsapp || m.phone;
+      if (wa) {
+        try {
+          const msg = await resolveWhatsAppTemplate(
+            'anniversary',
+            { name: m.name, years },
+            () => whatsappTemplates.anniversary(m.name, years),
+          );
+          await sendWhatsApp(wa, msg);
+          await logComm(wa, 'whatsapp', 'anniversary', m.name);
+        } catch (err) { console.error('anniversary WA failed', err); }
+      }
     }
   },
 
@@ -447,10 +570,12 @@ const handlers: Record<string, JobHandler> = {
     for (const m of members.filter((x) => x.md === md)) {
       if (m.phone) {
         try {
-          await sendWhatsApp(
-            m.phone,
-            `🎂 Happy birthday, ${m.name}! Wishing you health, happiness, and continued service. 🦁 — Lions Club Baroda Rising Star`,
+          const msg = await resolveWhatsAppTemplate(
+            'birthday',
+            { name: m.name },
+            () => `🎂 Happy birthday, ${m.name}! Wishing you health, happiness, and continued service. 🦁 — Lions Club Baroda Rising Star`,
           );
+          await sendWhatsApp(m.phone, msg);
           await logComm(m.phone, 'whatsapp', 'birthday', m.name);
         } catch (err) { console.error('birthday WA failed', err); }
       }
@@ -540,6 +665,7 @@ export async function enqueueJob(jobType: string, payload: Record<string, unknow
  */
 export async function scheduleDuesReminders() {
   const supabase = createAdminClient();
+  if (!(await getAutomationSettings()).dues_reminders_enabled) return 0;
   const today = new Date();
   const in7 = new Date(today.getTime() + 7 * 86_400_000);
 
@@ -553,6 +679,56 @@ export async function scheduleDuesReminders() {
     await enqueueJob('send_dues_reminder', { dues_id: d.id });
   }
   return dues?.length ?? 0;
+}
+
+/**
+ * Enqueue the daily birthday + anniversary greeting sweeps. Guarded so each
+ * sweep is enqueued at most once per day even if the scheduler runs more than
+ * once. The handlers themselves match today's date, so this only queues them.
+ */
+export async function scheduleDailyGreetings(): Promise<{ birthday: number; anniversary: number }> {
+  const supabase = createAdminClient();
+  const settings = await getAutomationSettings();
+  const enabled: Record<string, boolean> = {
+    daily_birthday_sweep: settings.birthday_greetings_enabled,
+    send_anniversary_sweep: settings.anniversary_greetings_enabled,
+  };
+  const since = new Date(Date.now() - 20 * 3_600_000).toISOString();
+  const out = { birthday: 0, anniversary: 0 };
+  for (const jobType of ['daily_birthday_sweep', 'send_anniversary_sweep'] as const) {
+    if (!enabled[jobType]) continue;
+    const { data: recent } = await supabase
+      .from('automation_jobs')
+      .select('id')
+      .eq('job_type', jobType)
+      .gte('created_at', since)
+      .limit(1);
+    if (recent && recent.length > 0) continue;
+    await enqueueJob(jobType, {});
+    if (jobType === 'daily_birthday_sweep') out.birthday = 1;
+    else out.anniversary = 1;
+  }
+  return out;
+}
+
+/**
+ * Enqueue the weekly officer digest, at most once every 6 days. Safe to
+ * call from a daily/hourly scheduler — the guard checks the communications
+ * log for the last digest and only queues a new one when a week has passed.
+ */
+export async function scheduleOfficerDigest(): Promise<number> {
+  const supabase = createAdminClient();
+  if (!(await getAutomationSettings()).officer_digest_enabled) return 0;
+  const sixDaysAgo = new Date(Date.now() - 6 * 86_400_000).toISOString();
+  const { data: recent } = await supabase
+    .from('communications')
+    .select('id')
+    .eq('template', 'officer_digest')
+    .gte('sent_at', sixDaysAgo)
+    .limit(1);
+  if (recent && recent.length > 0) return 0;
+  await enqueueJob('send_officer_digest', {});
+  return 1;
 }
 
 /**

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, env } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { CAUSES, CAUSE_SLUGS, getCause, type Cause } from '@/lib/causes';
+import { collectActivityPhotos } from '@/lib/activity-media';
 import { CauseActivities, type CauseActivity } from './CauseActivities';
 
 export const revalidate = 300;
@@ -47,6 +48,7 @@ type ActivityRow = {
   photos: string[] | null;
   before_photos: string[] | null;
   after_photos: string[] | null;
+  videos: string[] | null;
   photo_captions: Record<string, string> | null;
 };
 
@@ -58,7 +60,7 @@ async function loadActivities(cause: Cause): Promise<CauseActivity[]> {
     const { data } = await supabase
       .from('activities')
       .select(
-        'id, title, description, date, location, beneficiaries, photos, before_photos, after_photos, photo_captions',
+        'id, title, description, date, location, beneficiaries, photos, before_photos, after_photos, videos, photo_captions',
       )
       .in('category', cause.categories)
       .eq('approval_status', 'approved')
@@ -72,14 +74,8 @@ async function loadActivities(cause: Cause): Promise<CauseActivity[]> {
       date: a.date,
       location: a.location,
       beneficiaries: a.beneficiaries,
-      // Combine all media buckets; keep unique URLs, order photos first.
-      photos: Array.from(
-        new Set([
-          ...(a.photos ?? []),
-          ...(a.before_photos ?? []),
-          ...(a.after_photos ?? []),
-        ]),
-      ),
+      // Combine all media columns (incl. images misfiled into videos).
+      photos: collectActivityPhotos(a),
       captions: a.photo_captions ?? {},
     }));
   } catch {
@@ -141,7 +137,7 @@ export default async function CauseActivitiesPage({
       {/* Single-cause activity gallery */}
       <section className="container-page py-14 md:py-16">
         {activities.length > 0 ? (
-          <CauseActivities activities={activities} />
+          <CauseActivities activities={activities} causeSlug={cause.slug} />
         ) : (
           <div className="max-w-xl mx-auto text-center bg-white border border-gray-200 rounded-2xl p-10">
             <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-gray-100 flex items-center justify-center">
