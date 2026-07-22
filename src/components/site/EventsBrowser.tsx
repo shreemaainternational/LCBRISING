@@ -6,7 +6,7 @@ import { EventCard, type EventRow } from '@/components/site/EventCard';
 import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
 import { getEventCategory } from '@/lib/event-categories';
 
-function eventToDetail(e: EventRow, image: string): DetailItem {
+export function eventToDetail(e: EventRow, image: string): DetailItem {
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString('en-IN', {
       weekday: 'long',
