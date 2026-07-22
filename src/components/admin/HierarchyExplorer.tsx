@@ -1,19 +1,20 @@
 'use client';
 
-import { useState, useContext } from 'react';
+import { useState, useContext, createContext } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, Globe, MapPin, Building2, Users, Layers, Boxes, Landmark, ExternalLink, Pencil, Plus } from 'lucide-react';
+import { ChevronRight, Globe, MapPin, Building2, Users, Layers, Boxes, Landmark, ExternalLink, Pencil, Plus, AlertTriangle } from 'lucide-react';
 import { ClubMembersPanel, type ClubMember } from './ClubMembersPanel';
 import { HierarchyEditContext, HierarchyEditModal, type EditEntity } from './HierarchyEditModal';
 import { HierarchyCreateContext, HierarchyCreateModal, type CreateSpec } from './HierarchyCreateModal';
 
 export type ClubNode = {
   id: string; name: string; club_number: string | null;
-  city: string | null; state: string | null;
+  city: string | null; state: string | null; zone_id: string | null;
   members: ClubMember[];
 };
-export type ZoneNode = { id: string; code: string; name: string; chairperson_name: string | null; clubs: ClubNode[] };
+export type ZoneNode = { id: string; code: string; name: string; chairperson_name: string | null; region_id: string | null; clubs: ClubNode[] };
+type Opt = { id: string; code: string; name: string };
 export type RegionNode = { id: string; code: string; name: string; chairperson_name: string | null; zones: ZoneNode[] };
 export type DistrictNode = {
   id: string; code: string; name: string; governor_name: string | null; lions_year: string | null;
@@ -28,6 +29,10 @@ export type MdNode = {
   districts: DistrictNode[];
 };
 export type CaNode = { id: string; code: string; name: string; mds: MdNode[] };
+
+// When non-null, forces every branch's initial open state (Expand/Collapse All).
+// The tree is remounted (keyed) on toggle so this re-seeds each useState.
+const ForceOpenContext = createContext<boolean | null>(null);
 
 function countClubs(d: DistrictNode): number {
   const inZones = (zs: ZoneNode[]) => zs.reduce((a, z) => a + z.clubs.length, 0);
@@ -121,8 +126,9 @@ function Pill({ icon: Icon, value, tone = 'gray' }: {
   );
 }
 
-function ClubBranch({ club, depth }: { club: ClubNode; depth: number }) {
-  const [open, setOpen] = useState(false);
+function ClubBranch({ club, depth, districtZones }: { club: ClubNode; depth: number; districtZones: Opt[] }) {
+  const forceOpen = useContext(ForceOpenContext);
+  const [open, setOpen] = useState(forceOpen ?? false);
   const openEdit = useContext(HierarchyEditContext);
   return (
     <div className="border-t">
@@ -134,7 +140,7 @@ function ClubBranch({ club, depth }: { club: ClubNode; depth: number }) {
         title={club.name}
         subtitle={club.club_number ? `LCI #${club.club_number}` : undefined}
         type="Lions Club"
-        editEntity={{ type: 'club', id: club.id, name: club.name, club_number: club.club_number, city: club.city, state: club.state }}
+        editEntity={{ type: 'club', id: club.id, name: club.name, club_number: club.club_number, city: club.city, state: club.state, zone_id: club.zone_id, zones: districtZones }}
         badges={<Pill icon={Users} value={club.members.length} tone="emerald" />}
         depth={depth}
         href={`/admin/clubs/${club.id}`}
@@ -153,8 +159,9 @@ function ClubBranch({ club, depth }: { club: ClubNode; depth: number }) {
   );
 }
 
-function ZoneBranch({ zone, depth, districtId }: { zone: ZoneNode; depth: number; districtId: string }) {
-  const [open, setOpen] = useState(false);
+function ZoneBranch({ zone, depth, districtId, districtRegions, districtZones }: { zone: ZoneNode; depth: number; districtId: string; districtRegions: Opt[]; districtZones: Opt[] }) {
+  const forceOpen = useContext(ForceOpenContext);
+  const [open, setOpen] = useState(forceOpen ?? false);
   const members = zone.clubs.reduce((a, c) => a + c.members.length, 0);
   return (
     <div className="border-t">
@@ -166,7 +173,7 @@ function ZoneBranch({ zone, depth, districtId }: { zone: ZoneNode; depth: number
         title={zone.name}
         subtitle={zone.code && zone.code !== zone.name ? zone.code : undefined}
         type="Zone"
-        editEntity={{ type: 'zone', id: zone.id, code: zone.code, name: zone.name, chairperson_name: zone.chairperson_name }}
+        editEntity={{ type: 'zone', id: zone.id, code: zone.code, name: zone.name, chairperson_name: zone.chairperson_name, region_id: zone.region_id, regions: districtRegions }}
         createSpec={{ childType: 'club', parentLabel: zone.name, district_id: districtId, zone_id: zone.id }}
         createLabel="Club"
         badges={<><Pill icon={Building2} value={zone.clubs.length} tone="blue" /><Pill icon={Users} value={members} tone="emerald" /></>}
@@ -174,15 +181,16 @@ function ZoneBranch({ zone, depth, districtId }: { zone: ZoneNode; depth: number
       />
       {open && (
         zone.clubs.length
-          ? zone.clubs.map((c) => <ClubBranch key={c.id} club={c} depth={depth + 1} />)
+          ? zone.clubs.map((c) => <ClubBranch key={c.id} club={c} depth={depth + 1} districtZones={districtZones} />)
           : <div className="border-t text-xs text-gray-500 py-2.5" style={{ paddingLeft: `${(depth + 1) * 20 + 12}px` }}>No clubs in this zone.</div>
       )}
     </div>
   );
 }
 
-function RegionBranch({ region, depth, districtId }: { region: RegionNode; depth: number; districtId: string }) {
-  const [open, setOpen] = useState(false);
+function RegionBranch({ region, depth, districtId, districtRegions, districtZones }: { region: RegionNode; depth: number; districtId: string; districtRegions: Opt[]; districtZones: Opt[] }) {
+  const forceOpen = useContext(ForceOpenContext);
+  const [open, setOpen] = useState(forceOpen ?? false);
   const clubs = region.zones.reduce((a, z) => a + z.clubs.length, 0);
   return (
     <div className="border-t">
@@ -202,7 +210,7 @@ function RegionBranch({ region, depth, districtId }: { region: RegionNode; depth
       />
       {open && (
         region.zones.length
-          ? region.zones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} districtId={districtId} />)
+          ? region.zones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} districtId={districtId} districtRegions={districtRegions} districtZones={districtZones} />)
           : <div className="border-t text-xs text-gray-500 py-2.5" style={{ paddingLeft: `${(depth + 1) * 20 + 12}px` }}>No zones in this region.</div>
       )}
     </div>
@@ -210,8 +218,16 @@ function RegionBranch({ region, depth, districtId }: { region: RegionNode; depth
 }
 
 function DistrictBranch({ district, depth, defaultOpen }: { district: DistrictNode; depth: number; defaultOpen: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const forceOpen = useContext(ForceOpenContext);
+  const [open, setOpen] = useState(forceOpen ?? defaultOpen);
   const hasChildren = district.regions.length || district.looseZones.length || district.looseClubs.length;
+  const districtRegions: Opt[] = district.regions.map((r) => ({ id: r.id, code: r.code, name: r.name }));
+  const districtZones: Opt[] = [...district.regions.flatMap((r) => r.zones), ...district.looseZones]
+    .map((z) => ({ id: z.id, code: z.code, name: z.name }));
+  // Consistency: if regions exist every zone needs a region; if zones exist every club needs a zone.
+  const orphanZones = district.regions.length ? district.looseZones.length : 0;
+  const orphanClubs = districtZones.length ? district.looseClubs.length : 0;
+  const indent = `${(depth + 1) * 20 + 12}px`;
   return (
     <div className="border-t first:border-t-0">
       <Row
@@ -234,11 +250,23 @@ function DistrictBranch({ district, depth, defaultOpen }: { district: DistrictNo
       />
       {open && (
         <div>
-          {district.regions.map((r) => <RegionBranch key={r.id} region={r} depth={depth + 1} districtId={district.id} />)}
-          {district.looseZones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} districtId={district.id} />)}
-          {district.looseClubs.map((c) => <ClubBranch key={c.id} club={c} depth={depth + 1} />)}
+          {district.regions.map((r) => <RegionBranch key={r.id} region={r} depth={depth + 1} districtId={district.id} districtRegions={districtRegions} districtZones={districtZones} />)}
+          {(orphanZones > 0 || orphanClubs > 0) && (
+            <div className="border-t bg-amber-50 text-[11px] text-amber-800 py-2 flex items-start gap-1.5" style={{ paddingLeft: indent, paddingRight: 12 }}>
+              <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+              <span>
+                Structure inconsistent —{' '}
+                {orphanZones > 0 && <>{orphanZones} zone(s) not parented to a region</>}
+                {orphanZones > 0 && orphanClubs > 0 && ', '}
+                {orphanClubs > 0 && <>{orphanClubs} club(s) not assigned to a zone</>}
+                . Use <strong>Edit</strong> on each to set its parent.
+              </span>
+            </div>
+          )}
+          {district.looseZones.map((z) => <ZoneBranch key={z.id} zone={z} depth={depth + 1} districtId={district.id} districtRegions={districtRegions} districtZones={districtZones} />)}
+          {district.looseClubs.map((c) => <ClubBranch key={c.id} club={c} depth={depth + 1} districtZones={districtZones} />)}
           {!hasChildren && (
-            <div className="border-t text-xs text-gray-500 py-2.5" style={{ paddingLeft: `${(depth + 1) * 20 + 12}px` }}>
+            <div className="border-t text-xs text-gray-500 py-2.5" style={{ paddingLeft: indent }}>
               No regions, zones or clubs under this district yet.
             </div>
           )}
@@ -249,7 +277,8 @@ function DistrictBranch({ district, depth, defaultOpen }: { district: DistrictNo
 }
 
 function MdBranch({ md, depth = 0, defaultOpen }: { md: MdNode; depth?: number; defaultOpen: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const forceOpen = useContext(ForceOpenContext);
+  const [open, setOpen] = useState(forceOpen ?? defaultOpen);
   return (
     <div className="border-t first:border-t-0">
       <Row
@@ -276,7 +305,8 @@ function MdBranch({ md, depth = 0, defaultOpen }: { md: MdNode; depth?: number; 
 }
 
 function CaBranch({ ca, defaultOpen }: { ca: CaNode; defaultOpen: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const forceOpen = useContext(ForceOpenContext);
+  const [open, setOpen] = useState(forceOpen ?? defaultOpen);
   return (
     <div className="border-t first:border-t-0">
       <Row
@@ -315,12 +345,28 @@ export function HierarchyExplorer({
   const router = useRouter();
   const [editing, setEditing] = useState<EditEntity | null>(null);
   const [creating, setCreating] = useState<CreateSpec | null>(null);
+  // Expand/Collapse All: bump `version` to remount the tree so each branch's
+  // useState re-seeds from `forceOpen`.
+  const [forceOpen, setForceOpen] = useState<boolean | null>(null);
+  const [version, setVersion] = useState(0);
   const year = lionsYear || currentLionsYear();
   const onlyOne = cas.length + looseMds.length + looseDistricts.length === 1;
+
+  function expandAll(open: boolean) { setForceOpen(open); setVersion((v) => v + 1); }
 
   return (
     <HierarchyEditContext.Provider value={setEditing}>
       <HierarchyCreateContext.Provider value={setCreating}>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => expandAll(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-semibold text-gray-700 hover:bg-gray-50">
+            <Plus size={13} /> Expand all
+          </button>
+          <button type="button" onClick={() => expandAll(false)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-semibold text-gray-700 hover:bg-gray-50">
+            <ChevronRight size={13} /> Collapse all
+          </button>
+        </div>
         <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
           <div className="flex items-center justify-between gap-2 px-3 py-2 bg-navy-900 text-white">
             <span className="text-xs font-bold uppercase tracking-wide">Account Name</span>
@@ -331,12 +377,18 @@ export function HierarchyExplorer({
               <span className="w-24 md:w-28 text-right text-xs font-bold uppercase tracking-wide">Type</span>
             </div>
           </div>
-          <div>
-            {cas.map((c) => <CaBranch key={c.id} ca={c} defaultOpen={onlyOne} />)}
-            {looseMds.map((m) => <MdBranch key={m.id} md={m} defaultOpen={onlyOne} />)}
-            {looseDistricts.map((d) => <DistrictBranch key={d.id} district={d} depth={0} defaultOpen={onlyOne} />)}
-          </div>
+          <ForceOpenContext.Provider value={forceOpen}>
+            <div key={version}>
+              {cas.map((c) => <CaBranch key={c.id} ca={c} defaultOpen={onlyOne} />)}
+              {looseMds.map((m) => <MdBranch key={m.id} md={m} defaultOpen={onlyOne} />)}
+              {looseDistricts.map((d) => <DistrictBranch key={d.id} district={d} depth={0} defaultOpen={onlyOne} />)}
+            </div>
+          </ForceOpenContext.Provider>
         </div>
+        <p className="mt-3 flex items-start gap-1.5 text-xs text-gray-500">
+          <AlertTriangle size={12} className="mt-0.5 shrink-0 text-amber-500" />
+          <span><strong>District structure must be consistent:</strong> if zones exist, every club must be assigned to a zone; if regions exist, every zone must be parented to a region. Use <strong>Edit</strong> on a zone or club to set its parent.</span>
+        </p>
 
         {editing && (
           <HierarchyEditModal

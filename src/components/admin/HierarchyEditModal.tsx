@@ -10,8 +10,10 @@ export type EditEntity =
   | { type: 'md'; id: string; name: string; code: string; country: string | null; council_chairperson_name: string | null }
   | { type: 'district'; id: string; code: string; name: string; governor_name: string | null; lions_year: string | null }
   | { type: 'region'; id: string; code: string; name: string; chairperson_name: string | null }
-  | { type: 'zone'; id: string; code: string; name: string; chairperson_name: string | null }
-  | { type: 'club'; id: string; name: string; club_number: string | null; city: string | null; state: string | null }
+  | { type: 'zone'; id: string; code: string; name: string; chairperson_name: string | null;
+      region_id: string | null; regions: { id: string; code: string; name: string }[] }
+  | { type: 'club'; id: string; name: string; club_number: string | null; city: string | null; state: string | null;
+      zone_id: string | null; zones: { id: string; code: string; name: string }[] }
   | { type: 'member'; id: string; name: string; email: string | null; phone: string | null; status: string | null };
 
 /** Provided by the explorer; opens the edit modal for a node. */
@@ -46,7 +48,8 @@ function endpointFor(e: EditEntity): string {
   }
 }
 
-type Field = { key: string; label: string; type?: 'text' | 'select'; options?: string[]; required?: boolean };
+type Opt = { value: string; label: string };
+type Field = { key: string; label: string; type?: 'text' | 'select'; options?: Opt[]; required?: boolean };
 
 function fieldsFor(e: EditEntity): Field[] {
   switch (e.type) {
@@ -67,15 +70,22 @@ function fieldsFor(e: EditEntity): Field[] {
     ];
     case 'zone': return [
       { key: 'name', label: 'Zone Name', required: true }, { key: 'code', label: 'Code' },
+      // Parent region — required for consistency when the district has regions.
+      { key: 'region_id', label: 'Region (parent)', type: 'select',
+        options: [{ value: '', label: '— none —' }, ...e.regions.map((r) => ({ value: r.id, label: `${r.code} — ${r.name}` }))] },
       { key: 'chairperson_name', label: 'Zone Chairperson' },
     ];
     case 'club': return [
       { key: 'name', label: 'Club Name', required: true }, { key: 'club_number', label: 'LCI Club Number' },
+      // Parent zone — required for consistency when the district has zones.
+      { key: 'zone_id', label: 'Zone (parent)', type: 'select',
+        options: [{ value: '', label: '— none —' }, ...e.zones.map((z) => ({ value: z.id, label: `${z.code} — ${z.name}` }))] },
       { key: 'city', label: 'City' }, { key: 'state', label: 'State' },
     ];
     case 'member': return [
       { key: 'name', label: 'Name', required: true }, { key: 'email', label: 'Email' },
-      { key: 'phone', label: 'Phone' }, { key: 'status', label: 'Status', type: 'select', options: STATUSES },
+      { key: 'phone', label: 'Phone' },
+      { key: 'status', label: 'Status', type: 'select', options: STATUSES.map((s) => ({ value: s, label: s })) },
     ];
   }
 }
@@ -131,7 +141,7 @@ export function HierarchyEditModal({
               <span className={labelCls}>{fld.label}{fld.required && <span className="text-red-500"> *</span>}</span>
               {fld.type === 'select' ? (
                 <select className={inputCls} value={form[fld.key] ?? ''} onChange={(e) => setForm((s) => ({ ...s, [fld.key]: e.target.value }))}>
-                  {(fld.options ?? []).map((o) => <option key={o} value={o} className="capitalize">{o}</option>)}
+                  {(fld.options ?? []).map((o) => <option key={o.value} value={o.value} className="capitalize">{o.label}</option>)}
                 </select>
               ) : (
                 <input className={inputCls} value={form[fld.key] ?? ''} onChange={(e) => setForm((s) => ({ ...s, [fld.key]: e.target.value }))} />

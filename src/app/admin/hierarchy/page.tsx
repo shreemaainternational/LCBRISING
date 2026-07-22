@@ -45,9 +45,9 @@ export default async function HierarchyPage() {
     membersByClub.set(m.club_id, arr);
   }
 
-  const toClubNode = (c: { id: string; name: string; club_number: string | null; city?: string | null; state?: string | null }): ClubNode => ({
+  const toClubNode = (c: { id: string; name: string; club_number: string | null; city?: string | null; state?: string | null; zone_id?: string | null }): ClubNode => ({
     id: c.id, name: c.name, club_number: c.club_number ?? null,
-    city: c.city ?? null, state: c.state ?? null,
+    city: c.city ?? null, state: c.state ?? null, zone_id: c.zone_id ?? null,
     members: membersByClub.get(c.id) ?? [],
   });
 
@@ -67,7 +67,7 @@ export default async function HierarchyPage() {
   const zonesByRegion = new Map<string, ZoneNode[]>();
   const looseZonesByDistrict = new Map<string, ZoneNode[]>();
   for (const z of zones ?? []) {
-    const node: ZoneNode = { id: z.id, code: z.code, name: z.name, chairperson_name: z.chairperson_name ?? null, clubs: clubsByZone.get(z.id) ?? [] };
+    const node: ZoneNode = { id: z.id, code: z.code, name: z.name, chairperson_name: z.chairperson_name ?? null, region_id: z.region_id ?? null, clubs: clubsByZone.get(z.id) ?? [] };
     if (z.region_id) {
       const arr = zonesByRegion.get(z.region_id) ?? []; arr.push(node); zonesByRegion.set(z.region_id, arr);
     } else if (z.district_id) {
@@ -128,12 +128,12 @@ export default async function HierarchyPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-navy-800 mb-1 flex items-center gap-2">
-          <Network size={26} className="text-emerald-600" /> Federation Hierarchy
+          <Network size={26} className="text-emerald-600" /> Region / Zone Management
         </h1>
         <p className="text-gray-600">
-          Drill down Constitutional Area → Multiple District → District → Region → Zone → Club → Members. Expand any node,
-          and use <strong>Edit</strong> to update it inline. Expand a club to see its roster and add
-          members (single or bulk).
+          The active structure — Constitutional Area → Multiple District → District → Region → Zone → Club → Members.
+          Expand or collapse any node, <strong>+ Add</strong> a child, and <strong>Edit</strong> to update or
+          re-parent it (zone → region, club → zone). Expand a club to manage its roster.
         </p>
       </div>
 
