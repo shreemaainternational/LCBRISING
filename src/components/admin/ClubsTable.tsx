@@ -44,8 +44,26 @@ export function ClubsTable({
   const router = useRouter();
   const [editing, setEditing] = useState<ClubRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+
+  /** Inline reassign a club to another zone (or none). */
+  function moveZone(c: ClubRow, zoneId: string) {
+    if ((c.zone_id ?? '') === zoneId) return;
+    setError(null);
+    setMovingId(c.id);
+    start(async () => {
+      try {
+        const res = await fetch(`/api/crm/clubs/${c.id}`, {
+          method: 'PATCH', headers: await authHeaders(), body: JSON.stringify({ zone_id: zoneId || null }),
+        });
+        if (!res.ok) { const j = await res.json().catch(() => ({})); setError(typeof j.error === 'string' ? j.error : `Move failed (${res.status})`); return; }
+        router.refresh();
+      } catch { setError('Network error while moving.'); }
+      finally { setMovingId(null); }
+    });
+  }
 
   function remove(c: ClubRow) {
     if (!window.confirm(`Remove "${c.name}"? A club with members can't be removed until they're moved; this can be restored by an admin.`)) return;
@@ -81,6 +99,7 @@ export function ClubsTable({
             <tr>
               <th className="text-left p-3">Name</th>
               <th className="text-left p-3">District</th>
+              <th className="text-left p-3">Zone</th>
               <th className="text-left p-3">City</th>
               <th className="text-right p-3">Members</th>
               <th className="text-left p-3">Chartered</th>
@@ -95,6 +114,24 @@ export function ClubsTable({
                   {c.club_number && <div className="text-xs text-gray-500">LCI #{c.club_number}</div>}
                 </td>
                 <td className="p-3 text-gray-600">{c.district ?? '—'}</td>
+                <td className="p-3">
+                  <div className="inline-flex items-center gap-1.5">
+                    <select
+                      value={c.zone_id ?? ''}
+                      onChange={(e) => moveZone(c, e.target.value)}
+                      disabled={(pending && movingId === c.id) || !c.district_id}
+                      title={c.district_id ? 'Move to another zone' : 'Set a district first'}
+                      aria-label="Move club to zone"
+                      className="max-w-[9rem] px-2 py-1.5 rounded-md border border-gray-200 text-xs bg-white text-gray-700 disabled:opacity-60"
+                    >
+                      <option value="">— none —</option>
+                      {zones.filter((z) => z.district_id === c.district_id).map((z) => (
+                        <option key={z.id} value={z.id}>{z.code} — {z.name}</option>
+                      ))}
+                    </select>
+                    {pending && movingId === c.id && <Loader2 size={13} className="animate-spin text-gray-400" />}
+                  </div>
+                </td>
                 <td className="p-3 text-gray-600">
                   {c.city
                     ? <span className="inline-flex items-center gap-1"><MapPin size={11} />{c.city}{c.state ? `, ${c.state}` : ''}</span>

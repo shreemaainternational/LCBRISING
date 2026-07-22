@@ -46,8 +46,26 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
   const router = useRouter();
   const [editing, setEditing] = useState<MemberRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+
+  /** Inline reassign a member to another club (or Unassigned). */
+  function moveMember(m: MemberRow, clubId: string) {
+    if ((m.club_id ?? '') === clubId) return;
+    setError(null);
+    setMovingId(m.id);
+    start(async () => {
+      try {
+        const res = await fetch(`/api/crm/members/${m.id}`, {
+          method: 'PATCH', headers: await authHeaders(), body: JSON.stringify({ club_id: clubId || null }),
+        });
+        if (!res.ok) { const j = await res.json().catch(() => ({})); setError(typeof j.error === 'string' ? j.error : `Move failed (${res.status})`); return; }
+        router.refresh();
+      } catch { setError('Network error while moving.'); }
+      finally { setMovingId(null); }
+    });
+  }
 
   // Row selection for bulk actions. Held as a Set of member ids.
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -249,6 +267,18 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
                     <td className="p-3 text-gray-500">{m.joined_at ?? '—'}</td>
                     <td className="p-3">
                       <div className="flex items-center justify-end gap-1.5">
+                        <select
+                          value={m.club_id ?? ''}
+                          onChange={(e) => moveMember(m, e.target.value)}
+                          disabled={pending && movingId === m.id}
+                          title="Move to another club"
+                          aria-label="Move member to club"
+                          className="max-w-[9rem] px-2 py-1.5 rounded-md border border-gray-200 text-xs bg-white text-gray-700 disabled:opacity-60"
+                        >
+                          <option value="">Unassigned</option>
+                          {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                        {pending && movingId === m.id && <Loader2 size={13} className="animate-spin text-gray-400" />}
                         <button
                           type="button"
                           onClick={() => { setError(null); setEditing(m); }}
