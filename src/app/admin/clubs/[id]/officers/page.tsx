@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import AppointForm from './AppointForm';
+import ManageOfficers from './ManageOfficers';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +24,11 @@ type OfficerRow = {
   status: 'active' | 'past' | 'pending';
   notes: string | null;
   created_at: string;
+  officer_type: string | null;
+  is_district_cabinet: boolean | null;
+  address: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
 };
 
 type MemberRef = {
@@ -54,7 +59,7 @@ export default async function ClubOfficersPage({
       .maybeSingle(),
     supa
       .from('officers')
-      .select('id, member_id, role, term_start, term_end, status, notes, created_at')
+      .select('id, member_id, role, term_start, term_end, status, notes, created_at, officer_type, is_district_cabinet, address, contact_phone, contact_email')
       .eq('scope_kind', 'club')
       .eq('scope_id', clubId)
       .order('status')
@@ -65,16 +70,27 @@ export default async function ClubOfficersPage({
   const club = clubRes.data as Club;
   const officers = (officersRes.data ?? []) as OfficerRow[];
 
-  // Resolve member names in one query.
-  const memberIds = Array.from(new Set(officers.map((o) => o.member_id)));
-  let members: Record<string, MemberRef> = {};
-  if (memberIds.length > 0) {
-    const { data } = await supa
-      .from('members')
-      .select('id, name, email')
-      .in('id', memberIds);
-    members = Object.fromEntries(((data ?? []) as MemberRef[]).map((m) => [m.id, m]));
+  // Club roster (for the member picker) + resolve officer member names.
+  const { data: rosterData } = await supa
+    .from('members')
+    .select('id, name, email')
+    .eq('club_id', clubId)
+    .is('deleted_at', null)
+    .order('name');
+  const roster = (rosterData ?? []) as MemberRef[];
+  const members: Record<string, MemberRef> = Object.fromEntries(roster.map((m) => [m.id, m]));
+  // Officers may reference members outside the current roster (past terms) — backfill names.
+  const missing = officers.map((o) => o.member_id).filter((mid) => !members[mid]);
+  if (missing.length > 0) {
+    const { data } = await supa.from('members').select('id, name, email').in('id', Array.from(new Set(missing)));
+    for (const m of (data ?? []) as MemberRef[]) members[m.id] = m;
   }
+
+  const officerOpts = officers.map((o) => ({
+    id: o.id, member_id: o.member_id, member_name: members[o.member_id]?.name ?? o.member_id.slice(0, 8) + '…',
+    role: o.role, officer_type: o.officer_type, is_district_cabinet: !!o.is_district_cabinet, status: o.status,
+  }));
+  const memberOpts = roster.map((m) => ({ id: m.id, name: m.name, email: m.email }));
 
   return (
     <div>
@@ -85,27 +101,23 @@ export default async function ClubOfficersPage({
         <ArrowLeft size={14} /> Back to district
       </Link>
 
-      <header className="mb-6">
-        <Badge variant="default" className="mb-2">
-          {club.club_number ? `Club #${club.club_number}` : 'Club'}
-        </Badge>
-        <h1 className="text-3xl font-bold text-navy-800">{club.name}</h1>
-        <p className="text-gray-600 text-sm mt-1">Officer roster &amp; appointments</p>
+      <header className="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <Badge variant="default" className="mb-2">
+            {club.club_number ? `Club #${club.club_number}` : 'Club'}
+          </Badge>
+          <h1 className="text-3xl font-bold text-navy-800">{club.name}</h1>
+          <p className="text-gray-600 text-sm mt-1">Officer roster &amp; appointments</p>
+        </div>
+        <ManageOfficers clubId={clubId} members={memberOpts} officers={officerOpts} />
       </header>
 
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Appoint new officer</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AppointForm clubId={clubId} />
-          <p className="text-xs text-gray-500 mt-3">
-            Requires the actor to hold <code>officer.appoint</code> permission scoped to this
-            club (club president or higher). Past terms are kept on file for history; revoking
-            an officer marks the row <code>past</code>.
-          </p>
-        </CardContent>
-      </Card>
+      <p className="text-xs text-gray-500 mb-6">
+        Use <strong>Manage Officers</strong> to create a new assignment (Officer or Chairperson — a
+        chairperson is a district-cabinet member), end an assignment, or add an officer address.
+        Requires <code>officer.appoint</code> / <code>officer.revoke</code> scoped to this club. Past
+        terms stay on file.
+      </p>
 
       <Card>
         <CardHeader>
@@ -121,10 +133,11 @@ export default async function ClubOfficersPage({
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left p-3">Member</th>
-                  <th className="text-left p-3">Role</th>
+                  <th className="text-left p-3">Title</th>
+                  <th className="text-left p-3">Type</th>
                   <th className="text-left p-3">Term</th>
                   <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Notes</th>
+                  <th className="text-left p-3">Contact</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,13 +152,21 @@ export default async function ClubOfficersPage({
                         {m?.email && <div className="text-xs text-gray-500">{m.email}</div>}
                       </td>
                       <td className="p-3 capitalize">{o.role.replace(/_/g, ' ')}</td>
+                      <td className="p-3">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="capitalize text-xs">{o.officer_type ?? '—'}</span>
+                          {o.is_district_cabinet && <Badge variant="secondary">District cabinet</Badge>}
+                        </div>
+                      </td>
                       <td className="p-3 text-xs text-gray-600 whitespace-nowrap">
                         {o.term_start} → {o.term_end ?? 'present'}
                       </td>
                       <td className="p-3">
                         <Badge variant={STATUS_VARIANT[o.status]}>{o.status}</Badge>
                       </td>
-                      <td className="p-3 text-xs text-gray-600 max-w-xs">{o.notes ?? '—'}</td>
+                      <td className="p-3 text-xs text-gray-600 max-w-xs">
+                        {[o.address, o.contact_phone, o.contact_email].filter(Boolean).join(' · ') || '—'}
+                      </td>
                     </tr>
                   );
                 })}
