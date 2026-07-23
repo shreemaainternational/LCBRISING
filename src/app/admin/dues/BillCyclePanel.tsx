@@ -7,7 +7,43 @@ import {
 
 interface RateCard {
   id: string; code: string; name: string;
-  cadence: string; amount: number; currency: string;
+  cadence: string; amount: number; currency: string; gstPct: number;
+}
+
+const inr = (n: number) =>
+  n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** True for cards the bill-cycle engine multiplies by active-member count. */
+const isPerCapita = (rc: RateCard) =>
+  /per.capita/i.test(rc.name) || /per_capita/i.test(rc.code);
+
+/**
+ * Per-member (or per-invoice, for flat cards) INR the engine will bill —
+ * mirrors the math in src/lib/dues/billing.ts:
+ *   • USD card  → amount × fxRate, grossed up by GST
+ *   • INR card  → amount, grossed up by GST
+ * Returns null when a USD card has no FX rate yet.
+ */
+function computeRate(rc: RateCard, fx: number | null) {
+  const gross = 1 + rc.gstPct / 100;
+  if (rc.currency === 'USD') {
+    if (!fx) return null;
+    const base = Math.round(rc.amount * fx * 100) / 100;
+    const total = Math.round(rc.amount * fx * gross * 100) / 100;
+    return { base, total };
+  }
+  const base = rc.amount;
+  const total = Math.round(rc.amount * gross * 100) / 100;
+  return { base, total };
+}
+
+/** Human-readable rate expression, e.g. "50 USD × 94.35 + 18% GST". */
+function rateExpr(rc: RateCard, fx: number | null) {
+  const gst = rc.gstPct > 0 ? ` + ${rc.gstPct}% GST` : '';
+  if (rc.currency === 'USD') {
+    return `${rc.amount} USD × ${fx ?? 'rate'}${gst}`;
+  }
+  return rc.gstPct > 0 ? `₹${inr(rc.amount)}${gst}` : `₹${inr(rc.amount)} flat`;
 }
 
 interface Props {
@@ -108,6 +144,60 @@ export function BillCyclePanel({ tier, rateCards }: Props) {
           </label>
         </div>
       </div>
+
+      {rateCards.length > 0 && (() => {
+        const fx = fxRate ? Number(fxRate) : null;
+        const shown = code ? rateCards.filter((r) => r.code === code) : rateCards;
+        return (
+          <div className="mt-3 pt-3 border-t border-amber-200">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 mb-1.5">
+              Rate preview
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-gray-500">
+                    <th className="py-1 pr-3 font-medium">Rate card</th>
+                    <th className="py-1 pr-3 font-medium">Rate</th>
+                    <th className="py-1 pr-3 font-medium text-right">
+                      Per {tier === 'club' ? 'active member' : 'invoice'} (INR)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown.map((rc) => {
+                    const r = computeRate(rc, fx);
+                    const perCapita = isPerCapita(rc);
+                    return (
+                      <tr key={rc.id} className="border-t border-amber-100/70">
+                        <td className="py-1 pr-3 text-gray-700">
+                          {rc.name}
+                          {perCapita && (
+                            <span className="ml-1.5 text-[10px] text-amber-700">× active members</span>
+                          )}
+                        </td>
+                        <td className="py-1 pr-3 text-gray-600 tabular-nums">{rateExpr(rc, fx)}</td>
+                        <td className="py-1 pr-3 text-right tabular-nums font-semibold text-navy-800">
+                          {r === null ? (
+                            <span className="text-gray-400">enter USD → INR rate</span>
+                          ) : rc.currency === 'USD' && rc.gstPct > 0 ? (
+                            <span>
+                              <span className="text-gray-400 font-normal">₹{inr(r.base)} → × {(1 + rc.gstPct / 100).toFixed(2)} = </span>
+                              ₹{inr(r.total)}
+                            </span>
+                          ) : (
+                            <>₹{inr(r.total)}</>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="flex items-center gap-3 mt-3 pt-3 border-t border-amber-200">
         <button type="button" onClick={run} disabled={pending}
