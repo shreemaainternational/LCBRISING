@@ -25,8 +25,10 @@ export interface QuickField {
   step?: number;
   /** Layout — half-width column on md+ when set. */
   half?: boolean;
-  /** Transform value before submitting (e.g. parseFloat). */
-  cast?: 'number' | 'int' | 'boolean';
+  /** Transform value before submitting (e.g. parseFloat). 'datetime' reads a
+   *  `datetime-local` value as browser-local wall-clock time and emits an ISO
+   *  8601 string, so the API receives the instant the admin actually picked. */
+  cast?: 'number' | 'int' | 'boolean' | 'datetime';
   /** photos field: storage folder + recommended minimum count. */
   folder?: string;
   minPhotos?: number;
@@ -144,6 +146,12 @@ export function QuickAddCard({
       if (f.cast === 'number')       payload[f.name] = Number(raw);
       else if (f.cast === 'int')     payload[f.name] = parseInt(String(raw), 10);
       else if (f.cast === 'boolean') payload[f.name] = !!raw;
+      else if (f.cast === 'datetime') {
+        // Browser-local wall-clock ("YYYY-MM-DDTHH:mm") → ISO 8601 with the
+        // user's timezone applied. Leave unparseable input untouched.
+        const d = new Date(String(raw));
+        payload[f.name] = Number.isNaN(d.getTime()) ? raw : d.toISOString();
+      }
       else                           payload[f.name] = raw;
     }
     // Serializable photo promotion (server-rendered presets use this

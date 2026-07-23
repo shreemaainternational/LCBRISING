@@ -293,7 +293,7 @@ export function socialPreset(): Omit<QuickAddCardProps, 'title'> {
       ] },
       { name: 'caption', label: 'Caption', type: 'textarea', required: true, placeholder: 'Write or paste the post copy…' },
       { name: 'image_url', label: 'Image URL', type: 'url', hint: 'Optional cover image (or upload below)' },
-      { name: 'scheduled_at', label: 'Schedule (optional)', type: 'datetime-local', hint: 'Leave blank to publish immediately' },
+      { name: 'scheduled_at', label: 'Schedule (optional)', type: 'datetime-local', cast: 'datetime', hint: 'Leave blank to publish immediately' },
       { name: 'photos', label: 'Upload media', type: 'photos',
         folder: 'social', minPhotos: 1, maxPhotos: 10,
         hint: 'Upload cover image or carousel photos.' },
