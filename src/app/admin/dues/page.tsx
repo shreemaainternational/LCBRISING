@@ -130,7 +130,7 @@ export default async function DuesPage({ searchParams }: Props) {
 
       <BillCyclePanel
         tier={tier}
-        rateCards={(rateCards ?? []).map((r) => ({ id: r.id, code: r.code, name: r.name, cadence: r.cadence, amount: Number(r.amount), currency: r.currency }))}
+        rateCards={(rateCards ?? []).map((r) => ({ id: r.id, code: r.code, name: r.name, cadence: r.cadence, amount: Number(r.amount), currency: r.currency, gstPct: Number(r.gst_pct ?? 0) }))}
       />
 
       <Card>

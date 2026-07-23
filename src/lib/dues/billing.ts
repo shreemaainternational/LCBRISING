@@ -196,7 +196,7 @@ async function runClubLevelTier(
       amount = rc.amount * (count ?? 0);
     }
     // INR value = (currency amount × FX) grossed up by GST.
-    //   • USD international dues: convert then add GST (e.g. 50 USD × 94.35 × 1.18).
+    //   • USD international dues: convert then add GST (e.g. 25 USD × 94.35 × 1.18).
     //   • INR dues with GST: gross up the flat amount.
     //   • INR dues without GST: leave amount_inr null (compliance falls back to `amount`).
     let amountInr: number | null = null;

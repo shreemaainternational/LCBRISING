@@ -2,10 +2,12 @@
 -- LCBRising — apply 18% GST to the dues fee schedule and (re)compute the
 -- affected invoices on the production database.
 --
--- Fee schedule being encoded:
+-- Fee schedule being encoded (LCI standard, effective 1 July 2025):
 --   • District Dues      — ₹350 per active member (half-yearly, no GST)
---   • International Dues — 50 USD per active member, converted at the
---                          USD→INR rate and grossed up by 18% GST.
+--   • International Dues — 25 USD per active member per half-year
+--                          (50 USD/yr, billed in two instalments),
+--                          converted at the USD→INR rate and grossed up
+--                          by 18% GST.
 --
 -- Idempotent + safe to re-run. Settled invoices (paid/waived/cancelled)
 -- are never touched. Runs on the server, so member counts are real.
@@ -35,12 +37,15 @@ update public.dues_rate_cards
  where code = 'DISTRICT_PER_CAPITA';
 
 update public.dues_rate_cards
-   set amount = 50, currency = 'USD', gst_pct = 18, updated_at = now()
+   set amount = 25, currency = 'USD', cadence = 'half_yearly', gst_pct = 18,
+       description = 'Half-yearly per active member — US$25 (US$50/yr) + 18% GST',
+       updated_at = now()
  where code = 'LCI_PER_CAPITA';
 
 -- ---------------------------------------------------------------------
 -- 3. UPDATE existing International per-capita invoices (unsettled only):
---    50 USD × active-member-count, INR = USD × 94.348698 × 1.18.
+--    25 USD × active-member-count per half-year,
+--    INR = USD × 94.348698 × 1.18.
 -- ---------------------------------------------------------------------
 with mc as (
   select club_id, count(*)::numeric as n
@@ -49,10 +54,10 @@ with mc as (
    group by club_id
 )
 update public.dues_invoices di
-   set amount     = 50 * mc.n,
+   set amount     = 25 * mc.n,
        currency   = 'USD',
        fx_rate    = 94.348698,
-       amount_inr = round(50 * mc.n * 94.348698 * 1.18, 2),
+       amount_inr = round(25 * mc.n * 94.348698 * 1.18, 2),
        updated_at = now()
   from mc
  where di.club_id = mc.club_id
