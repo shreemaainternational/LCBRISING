@@ -116,3 +116,5 @@ select tier,
  where tier in ('district', 'international')
  group by tier
  order by tier;
+
+-- re-apply trigger: dues fee schedule at US$25/half-year + 18% GST (idempotent).
