@@ -8,7 +8,11 @@ import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 import { loadLionsApiSettings } from '@/lib/oidc/lions-api-runtime';
 import { loadLionsPortalSettings } from '@/lib/oidc/lions-portal-runtime';
 import { LionsSyncPanel } from './LionsSyncPanel';
+import { AutoSyncPanel } from './AutoSyncPanel';
 import { DistrictPortalUpload } from '@/components/admin/DistrictPortalUpload';
+import { getAutoSyncState } from '@/lib/sync/lions-auto';
+import { getAutomationSettings } from '@/lib/automation/settings';
+import { Zap } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +22,7 @@ export default async function LionsSyncPage() {
   const apiConfig = apiConfigured ? getLionsApiConfig() : null;
   const oidcConfigured = isOidcConfigured();
   const portalConfigured = isLionsPortalConfigured();
+  const [autoState, automation] = await Promise.all([getAutoSyncState(), getAutomationSettings()]);
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -119,8 +124,29 @@ export default async function LionsSyncPage() {
         </Card>
       </div>
 
+      <Card className="border-amber-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap size={16} className="text-amber-500" /> Automated sync
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-4 text-sm text-gray-600">
+            Fetches districts, clubs &amp; members from the Lions Portal on a daily schedule and updates
+            the system automatically — then runs an AI duplicate scan to flag merged-member candidates.
+            Configure the schedule &amp; toggles on the{' '}
+            <a href="/admin/automation" className="text-amber-700 hover:underline">Automation</a> page.
+          </p>
+          <AutoSyncPanel
+            enabled={automation.lions_auto_sync_enabled}
+            scheduleLabel="Daily · 01:00"
+            initialState={autoState}
+          />
+        </CardContent>
+      </Card>
+
       <Card>
-        <CardHeader><CardTitle>Run Sync</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Run Sync manually</CardTitle></CardHeader>
         <CardContent>
           <LionsSyncPanel apiConfigured={apiConfigured} portalConfigured={portalConfigured} />
         </CardContent>

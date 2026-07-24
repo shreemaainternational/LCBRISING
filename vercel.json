@@ -35,6 +35,10 @@
       "schedule": "0 10 * * *"
     },
     {
+      "path": "/api/cron/lions-sync",
+      "schedule": "0 1 * * *"
+    },
+    {
       "path": "/api/cron/blog-sync",
       "schedule": "0 2 * * *"
     }

@@ -11,7 +11,7 @@ async function loadSettings(): Promise<{ settings: AutomationSettings; unavailab
     const db = createAdminClient();
     const { data, error } = await db
       .from('automation_settings')
-      .select('officer_digest_enabled, birthday_greetings_enabled, anniversary_greetings_enabled, dues_reminders_enabled')
+      .select('officer_digest_enabled, birthday_greetings_enabled, anniversary_greetings_enabled, dues_reminders_enabled, lions_auto_sync_enabled, lions_auto_dedupe_enabled')
       .eq('id', 'singleton')
       .maybeSingle();
     if (error) return { settings: AUTOMATION_DEFAULTS, unavailable: true };
