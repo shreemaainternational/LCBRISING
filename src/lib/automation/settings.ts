@@ -17,7 +17,7 @@ export async function getAutomationSettings(): Promise<AutomationSettings> {
     const db = createAdminClient();
     const { data, error } = await db
       .from('automation_settings')
-      .select('officer_digest_enabled, birthday_greetings_enabled, anniversary_greetings_enabled, dues_reminders_enabled, lions_auto_sync_enabled, lions_auto_dedupe_enabled')
+      .select('officer_digest_enabled, birthday_greetings_enabled, anniversary_greetings_enabled, dues_reminders_enabled, lions_auto_sync_enabled, lions_auto_dedupe_enabled, enterprise_automation_enabled, auto_heal_enabled, auto_alert_enabled')
       .eq('id', 'singleton')
       .maybeSingle();
     if (error || !data) return AUTOMATION_DEFAULTS;
@@ -28,6 +28,9 @@ export async function getAutomationSettings(): Promise<AutomationSettings> {
       dues_reminders_enabled: data.dues_reminders_enabled ?? true,
       lions_auto_sync_enabled: data.lions_auto_sync_enabled ?? true,
       lions_auto_dedupe_enabled: data.lions_auto_dedupe_enabled ?? true,
+      enterprise_automation_enabled: data.enterprise_automation_enabled ?? true,
+      auto_heal_enabled: data.auto_heal_enabled ?? true,
+      auto_alert_enabled: data.auto_alert_enabled ?? true,
     };
   } catch {
     return AUTOMATION_DEFAULTS;
