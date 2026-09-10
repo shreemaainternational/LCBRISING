@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/server';
-import { Plus, Activity, Calendar, MapPin } from 'lucide-react';
+import { Plus, Activity, Calendar, MapPin, Clock } from 'lucide-react';
+import { formatActivityTimeRange } from '@/lib/utils';
 import { activityCategoryLabel } from '@/lib/activity-categories';
 
 export const dynamic = 'force-dynamic';
@@ -33,6 +34,11 @@ export default async function MobileActivities() {
                   <span className="inline-flex items-center gap-1">
                     <Calendar size={10} />{new Date(a.date).toLocaleDateString('en-IN')}
                   </span>
+                  {formatActivityTimeRange(a.start_at, a.end_at) && (
+                    <span className="inline-flex items-center gap-1">
+                      <Clock size={10} />{formatActivityTimeRange(a.start_at, a.end_at)}
+                    </span>
+                  )}
                   {a.location && (
                     <span className="inline-flex items-center gap-1">
                       <MapPin size={10} />{a.location}

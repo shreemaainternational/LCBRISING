@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/server';
 import { ArrowLeft, Calendar, MapPin, Users, Clock, Banknote } from 'lucide-react';
-import { formatINR } from '@/lib/utils';
+import { formatINR, formatActivityWhen } from '@/lib/utils';
 import { activityCategoryLabel } from '@/lib/activity-categories';
 import { collectActivityPhotos, collectActivityVideos } from '@/lib/activity-media';
 
@@ -27,7 +27,7 @@ export default async function MobileActivityDetail({ params }: { params: Promise
         )}
         <h1 className="text-xl font-bold text-navy-800">{a.title}</h1>
         <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-2">
-          <span className="inline-flex items-center gap-1"><Calendar size={11} /> {new Date(a.date).toLocaleDateString('en-IN')}</span>
+          <span className="inline-flex items-center gap-1"><Calendar size={11} /> {formatActivityWhen(a.start_at, a.end_at, a.date)}</span>
           {a.location && <span className="inline-flex items-center gap-1"><MapPin size={11} /> {a.location}</span>}
         </div>
         {a.description && <p className="text-sm text-gray-700 mt-3">{a.description}</p>}
