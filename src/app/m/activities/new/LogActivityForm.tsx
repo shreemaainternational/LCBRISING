@@ -3,12 +3,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Save, AlertCircle, CheckCircle2, MapPin, ScanLine } from 'lucide-react';
 import { PhotoMultiUpload } from '@/components/admin/PhotoMultiUpload';
-
-const CATEGORIES = [
-  'vision', 'hunger', 'environment', 'diabetes', 'childhood_cancer',
-  'humanitarian', 'youth', 'education', 'healthcare', 'women', 'senior',
-  'meeting', 'leadership_program', 'event', 'other',
-];
+import { ACTIVITY_CATEGORY_OPTIONS } from '@/lib/activity-categories';
 
 /** Local "YYYY-MM-DDTHH:mm" string suitable for a datetime-local input. */
 function nowLocalInput() {
@@ -145,7 +140,9 @@ export function LogActivityForm() {
 
       <Field label="Category">
         <select value={category} onChange={(e) => setCategory(e.target.value)} className={input}>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
+          {ACTIVITY_CATEGORY_OPTIONS.map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
         </select>
       </Field>
 

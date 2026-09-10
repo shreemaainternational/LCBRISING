@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requireAdminPage } from '@/lib/auth';
@@ -7,12 +6,7 @@ import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { eventsPreset } from '@/components/admin/quick-add-presets';
 import { Calendar } from 'lucide-react';
-import {
-  EVENT_CATEGORY_GROUPS,
-  getEventCategory,
-  getEventCategoryGroup,
-  groupCategorySlugs,
-} from '@/lib/event-categories';
+import { getEventCategory, getEventCategoryGroup, groupCategorySlugs } from '@/lib/event-categories';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,34 +37,13 @@ export default async function AdminEventsPage({
         <QuickAddCard title="Event" {...preset} />
       </div>
 
-      {/* Category filter */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        <FilterChip href="/admin/events" label="All" active={!activeGroup} />
-        {EVENT_CATEGORY_GROUPS.map((g) => (
-          <FilterChip
-            key={g.key}
-            href={`/admin/events?group=${g.key}`}
-            label={g.title}
-            active={activeGroup?.key === g.key}
-          />
-        ))}
-      </div>
-
       {!events?.length ? (
-        activeGroup ? (
-          <Card>
-            <CardContent className="p-8 text-center text-sm text-gray-500">
-              No {activeGroup.title.toLowerCase()} events yet.
-            </CardContent>
-          </Card>
-        ) : (
-          <EmptyState
-            icon={<Calendar size={26} />}
-            title="No events yet"
-            description="Create your first event below. A QR code is auto-issued so attendees can self check-in."
-            cta={<QuickAddCard title="Event" {...preset} />}
-          />
-        )
+        <EmptyState
+          icon={<Calendar size={26} />}
+          title="No events yet"
+          description="Create your first event below. A QR code is auto-issued so attendees can self check-in."
+          cta={<QuickAddCard title="Event" {...preset} />}
+        />
       ) : (
         <Card>
           <CardHeader><CardTitle>{events.length} events</CardTitle></CardHeader>
@@ -107,20 +80,5 @@ export default async function AdminEventsPage({
         </Card>
       )}
     </div>
-  );
-}
-
-function FilterChip({ href, label, active }: { href: string; label: string; active: boolean }) {
-  return (
-    <Link
-      href={href}
-      className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
-        active
-          ? 'bg-navy-800 border-navy-800 text-white'
-          : 'bg-white border-gray-200 text-navy-700 hover:border-brand-400 hover:text-brand-600'
-      }`}
-    >
-      {label}
-    </Link>
   );
 }

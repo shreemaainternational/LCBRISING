@@ -65,7 +65,11 @@ export function EventCard({
   const inner = (
     <>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={image} alt={event.title} className="h-44 w-full object-cover" />
+      <img
+        src={image}
+        alt={event.title}
+        className="h-44 w-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+      />
       <div className="p-6 flex flex-col flex-1">
         <span className="inline-block self-start bg-blue-50 text-navy-700 px-3 py-1 rounded-full text-xs font-semibold mb-3">
           {categoryLabel}

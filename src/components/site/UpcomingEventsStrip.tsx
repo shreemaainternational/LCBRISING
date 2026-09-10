@@ -1,25 +1,14 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/env';
+import { getUpcomingPublicEvents } from '@/lib/events';
 import { type EventRow } from '@/components/site/EventCard';
 import { UpcomingEventsGrid } from '@/components/site/UpcomingEventsGrid';
 
+// Reads through the RLS-resilient helper (service-role client when
+// configured) so the homepage strip isn't blanked by the events_public_read
+// policy recursion on databases missing migration 0059.
 async function getUpcoming(): Promise<EventRow[]> {
-  if (!isSupabaseConfigured()) return [];
-  try {
-    const supa = await createClient();
-    const { data } = await supa
-      .from('events')
-      .select('id, title, date, end_date, location, description, cover_url, category, photos')
-      .eq('is_public', true)
-      .gte('date', new Date().toISOString())
-      .order('date')
-      .limit(3);
-    return (data ?? []) as EventRow[];
-  } catch {
-    return [];
-  }
+  return (await getUpcomingPublicEvents(3)) as EventRow[];
 }
 
 export async function UpcomingEventsStrip() {

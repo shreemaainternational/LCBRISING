@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured, env } from '@/lib/env';
+import { getUpcomingPublicEvents, getPastPublicEvents } from '@/lib/events';
+import { env } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { type EventRow } from '@/components/site/EventCard';
 import { EventsBrowser } from '@/components/site/EventsBrowser';
@@ -41,29 +41,13 @@ export const metadata: Metadata = { title: 'Events', alternates: { canonical: '/
 export const revalidate = 60;
 
 export default async function EventsPage() {
-  let upcoming: EventRow[] = [];
-  let past: EventRow[] = [];
-  if (isSupabaseConfigured()) {
-    const supabase = await createClient();
-    const now = new Date().toISOString();
-    const [u, p] = await Promise.all([
-      supabase
-        .from('events')
-        .select('*')
-        .eq('is_public', true)
-        .gte('date', now)
-        .order('date'),
-      supabase
-        .from('events')
-        .select('*')
-        .eq('is_public', true)
-        .lt('date', now)
-        .order('date', { ascending: false })
-        .limit(24),
-    ]);
-    upcoming = (u.data ?? []) as EventRow[];
-    past = (p.data ?? []) as EventRow[];
-  }
+  // Read through the RLS-resilient helpers (service-role client when
+  // configured) so the public listing isn't blanked by the
+  // events_public_read policy recursion on databases missing migration 0059.
+  const [upcoming, past] = await Promise.all([
+    getUpcomingPublicEvents(),
+    getPastPublicEvents(24),
+  ]);
 
   const allForSeo = [...upcoming, ...past];
 
@@ -83,7 +67,7 @@ export default async function EventsPage() {
       />
 
       <section className="container-page py-16 md:py-20">
-        <EventsBrowser upcoming={upcoming} past={past} />
+        <EventsBrowser upcoming={upcoming as EventRow[]} past={past as EventRow[]} />
       </section>
     </>
   );
