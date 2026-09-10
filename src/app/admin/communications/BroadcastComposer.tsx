@@ -1,7 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+
+type TemplateOption = {
+  id: string;
+  label: string;
+  subject: string | null;
+  body: string;
+};
 
 const SEGMENTS = [
   { value: 'all_active', label: 'All active members' },
@@ -37,6 +44,21 @@ export default function BroadcastComposer() {
   const [body, setBody] = useState('');
   const [result, setResult] = useState<ApiResult | null>(null);
   const [pending, startTransition] = useTransition();
+  const [templates, setTemplates] = useState<TemplateOption[]>([]);
+
+  useEffect(() => {
+    fetch('/api/admin/templates')
+      .then((r) => r.json())
+      .then((d) => setTemplates(d.templates ?? []))
+      .catch(() => setTemplates([]));
+  }, []);
+
+  function applyTemplate(id: string) {
+    const t = templates.find((x) => x.id === id);
+    if (!t) return;
+    if (t.subject) setSubject(t.subject);
+    setBody(t.body);
+  }
 
   async function call(dry: boolean) {
     setResult(null);
@@ -63,6 +85,22 @@ export default function BroadcastComposer() {
 
   return (
     <div className="grid gap-4">
+      {templates.length > 0 && (
+        <label className="text-sm">
+          <span className="block mb-1 text-gray-600">Load a saved template</span>
+          <select
+            defaultValue=""
+            onChange={(e) => { applyTemplate(e.target.value); e.currentTarget.value = ''; }}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white"
+          >
+            <option value="" disabled>Choose a template…</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>{t.label}</option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <div className="grid sm:grid-cols-2 gap-3">
         <label className="text-sm">
           <span className="block mb-1 text-gray-600">Recipient segment</span>

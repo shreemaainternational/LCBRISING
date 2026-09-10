@@ -2,6 +2,7 @@ import { PublicNav } from '@/components/site/PublicNav';
 import { Footer } from '@/components/site/Footer';
 import { PWARegister } from '@/components/site/PWARegister';
 import { PageViewBeacon } from '@/components/site/PageViewBeacon';
+import { OrganizationJsonLd } from '@/components/site/StructuredData';
 
 export default function PublicLayout({
   children,
@@ -12,6 +13,7 @@ export default function PublicLayout({
 }) {
   return (
     <>
+      <OrganizationJsonLd />
       <PublicNav />
       <main className="min-h-[calc(100vh-4rem)]">{children}</main>
       {modal}

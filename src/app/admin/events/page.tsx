@@ -1,27 +1,30 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { integrations } from '@/lib/env';
+import { requireAdminPage } from '@/lib/auth';
 import { formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { eventsPreset } from '@/components/admin/quick-add-presets';
 import { Calendar } from 'lucide-react';
-import { getEventCategory } from '@/lib/event-categories';
+import { getEventCategory, getEventCategoryGroup, groupCategorySlugs } from '@/lib/event-categories';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminEventsPage() {
-  // Read through the service-role client when available so the admin table
-  // is not blanked by the events_public_read RLS policy, which trips
-  // "infinite recursion detected in policy for relation members" on databases
-  // where migration 0059 has not been applied. This page is already gated by
-  // the admin layout (getCurrentMember → redirect), so bypassing RLS to list
-  // all events here is safe.
-  const supabase = integrations.supabaseAdmin ? createAdminClient() : await createClient();
-  const { data: events } = await supabase
-    .from('events')
-    .select('*')
-    .order('date', { ascending: false });
+export default async function AdminEventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ group?: string }>;
+}) {
+  await requireAdminPage();
+  // Service-role read: the events select policy sub-selects members, which
+  // trips RLS recursion under the user session on DBs missing migration 0059.
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
+  const { group: groupKey } = await searchParams;
+  const activeGroup = groupKey ? getEventCategoryGroup(groupKey) : undefined;
+
+  let query = supabase.from('events').select('*').order('date', { ascending: false });
+  if (activeGroup) query = query.in('category', groupCategorySlugs(activeGroup));
+  const { data: events } = await query;
   const preset = eventsPreset();
 
   return (

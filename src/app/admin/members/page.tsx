@@ -1,15 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { BulkMemberUpload } from '@/components/admin/BulkMemberUpload';
 import { MembersTable, type MemberRow } from '@/components/admin/MembersTable';
 import { EmptyState } from '@/components/admin/EmptyState';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import { membersPreset } from '@/components/admin/quick-add-presets';
 import { Users } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MembersPage() {
+  await requireAdminPage();
   // Read via the service-role client (this page is inside the admin-gated
   // layout) so the roster query bypasses RLS. The members SELECT policy is
   // self-referential on databases where migration 0059 has not been applied,
@@ -31,7 +34,25 @@ export default async function MembersPage() {
           <h1 className="text-3xl font-bold text-navy-800 mb-1">Members</h1>
           <p className="text-gray-600">All members across the chapter.</p>
         </div>
-        <QuickAddCard title="Member" {...preset} />
+        <div className="flex flex-col sm:flex-row gap-2">
+          {!!members?.length && (
+            <ExportCsvButton
+              rows={members}
+              filename="members"
+              columns={[
+                { key: 'name', label: 'Name' },
+                { key: 'email', label: 'Email' },
+                { key: 'phone', label: 'Phone' },
+                { key: 'whatsapp', label: 'WhatsApp' },
+                { key: 'role', label: 'Role' },
+                { key: 'status', label: 'Status' },
+                { key: 'lions_member_id', label: 'Membership No.' },
+                { key: 'created_at', label: 'Joined' },
+              ]}
+            />
+          )}
+          <QuickAddCard title="Member" {...preset} />
+        </div>
       </div>
 
       <div className="mb-6">

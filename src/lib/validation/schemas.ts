@@ -58,6 +58,22 @@ export const officerSchema = z.object({
   term_end: z.string().optional().nullable(),
   status: z.enum(['active', 'past', 'pending']).default('active'),
   notes: z.string().max(2000).optional().nullable(),
+  // Lions portal "Manage Officers" fields.
+  officer_type: z.enum(['officer', 'chairperson']).optional().nullable(),
+  is_district_cabinet: z.boolean().optional(),
+  address: z.string().max(2000).optional().nullable(),
+  contact_phone: z.string().max(50).optional().nullable(),
+  contact_email: z.string().max(200).optional().nullable(),
+});
+
+/** PATCH payload for ending an assignment or adding an officer address. */
+export const officerUpdateSchema = z.object({
+  status: z.enum(['active', 'past', 'pending']).optional(),
+  term_end: z.string().optional().nullable(),
+  address: z.string().max(2000).optional().nullable(),
+  contact_phone: z.string().max(50).optional().nullable(),
+  contact_email: z.string().max(200).optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
 });
 
 export const attendanceSchema = z.object({

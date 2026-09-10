@@ -33,6 +33,7 @@ async function excelToCsv(file: File): Promise<string> {
 const ALLOWED: SyncEntity[] = [
   'members',
   'clubs',
+  'districts',
   'officers',
   'attendance',
   'donations',

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Search, Calendar, Newspaper, Globe, Tv } from 'lucide-react';
+import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
 
 export type MediaItem = {
   id: string;
@@ -12,6 +13,21 @@ export type MediaItem = {
   image: string;
   url?: string;
 };
+
+function toDetail(m: MediaItem): DetailItem {
+  return {
+    id: m.id,
+    title: m.title,
+    kicker: `${m.type} · ${m.outlet}`,
+    dateLabel: m.date,
+    photos: [m.image],
+    body: `Media coverage of Lions Club of Baroda Rising Star by ${m.outlet} (${m.type}).`,
+    ctas: m.url
+      ? [{ href: m.url, label: 'Read original coverage', external: true, variant: 'navy' }]
+      : undefined,
+    sharePath: '/media',
+  };
+}
 
 const TYPE_META: Record<
   MediaItem['type'],
@@ -24,6 +40,7 @@ const TYPE_META: Record<
 
 export function MediaExplorer({ items }: { items: MediaItem[] }) {
   const [query, setQuery] = useState('');
+  const [open, setOpen] = useState<DetailItem | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -70,18 +87,12 @@ export function MediaExplorer({ items }: { items: MediaItem[] }) {
               {filtered.map((m) => {
                 const meta = TYPE_META[m.type];
                 const Icon = meta.icon;
-                const Wrapper = m.url ? 'a' : 'div';
                 return (
-                  <Wrapper
+                  <button
                     key={m.id}
-                    {...(m.url
-                      ? {
-                          href: m.url,
-                          target: '_blank',
-                          rel: 'noopener noreferrer',
-                        }
-                      : {})}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group"
+                    type="button"
+                    onClick={() => setOpen(toDetail(m))}
+                    className="text-left bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group hover:shadow-md transition-shadow"
                   >
                     <div className="relative">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -108,13 +119,15 @@ export function MediaExplorer({ items }: { items: MediaItem[] }) {
                         {m.title}
                       </h3>
                     </div>
-                  </Wrapper>
+                  </button>
                 );
               })}
             </div>
           )}
         </div>
       </section>
+
+      <DetailModal item={open} onClose={() => setOpen(null)} />
     </>
   );
 }

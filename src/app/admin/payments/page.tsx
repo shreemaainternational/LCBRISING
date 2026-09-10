@@ -10,6 +10,7 @@ import { RecurringCard } from './RecurringCard';
 import { SendInvoiceButton } from './SendInvoiceButton';
 import { RefundButton } from './RefundButton';
 import { CollectionsChart } from './PaymentCharts';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -132,7 +133,23 @@ export default async function AdminPaymentsPage() {
             <strong>{pendingProofs.length}</strong> proof(s) awaiting review
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {rows.length > 0 && (
+            <ExportCsvButton
+              rows={rows}
+              filename="invoices"
+              label="Invoices CSV"
+              columns={[
+                { key: 'invoice_no', label: 'Invoice No' },
+                { key: 'customer_name', label: 'Customer' },
+                { key: 'customer_email', label: 'Email' },
+                { key: 'customer_phone', label: 'Phone' },
+                { key: 'amount', label: 'Amount' },
+                { key: 'status', label: 'Status' },
+                { key: 'created_at', label: 'Created' },
+              ]}
+            />
+          )}
           <a
             href="/api/payments/reconciliation"
             className="h-9 px-4 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-50 inline-flex items-center"

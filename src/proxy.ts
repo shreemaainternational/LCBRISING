@@ -112,7 +112,18 @@ export async function proxy(request: NextRequest) {
   );
 
   // IMPORTANT: refreshes and persists the session for this request.
-  const { data: { user } } = await supabase.auth.getUser();
+  // getUser() throws (rather than returning { user: null }) when the
+  // refresh token cookie is present but invalid/revoked — e.g. after a
+  // Supabase project reset or a token consumed by a concurrent request.
+  // Left uncaught this crashed the middleware and 500'd every request
+  // carrying that cookie, admin and public alike. Treat it the same as
+  // "no session" instead.
+  let user = null;
+  try {
+    ({ data: { user } } = await supabase.auth.getUser());
+  } catch {
+    user = null;
+  }
 
   // Only /admin/* gets the redirect-to-login treatment.
   if (isAdminPath && !user) {

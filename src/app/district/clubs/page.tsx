@@ -7,7 +7,7 @@ import { Building2, AlertTriangle } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 const RISK_PILL = (s: number | null): { label: string; cls: string } => {
-  if (s == null) return { label: '—', cls: 'bg-gray-100 text-gray-500' };
+  if (s == null) return { label: 'New', cls: 'bg-gray-100 text-gray-500' };
   if (s >= 85)   return { label: 'Thriving', cls: 'bg-emerald-100 text-emerald-700' };
   if (s >= 70)   return { label: 'Healthy',  cls: 'bg-lime-100 text-lime-700' };
   if (s >= 50)   return { label: 'Watch',    cls: 'bg-amber-100 text-amber-800' };

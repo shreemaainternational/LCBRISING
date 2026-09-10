@@ -15,13 +15,16 @@ type Photo = {
   is_featured: boolean;
   display_order: number;
   created_at: string;
+  source_name: string | null;
+  source_url: string | null;
+  media_type: string | null;
 };
 
 export default async function AdminMediaPage() {
   const supa = await createClient();
   const { data } = await supa
     .from('photos')
-    .select('id, url, title, caption, category, is_featured, display_order, created_at')
+    .select('id, url, title, caption, category, is_featured, display_order, created_at, source_name, source_url, media_type')
     .is('deleted_at', null)
     .order('category')
     .order('display_order')
@@ -79,6 +82,11 @@ export default async function AdminMediaPage() {
                             <span className="text-brand-300 font-semibold">★ featured</span>
                           )}
                         </div>
+                        {p.category === 'press' && p.source_name && (
+                          <div className="text-[10px] text-gray-300 mt-0.5 truncate">
+                            {p.media_type ?? 'Online'} · {p.source_name}
+                          </div>
+                        )}
                       </div>
                       <DeletePhotoButton id={p.id} />
                     </div>

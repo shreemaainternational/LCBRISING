@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { Users, Plus, MapPin, Phone, Calendar } from 'lucide-react';
 import { formatINR } from '@/lib/utils';
 import { BeneficiarySearch } from './BeneficiarySearch';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,12 +40,29 @@ export default async function BeneficiariesPage({ searchParams }: Props) {
             Track who you serve, what you&apos;ve delivered, follow-up status and demographics.
           </p>
         </div>
-        <Link
-          href="/admin/beneficiaries/new"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-navy-900 text-white text-sm font-medium hover:bg-navy-800"
-        >
-          <Plus size={16} /> Add Beneficiary
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {!!beneficiaries?.length && (
+            <ExportCsvButton
+              rows={beneficiaries}
+              filename="beneficiaries"
+              columns={[
+                { key: 'full_name', label: 'Name' },
+                { key: 'phone', label: 'Phone' },
+                { key: 'email', label: 'Email' },
+                { key: 'gender', label: 'Gender' },
+                { key: 'city', label: 'City' },
+                { key: 'last_service_date', label: 'Last Served' },
+                { key: 'total_value_received', label: 'Value Received' },
+              ]}
+            />
+          )}
+          <Link
+            href="/admin/beneficiaries/new"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-navy-900 text-white text-sm font-medium hover:bg-navy-800"
+          >
+            <Plus size={16} /> Add Beneficiary
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

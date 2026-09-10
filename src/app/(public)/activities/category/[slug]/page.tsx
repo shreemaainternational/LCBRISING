@@ -19,6 +19,8 @@ type ActivityRow = {
   date: string;
   location: string | null;
   beneficiaries: number | null;
+  lion_members_count: number | null;
+  service_hours: number | null;
   category: string | null;
   photos: string[] | null;
   before_photos: string[] | null;
@@ -39,7 +41,7 @@ async function loadByCategory(slug: string): Promise<CauseActivity[]> {
     const { data } = await supabase
       .from('activities')
       .select(
-        'id, title, description, date, location, beneficiaries, category, photos, before_photos, after_photos, photo_captions',
+        'id, title, description, date, location, beneficiaries, lion_members_count, service_hours, category, photos, before_photos, after_photos, photo_captions',
       )
       .eq('category', slug)
       .eq('approval_status', 'approved')
@@ -53,6 +55,8 @@ async function loadByCategory(slug: string): Promise<CauseActivity[]> {
       date: a.date,
       location: a.location,
       beneficiaries: a.beneficiaries,
+      lionMembers: a.lion_members_count,
+      serviceHours: a.service_hours,
       category: a.category,
       photos: Array.from(
         new Set([

@@ -10,6 +10,7 @@ export type PublicEventRow = {
   location: string | null;
   cover_url: string | null;
   category: string | null;
+  photos: string[] | null;
 };
 
 /**

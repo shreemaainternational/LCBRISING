@@ -104,6 +104,11 @@ export function getIntegrationRegistry(): IntegrationDescriptor[] {
 type BaseDescriptor = Omit<IntegrationDescriptor, 'status' | 'modeLabel'>;
 
 function baseRegistry(): BaseDescriptor[] {
+  // Ayrshare is a single-key gateway: when it is connected, the public
+  // social networks post through it instead of per-platform tokens, so
+  // Facebook / Instagram / LinkedIn count as live even without Meta /
+  // LinkedIn credentials of their own.
+  const viaAyrshare = integrations.ayrshare;
   return [
     // ---------------- IDENTITY ----------------
     {
@@ -280,45 +285,64 @@ function baseRegistry(): BaseDescriptor[] {
 
     // ---------------- SOCIAL ----------------
     {
+      key: 'ayrshare',
+      name: 'Ayrshare (Social gateway)',
+      category: 'social',
+      description: 'Single-key gateway that posts to every connected network (Facebook, Instagram, LinkedIn, X, TikTok…). When set, it powers the Social cards below — no per-platform Meta / LinkedIn tokens needed. Connect accounts once at ayrshare.com.',
+      configured: integrations.ayrshare,
+      envVars: [
+        v('AYRSHARE_API_KEY', true, { hint: 'From the Ayrshare dashboard → API Key' }),
+        v('AYRSHARE_PROFILE_KEY', false, { hint: 'Business plan only — for multi-profile posting' }),
+      ],
+      whenMissing: 'Social posting falls back to per-platform Meta / LinkedIn credentials (if set).',
+      adminHref: '/admin/social',
+    },
+    {
       key: 'facebook',
       name: 'Meta — Facebook Pages',
       category: 'social',
-      description: 'Auto-post to the club Facebook Page with images & captions.',
-      configured: integrations.facebook,
+      description: viaAyrshare
+        ? 'Auto-post to the club Facebook Page (via Ayrshare) with images & captions.'
+        : 'Auto-post to the club Facebook Page with images & captions.',
+      configured: integrations.facebook || viaAyrshare,
       envVars: [
         v('META_APP_ID', false),
         v('META_APP_SECRET', false),
         v('META_ACCESS_TOKEN', true),
         v('FACEBOOK_PAGE_ID', true),
       ],
-      whenMissing: 'Facebook posting from /admin/social is disabled.',
+      whenMissing: 'Facebook posting from /admin/social is disabled. Connect Facebook in Ayrshare, or set the Meta vars below.',
       adminHref: '/admin/social',
     },
     {
       key: 'instagram',
       name: 'Meta — Instagram Business',
       category: 'social',
-      description: 'Auto-post to the club Instagram Business account.',
-      configured: integrations.instagram,
+      description: viaAyrshare
+        ? 'Auto-post to the club Instagram Business account (via Ayrshare).'
+        : 'Auto-post to the club Instagram Business account.',
+      configured: integrations.instagram || viaAyrshare,
       envVars: [
         v('META_ACCESS_TOKEN', true),
         v('INSTAGRAM_BUSINESS_ID', true),
       ],
-      whenMissing: 'Instagram posting from /admin/social is disabled.',
+      whenMissing: 'Instagram posting from /admin/social is disabled. Connect Instagram in Ayrshare, or set the Meta vars below.',
       adminHref: '/admin/social',
     },
     {
       key: 'linkedin',
       name: 'LinkedIn Organization',
       category: 'social',
-      description: 'Auto-post to the club LinkedIn organization page.',
-      configured: integrations.linkedin,
+      description: viaAyrshare
+        ? 'Auto-post to the club LinkedIn organization page (via Ayrshare).'
+        : 'Auto-post to the club LinkedIn organization page.',
+      configured: integrations.linkedin || viaAyrshare,
       envVars: [
         v('LINKEDIN_CLIENT_ID', false),
         v('LINKEDIN_ACCESS_TOKEN', true),
         v('LINKEDIN_ORGANIZATION_URN', true, { hint: 'urn:li:organization:1234567' }),
       ],
-      whenMissing: 'LinkedIn posting from /admin/social is disabled.',
+      whenMissing: 'LinkedIn posting from /admin/social is disabled. Connect LinkedIn in Ayrshare, or set the LinkedIn vars below.',
       adminHref: '/admin/social',
     },
 

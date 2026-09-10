@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import {
   ShieldCheck, Users, CalendarCheck, CalendarDays,
-  HeartHandshake, Megaphone, GraduationCap, Sparkles,
+  HeartHandshake, Megaphone, GraduationCap, Sparkles, Images,
 } from 'lucide-react';
 import {
   Card, CardHeading, LeadershipStrip, StatTile, RowCard, IconAction, roleLabel,
@@ -136,6 +136,7 @@ export default async function MobileHome() {
           <IconAction icon={HeartHandshake} label="Service Activities" href="/m/activities" />
           <IconAction icon={CalendarDays} label="Programs" href="/m/events" />
           <IconAction icon={Megaphone} label="Member Stories" href="/blog" />
+          <IconAction icon={Images} label="Photo Gallery" href="/m/gallery" />
         </div>
       </Card>
 

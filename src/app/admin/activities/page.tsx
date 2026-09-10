@@ -5,6 +5,7 @@ import { formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { BulkActivityUpload } from '@/components/admin/BulkActivityUpload';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import { activitiesPreset } from '@/components/admin/quick-add-presets';
 import { activityCategoryLabel } from '@/lib/activity-categories';
 import { Activity as ActivityIcon, Pencil } from 'lucide-react';
@@ -48,6 +49,23 @@ export default async function AdminActivitiesPage({
           <p className="text-gray-600">Service projects and reporting.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
+          {!!activities?.length && (
+            <ExportCsvButton
+              rows={activities}
+              filename="activities"
+              columns={[
+                { key: 'title', label: 'Title' },
+                { key: 'category', label: 'Category' },
+                { key: 'date', label: 'Date' },
+                { key: 'location', label: 'Location' },
+                { key: 'beneficiaries', label: 'Beneficiaries' },
+                { key: 'lion_members_count', label: 'Lion Members' },
+                { key: 'service_hours', label: 'Service Hours' },
+                { key: 'amount_raised', label: 'Funds Raised' },
+                { key: 'approval_status', label: 'Status' },
+              ]}
+            />
+          )}
           <BulkActivityUpload clubs={clubOptions} />
           <QuickAddCard title="Service Activity" {...preset} />
         </div>
@@ -97,6 +115,7 @@ export default async function AdminActivitiesPage({
                     <th className="text-left p-3">Category</th>
                     <th className="text-left p-3">Date</th>
                     <th className="text-right p-3">Beneficiaries</th>
+                    <th className="text-right p-3">Lions</th>
                     <th className="text-right p-3">Hours</th>
                     <th className="text-right p-3">Raised</th>
                     <th className="text-right p-3">Edit</th>
@@ -113,6 +132,7 @@ export default async function AdminActivitiesPage({
                       <td className="p-3">{a.category ? activityCategoryLabel(a.category) : '—'}</td>
                       <td className="p-3">{formatDate(a.date)}</td>
                       <td className="p-3 text-right">{a.beneficiaries}</td>
+                      <td className="p-3 text-right">{a.lion_members_count ?? 0}</td>
                       <td className="p-3 text-right">{Number(a.service_hours)}</td>
                       <td className="p-3 text-right">{Number(a.amount_raised)}</td>
                       <td className="p-3 text-right">

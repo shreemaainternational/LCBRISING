@@ -7,7 +7,7 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { env, integrations } from '@/lib/env';
 
-export type ClubRiskLevel = 'thriving' | 'healthy' | 'watch' | 'at_risk' | 'critical';
+export type ClubRiskLevel = 'thriving' | 'healthy' | 'watch' | 'at_risk' | 'critical' | 'unrated';
 
 export interface ClubHealthBreakdown {
   membership: number;
@@ -79,7 +79,7 @@ async function assessFromClub(club: ClubInput): Promise<ClubHealthAssessment> {
     db.from('members').select('id, status').eq('club_id', club.id).is('deleted_at', null),
     db.from('activities').select('beneficiaries, amount_raised, sponsorship_amount, service_hours, date').eq('club_id', club.id).gte('date', since90.slice(0, 10)),
     db.from('volunteer_logs').select('hours, member_id'),
-    db.from('dues').select('amount, status').eq('status', 'pending'),
+    db.from('dues').select('amount, status, member_id').eq('status', 'pending'),
     db.from('attendance').select('status, member_id, occurred_at').gte('occurred_at', since60),
     db.from('activities').select('date').eq('club_id', club.id).order('date', { ascending: false }).limit(1),
   ]);
@@ -99,7 +99,10 @@ async function assessFromClub(club: ClubInput): Promise<ClubHealthAssessment> {
   const fundsLast90d = (acts ?? []).reduce((a, b) => a + Number(b.amount_raised ?? 0) + Number(b.sponsorship_amount ?? 0), 0);
   const activityHours = (acts ?? []).reduce((a, b) => a + Number(b.service_hours ?? 0), 0);
 
-  const duesPendingCount = (dues ?? []).length;
+  // Scope pending dues to this club's own members (the dues table keys on
+  // member_id, not club_id) so one club isn't penalised for the whole
+  // federation's outstanding invoices.
+  const duesPendingCount = (dues ?? []).filter((d) => memberIds.has(d.member_id)).length;
   const avgVolHours = activeMembers ? activityHours / activeMembers : 0;
   const lastActivityDate = lastAct?.[0]?.date ? new Date(lastAct[0].date as string) : null;
   const reportingCadenceDays = lastActivityDate ? Math.floor((Date.now() - lastActivityDate.getTime()) / 86400_000) : null;
@@ -141,6 +144,13 @@ async function assessFromClub(club: ClubInput): Promise<ClubHealthAssessment> {
     breakdown.compliance * WEIGHTS.compliance,
   );
 
+  // A club with no operational history yet (no activities, attendance, dues or
+  // funds on record) can't be meaningfully scored — everything but the finance
+  // base reads as zero, which would brand every brand-new club "critical".
+  // Mark it 'unrated' instead so it shows neutrally until real data arrives.
+  const hasSignal = activitiesLast90d > 0 || clubAtt.length > 0 || duesPendingCount > 0 || fundsLast90d > 0;
+  const risk: ClubRiskLevel = hasSignal ? classify(score) : 'unrated';
+
   // ------------ Flags ---------------------------------------------
   const flags: string[] = [];
   if (totalMembers < 15)         flags.push('Roster below charter threshold');
@@ -154,7 +164,7 @@ async function assessFromClub(club: ClubInput): Promise<ClubHealthAssessment> {
   return {
     clubId: club.id,
     score,
-    risk: classify(score),
+    risk,
     breakdown,
     flags,
     metrics: {
@@ -196,11 +206,12 @@ export async function assessAllClubs(): Promise<ClubHealthAssessment[]> {
   return results;
 }
 
-/** Persist score onto the club row. */
+/** Persist score onto the club row. Unrated clubs store a null score so the UI
+ *  shows them neutrally ("New") rather than as a misleading low number. */
 export async function persistClubHealth(a: ClubHealthAssessment): Promise<void> {
   const db = createAdminClient();
   await db.from('clubs').update({
-    health_score: a.score,
+    health_score: a.risk === 'unrated' ? null : a.score,
     health_assessed_at: a.assessedAt,
     health_commentary: a.commentary ?? null,
   }).eq('id', a.clubId);
@@ -237,4 +248,5 @@ export const RISK_META: Record<ClubRiskLevel, { label: string; color: string; ch
   watch:    { label: 'Watch',     color: '#F59E0B', chip: 'bg-amber-100 text-amber-800' },
   at_risk:  { label: 'At risk',   color: '#EA580C', chip: 'bg-orange-100 text-orange-700' },
   critical: { label: 'Critical',  color: '#DC2626', chip: 'bg-rose-100 text-rose-700' },
+  unrated:  { label: 'New',       color: '#6B7280', chip: 'bg-gray-100 text-gray-500' },
 };

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { formatINR, formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import { donationsPreset } from '@/components/admin/quick-add-presets';
 import { HeartHandshake } from 'lucide-react';
 
@@ -26,7 +27,24 @@ export default async function DonationsPage() {
           <h1 className="text-3xl font-bold text-navy-800 mb-1">Donations</h1>
           <p className="text-gray-600">Total raised: <strong>{formatINR(total)}</strong></p>
         </div>
-        <QuickAddCard title="Offline Donation" {...preset} />
+        <div className="flex flex-col sm:flex-row gap-2">
+          {!!donations?.length && (
+            <ExportCsvButton
+              rows={donations}
+              filename="donations"
+              columns={[
+                { key: 'donor_name', label: 'Donor', get: (d) => (d.is_anonymous ? 'Anonymous' : d.donor_name) },
+                { key: 'donor_email', label: 'Email' },
+                { key: 'donor_phone', label: 'Phone' },
+                { key: 'campaign', label: 'Campaign' },
+                { key: 'amount', label: 'Amount' },
+                { key: 'receipt_no', label: 'Receipt' },
+                { key: 'created_at', label: 'Date' },
+              ]}
+            />
+          )}
+          <QuickAddCard title="Offline Donation" {...preset} />
+        </div>
       </div>
 
       {!donations?.length ? (
