@@ -10,13 +10,14 @@ create table if not exists public.site_counters (
   updated_at timestamptz not null default now()
 );
 
--- Seed with a baseline so the public counter never reads as brand-new.
--- If the row already exists with a lower value, bump it up to the
--- baseline (real tracked visits accumulate on top of this).
+-- `value` holds ONLY real tracked visits and starts at 0. The public
+-- "TOTAL VISITORS" baseline (so the site never reads as brand-new) is a
+-- presentation concern applied in the app (VISITOR_BASELINE in Footer.tsx),
+-- added on top of this value. Do NOT seed the baseline here — that would
+-- double-count it against the app-side baseline.
 insert into public.site_counters (key, value)
-values ('visits', 25889)
-on conflict (key) do update
-  set value = greatest(public.site_counters.value, 25889);
+values ('visits', 0)
+on conflict (key) do nothing;
 
 create or replace function public.increment_visits()
 returns bigint

@@ -38,6 +38,26 @@ export async function createClient() {
 }
 
 /**
+ * Client for a trusted admin write that has ALREADY passed an authorization
+ * guard (requireAdmin / requirePermission). Returns the service-role client
+ * when SUPABASE_SERVICE_ROLE_KEY is configured so the INSERT/UPDATE and its
+ * `.select()` read-back bypass RLS.
+ *
+ * Why this matters: several table policies sub-select public.members
+ * (events, dues, zones/districts admin-write, the members self-read policy
+ * itself). The original members policies are self-referential, so any query
+ * that reaches them through RLS trips "infinite recursion detected in policy
+ * for relation members" on databases where migration 0059 has not been
+ * applied. Bypassing RLS for these already-authorized writes avoids the
+ * error regardless of DB state. Falls back to the user's session when no
+ * service-role key is set (relies on migrations 0037 + 0059 being applied).
+ */
+export async function createAuthorizedWriteClient() {
+  if (env.SUPABASE_SERVICE_ROLE_KEY) return createAdminClient();
+  return createClient();
+}
+
+/**
  * Service-role client. NEVER import in client code.
  * Bypasses RLS — use only in trusted server-side flows
  * (webhooks, cron jobs, admin actions).

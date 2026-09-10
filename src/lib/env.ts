@@ -74,6 +74,15 @@ const schema = z.object({
   // and return a synthetic admin member. Remove in production.
   ADMIN_AUTH_BYPASS: z.string().optional(),
 
+  // Vercel-injected deployment environment: 'production' | 'preview' | 'development'.
+  // Lets us treat preview/branch deploys as non-production even though
+  // Vercel builds them with NODE_ENV=production.
+  VERCEL_ENV: z.string().optional(),
+  // Explicit opt-in to allow the Lions sandbox sign-in on the LIVE
+  // production domain (set to "true"). Off by default — the sandbox mints
+  // a privileged synthetic session, so this must be a conscious choice.
+  LIONS_SANDBOX_ALLOW_PRODUCTION: z.string().optional(),
+
   // --- AI ---
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
@@ -96,6 +105,13 @@ const schema = z.object({
   LINKEDIN_CLIENT_SECRET: z.string().optional(),
   LINKEDIN_ACCESS_TOKEN: z.string().optional(),
   LINKEDIN_ORGANIZATION_URN: z.string().optional(),
+
+  // --- Ayrshare (single-key gateway to FB / IG / LinkedIn / X / TikTok …) ---
+  // When set, social posts route through Ayrshare instead of per-platform
+  // Meta / LinkedIn credentials. Connect each network once in the Ayrshare
+  // dashboard. PROFILE_KEY is only needed for Business-plan multi-profile.
+  AYRSHARE_API_KEY: z.string().optional(),
+  AYRSHARE_PROFILE_KEY: z.string().optional(),
 
   // --- WhatsApp Business (Cloud API alt to Twilio) ---
   WHATSAPP_BUSINESS_PHONE_ID: z.string().optional(),
@@ -149,6 +165,21 @@ const schema = z.object({
   LIONS_API_MULTI_DISTRICT_CODE: z.string().optional(),
   LIONS_WEBHOOK_SECRET: z.string().optional(),
 
+  // --- Lions Portal (District Governor login) sync (optional) ---
+  LIONS_PORTAL_LOGIN_URL: z.string().url().optional(),
+  LIONS_PORTAL_DATA_URL: z.string().url().optional(),
+  LIONS_PORTAL_USERNAME: z.string().optional(),
+  LIONS_PORTAL_PASSWORD: z.string().optional(),
+  LIONS_PORTAL_DISTRICT_CODE: z.string().optional(),
+
+  // --- Lions newsroom blog crawler (public content, no auth) ---
+  LIONS_BLOG_BASE_URL: z.string().url().default('https://www.lionsclubs.org'),
+  LIONS_BLOG_PATH: z.string().default('/en/blog'),
+  LIONS_BLOG_USER_AGENT: z.string().optional(),
+  LIONS_BLOG_CONCURRENCY: z.coerce.number().int().min(1).max(16).optional(),
+  LIONS_BLOG_MAX_POSTS: z.coerce.number().int().min(0).optional(),
+  LIONS_BLOG_AUTOPUBLISH: z.string().optional(), // '1' → publish on import
+
   // --- Secret encryption at rest (AES-256-GCM wrapper) ---
   SECRET_ENCRYPTION_KEY: z.string().optional(),
 
@@ -177,6 +208,8 @@ const parsed = schema.parse({
   CRON_SECRET: process.env.CRON_SECRET,
   ADMIN_BOOTSTRAP_EMAIL: process.env.ADMIN_BOOTSTRAP_EMAIL,
   ADMIN_AUTH_BYPASS: process.env.ADMIN_AUTH_BYPASS,
+  VERCEL_ENV: process.env.VERCEL_ENV,
+  LIONS_SANDBOX_ALLOW_PRODUCTION: process.env.LIONS_SANDBOX_ALLOW_PRODUCTION,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_MODEL: process.env.OPENAI_MODEL,
   CANVA_CLIENT_ID: process.env.CANVA_CLIENT_ID,
@@ -192,6 +225,8 @@ const parsed = schema.parse({
   LINKEDIN_CLIENT_SECRET: process.env.LINKEDIN_CLIENT_SECRET,
   LINKEDIN_ACCESS_TOKEN: process.env.LINKEDIN_ACCESS_TOKEN,
   LINKEDIN_ORGANIZATION_URN: process.env.LINKEDIN_ORGANIZATION_URN,
+  AYRSHARE_API_KEY: process.env.AYRSHARE_API_KEY,
+  AYRSHARE_PROFILE_KEY: process.env.AYRSHARE_PROFILE_KEY,
   WHATSAPP_BUSINESS_PHONE_ID: process.env.WHATSAPP_BUSINESS_PHONE_ID,
   WHATSAPP_BUSINESS_TOKEN: process.env.WHATSAPP_BUSINESS_TOKEN,
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
@@ -227,6 +262,17 @@ const parsed = schema.parse({
   LIONS_API_DISTRICT_CODE: process.env.LIONS_API_DISTRICT_CODE,
   LIONS_API_MULTI_DISTRICT_CODE: process.env.LIONS_API_MULTI_DISTRICT_CODE,
   LIONS_WEBHOOK_SECRET: process.env.LIONS_WEBHOOK_SECRET,
+  LIONS_PORTAL_LOGIN_URL: process.env.LIONS_PORTAL_LOGIN_URL,
+  LIONS_PORTAL_DATA_URL: process.env.LIONS_PORTAL_DATA_URL,
+  LIONS_PORTAL_USERNAME: process.env.LIONS_PORTAL_USERNAME,
+  LIONS_PORTAL_PASSWORD: process.env.LIONS_PORTAL_PASSWORD,
+  LIONS_PORTAL_DISTRICT_CODE: process.env.LIONS_PORTAL_DISTRICT_CODE,
+  LIONS_BLOG_BASE_URL: process.env.LIONS_BLOG_BASE_URL,
+  LIONS_BLOG_PATH: process.env.LIONS_BLOG_PATH,
+  LIONS_BLOG_USER_AGENT: process.env.LIONS_BLOG_USER_AGENT,
+  LIONS_BLOG_CONCURRENCY: process.env.LIONS_BLOG_CONCURRENCY,
+  LIONS_BLOG_MAX_POSTS: process.env.LIONS_BLOG_MAX_POSTS,
+  LIONS_BLOG_AUTOPUBLISH: process.env.LIONS_BLOG_AUTOPUBLISH,
   SECRET_ENCRYPTION_KEY: process.env.SECRET_ENCRYPTION_KEY,
   VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
@@ -247,6 +293,32 @@ export const env = parsed;
  */
 export function isDevAuthBypass(): boolean {
   return process.env.NODE_ENV !== 'production' && parsed.ADMIN_AUTH_BYPASS === '1';
+}
+
+/**
+ * True only on the LIVE production deployment.
+ *
+ * Vercel builds preview/branch deploys with NODE_ENV=production, so we
+ * prefer VERCEL_ENV (which is 'preview' for those) when it's present and
+ * only fall back to NODE_ENV off Vercel. This lets preview URLs behave
+ * like non-production while the real production domain stays locked down.
+ */
+export function isLiveProduction(): boolean {
+  if (parsed.VERCEL_ENV) return parsed.VERCEL_ENV === 'production';
+  return process.env.NODE_ENV === 'production';
+}
+
+/**
+ * Whether the Lions sandbox sign-in route may run.
+ *
+ * Allowed off live production (local dev + Vercel preview/branch deploys),
+ * or on live production only when LIONS_SANDBOX_ALLOW_PRODUCTION="true" is
+ * explicitly set. The route still additionally requires the admin-only
+ * sandbox_mode DB toggle, so this is defense-in-depth, not the sole gate.
+ */
+export function isLionsSandboxAllowed(): boolean {
+  if (!isLiveProduction()) return true;
+  return parsed.LIONS_SANDBOX_ALLOW_PRODUCTION === 'true';
 }
 
 export function requireSupabaseEnv() {
@@ -277,6 +349,7 @@ export const integrations = {
   facebook: Boolean(parsed.META_ACCESS_TOKEN && parsed.FACEBOOK_PAGE_ID),
   instagram: Boolean(parsed.META_ACCESS_TOKEN && parsed.INSTAGRAM_BUSINESS_ID),
   linkedin: Boolean(parsed.LINKEDIN_ACCESS_TOKEN && parsed.LINKEDIN_ORGANIZATION_URN),
+  ayrshare: Boolean(parsed.AYRSHARE_API_KEY),
   whatsappBusiness: Boolean(parsed.WHATSAPP_BUSINESS_TOKEN && parsed.WHATSAPP_BUSINESS_PHONE_ID),
   cloudinary: Boolean(parsed.CLOUDINARY_CLOUD_NAME && parsed.CLOUDINARY_API_KEY && parsed.CLOUDINARY_API_SECRET),
   upi: Boolean(parsed.UPI_VPA),
@@ -284,3 +357,24 @@ export const integrations = {
   lionsOidc: Boolean(parsed.LIONS_OIDC_ISSUER && parsed.LIONS_OIDC_CLIENT_ID && parsed.LIONS_OIDC_REDIRECT_URI),
   webPush: Boolean(parsed.VAPID_PUBLIC_KEY && parsed.VAPID_PRIVATE_KEY),
 };
+
+/**
+ * Crawl-config overrides for the Lions newsroom blog sync, derived from
+ * environment. Returns only the keys that are actually set so the library
+ * defaults (src/lib/blog-sync/lions-newsroom.ts) fill in the rest.
+ */
+export function blogSyncEnvConfig(): Record<string, unknown> {
+  const cfg: Record<string, unknown> = {
+    baseUrl: parsed.LIONS_BLOG_BASE_URL,
+    blogPath: parsed.LIONS_BLOG_PATH,
+    articlePathPrefix: parsed.LIONS_BLOG_PATH.replace(/\/+$/, '') + '/',
+  };
+  if (parsed.LIONS_BLOG_USER_AGENT) cfg.userAgent = parsed.LIONS_BLOG_USER_AGENT;
+  if (parsed.LIONS_BLOG_CONCURRENCY != null) cfg.concurrency = parsed.LIONS_BLOG_CONCURRENCY;
+  if (parsed.LIONS_BLOG_MAX_POSTS != null) cfg.maxPosts = parsed.LIONS_BLOG_MAX_POSTS;
+  return cfg;
+}
+
+export function blogSyncAutoPublish(): boolean {
+  return parsed.LIONS_BLOG_AUTOPUBLISH === '1';
+}

@@ -92,6 +92,22 @@ export interface District {
   cabinet_treasurer_name: string | null;
   lions_year: string | null;
   source_id: string | null;
+  // Lions Portal-shaped fields (see migration 0065).
+  multiple_district_code: string | null;
+  constitutional_area: string | null;
+  status: string | null;
+  first_vice_governor_name: string | null;
+  second_vice_governor_name: string | null;
+  governor_email: string | null;
+  governor_phone: string | null;
+  club_count: number | null;
+  member_count: number | null;
+  region_count: number | null;
+  zone_count: number | null;
+  effective_date: string | null;
+  website: string | null;
+  last_portal_sync_at: string | null;
+  portal_raw: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }

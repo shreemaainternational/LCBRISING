@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Calendar, MapPin } from 'lucide-react';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { CAUSES } from '@/lib/causes';
+import { getAllPublicEvents } from '@/lib/events';
+import { formatDate } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'Service Activities',
@@ -11,7 +13,15 @@ export const metadata: Metadata = {
   alternates: { canonical: '/activities' },
 };
 
-export default function ActivitiesPage() {
+const EVENT_FALLBACK_IMAGES = [
+  'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=900&q=70',
+  'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=900&q=70',
+  'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=900&q=70',
+];
+
+export default async function ActivitiesPage() {
+  const events = await getAllPublicEvents();
+
   return (
     <>
       <PageHero
@@ -61,6 +71,68 @@ export default function ActivitiesPage() {
           ))}
         </div>
       </section>
+
+      {/* Events — public events with their posters/photos */}
+      {events.length > 0 && (
+        <section id="events" className="scroll-mt-28 bg-gray-50 border-t border-gray-200 py-16 md:py-20">
+          <div className="container-page">
+            <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
+              <div>
+                <span className="inline-block bg-blue-50 text-navy-700 px-3 py-1 rounded-full text-xs font-semibold mb-3">
+                  Events
+                </span>
+                <h2 className="text-3xl md:text-4xl font-bold text-navy-800">
+                  Installations, Meetings &amp; Celebrations
+                </h2>
+              </div>
+              <Link
+                href="/events"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 hover:text-brand-600"
+              >
+                View all events
+                <ArrowRight size={15} aria-hidden />
+              </Link>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-7">
+              {events.map((e, i) => {
+                const image = e.cover_url || EVENT_FALLBACK_IMAGES[i % EVENT_FALLBACK_IMAGES.length];
+                return (
+                  <Link
+                    key={e.id}
+                    href={`/events/${e.id}`}
+                    className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition-shadow"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={image}
+                      alt={e.title}
+                      loading="lazy"
+                      className="h-48 w-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+                    />
+                    <div className="p-6 flex flex-col flex-1">
+                      <div className="text-xs text-brand-600 font-medium mb-1.5 flex items-center gap-1.5">
+                        <Calendar size={13} aria-hidden />
+                        {formatDate(e.date)}
+                      </div>
+                      <h3 className="font-bold text-lg text-navy-800 mb-2">{e.title}</h3>
+                      {e.description && (
+                        <p className="text-sm text-gray-600 line-clamp-3 mb-4">{e.description}</p>
+                      )}
+                      {e.location && (
+                        <div className="mt-auto text-xs text-gray-500 flex items-center gap-1.5">
+                          <MapPin size={13} className="text-brand-500 flex-shrink-0" aria-hidden />
+                          <span>{e.location}</span>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Get involved CTA */}
       <section className="bg-gray-50 py-16 md:py-20">

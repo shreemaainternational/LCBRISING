@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { formatINR } from '@/lib/utils';
 import { Users, Banknote, HeartHandshake, Activity as ActivityIcon } from 'lucide-react';
 import {
@@ -85,6 +86,7 @@ async function getDashboardData() {
 }
 
 export default async function AdminDashboard() {
+  await requireAdminPage();
   const d = await getDashboardData();
 
   return (

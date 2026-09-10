@@ -1,9 +1,9 @@
-import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { zonesPreset } from '@/components/admin/quick-add-presets';
+import { ZonesTable, type ZoneRow } from '@/components/admin/ZonesTable';
 import { MapPin } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -17,28 +17,47 @@ type Zone = {
   district_id: string;
 };
 
-type DistrictRef = { id: string; code: string };
+type DistrictRef = { id: string; code: string; name: string };
 
 export default async function ZonesPage() {
-  const supa = await createClient();
+  // Read via the service-role client (gated by the admin layout) so the zones
+  // list survives databases where the `members` RLS policy recurses; fall back
+  // to the SSR session when no service-role key is set.
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
-  const [zonesRes, districtsRes, clubCountsRes] = await Promise.all([
+  const [zonesRes, districtsRes, regionsRes, clubCountsRes] = await Promise.all([
     supa.from('zones').select('id, code, name, chairperson_name, region_id, district_id')
       .is('deleted_at', null).order('code'),
     supa.from('districts').select('id, code, name').is('deleted_at', null).order('code'),
+    supa.from('regions').select('id, code, name, district_id').is('deleted_at', null).order('code'),
     supa.from('clubs').select('zone_id').is('deleted_at', null),
   ]);
 
   const zones = (zonesRes.data ?? []) as Zone[];
+  const districtOptions = (districtsRes.data ?? []) as DistrictRef[];
+  const regionOptions = (regionsRes.data ?? []) as { id: string; code: string; name: string; district_id: string }[];
   const districts: Record<string, DistrictRef> = Object.fromEntries(
-    ((districtsRes.data ?? []) as DistrictRef[]).map((d) => [d.id, d]),
+    districtOptions.map((d) => [d.id, d]),
   );
+  const regionCodeById = new Map(regionOptions.map((r) => [r.id, r.code]));
   const clubsByZone = new Map<string, number>();
   for (const c of (clubCountsRes.data ?? []) as { zone_id: string | null }[]) {
     if (c.zone_id) clubsByZone.set(c.zone_id, (clubsByZone.get(c.zone_id) ?? 0) + 1);
   }
 
-  const preset = zonesPreset({ districts: districtsRes.data ?? [] });
+  const zoneRows: ZoneRow[] = zones.map((z) => ({
+    id: z.id,
+    code: z.code,
+    name: z.name,
+    chairperson_name: z.chairperson_name,
+    district_id: z.district_id,
+    district_code: districts[z.district_id]?.code ?? null,
+    region_id: z.region_id,
+    region_code: z.region_id ? regionCodeById.get(z.region_id) ?? null : null,
+    club_count: clubsByZone.get(z.id) ?? 0,
+  }));
+
+  const preset = zonesPreset({ districts: districtOptions });
 
   return (
     <div>
@@ -62,32 +81,9 @@ export default async function ZonesPage() {
         />
       ) : (
         <Card>
-          <CardHeader><CardTitle>{zones.length} zones</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{zoneRows.length} zones</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-3">Code</th>
-                  <th className="text-left p-3">Name</th>
-                  <th className="text-left p-3">District</th>
-                  <th className="text-left p-3">Chairperson</th>
-                  <th className="text-right p-3">Clubs</th>
-                </tr>
-              </thead>
-              <tbody>
-                {zones.map((z) => (
-                  <tr key={z.id} className="border-t">
-                    <td className="p-3 font-mono">
-                      <Link href={`/admin/zones/${z.id}`} className="text-navy-700 hover:underline">{z.code}</Link>
-                    </td>
-                    <td className="p-3 font-medium">{z.name}</td>
-                    <td className="p-3 text-gray-600">{districts[z.district_id]?.code ?? '—'}</td>
-                    <td className="p-3">{z.chairperson_name ?? '—'}</td>
-                    <td className="p-3 text-right">{clubsByZone.get(z.id) ?? 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ZonesTable zones={zoneRows} districts={districtOptions} regions={regionOptions} />
           </CardContent>
         </Card>
       )}

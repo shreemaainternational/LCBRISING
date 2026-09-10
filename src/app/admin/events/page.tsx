@@ -1,16 +1,30 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { eventsPreset } from '@/components/admin/quick-add-presets';
 import { Calendar } from 'lucide-react';
+import { getEventCategory, getEventCategoryGroup, groupCategorySlugs } from '@/lib/event-categories';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminEventsPage() {
-  const supabase = await createClient();
-  const { data: events } = await supabase.from('events').select('*').order('date', { ascending: false });
+export default async function AdminEventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ group?: string }>;
+}) {
+  await requireAdminPage();
+  // Service-role read: the events select policy sub-selects members, which
+  // trips RLS recursion under the user session on DBs missing migration 0059.
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
+  const { group: groupKey } = await searchParams;
+  const activeGroup = groupKey ? getEventCategoryGroup(groupKey) : undefined;
+
+  let query = supabase.from('events').select('*').order('date', { ascending: false });
+  if (activeGroup) query = query.in('category', groupCategorySlugs(activeGroup));
+  const { data: events } = await query;
   const preset = eventsPreset();
 
   return (
@@ -38,6 +52,7 @@ export default async function AdminEventsPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left p-3">Title</th>
+                  <th className="text-left p-3">Category</th>
                   <th className="text-left p-3">When</th>
                   <th className="text-left p-3">Location</th>
                   <th className="text-right p-3">Capacity</th>
@@ -48,6 +63,11 @@ export default async function AdminEventsPage() {
                 {events.map((e) => (
                   <tr key={e.id} className="border-t">
                     <td className="p-3 font-medium">{e.title}</td>
+                    <td className="p-3">
+                      {e.category
+                        ? getEventCategory(e.category)?.label ?? e.category
+                        : '—'}
+                    </td>
                     <td className="p-3">{formatDate(e.date, { hour: '2-digit', minute: '2-digit' })}</td>
                     <td className="p-3">{e.location ?? '—'}</td>
                     <td className="p-3 text-right">{e.capacity ?? '—'}</td>

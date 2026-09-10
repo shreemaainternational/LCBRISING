@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "blog:sync": "tsx scripts/lions-blog-sync.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.2",

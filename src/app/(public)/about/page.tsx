@@ -2,13 +2,16 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Target, Eye, Heart, Users, Award, Calendar } from 'lucide-react';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
+import { OrgHierarchy } from '@/components/site/OrgHierarchy';
 
 export const metadata: Metadata = {
   title: 'About',
   description:
-    'Learn about the Lions Club of Baroda Rising Star, our mission, leadership, and history.',
+    'Learn about the Lions Club of Baroda Rising Star, our mission, leadership, and place in the Lions District 3232 F1 and Multiple District 3232 hierarchy.',
   alternates: { canonical: '/about' },
 };
+
+export const revalidate = 300; // ISR: refresh hierarchy/leadership every 5 min
 
 const STATS = [
   { value: '92+', label: 'Members' },
@@ -131,6 +134,9 @@ export default function AboutPage() {
           ))}
         </div>
       </section>
+
+      {/* Our Lions Structure — District & Multiple District hierarchy */}
+      <OrgHierarchy />
 
       {/* Our Story */}
       <section className="bg-gray-50 py-16 md:py-20">

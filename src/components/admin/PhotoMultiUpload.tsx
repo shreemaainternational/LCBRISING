@@ -59,6 +59,24 @@ export function PhotoMultiUpload({
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  /**
+   * Whether a file matches this uploader's `accept` list. Enforced for BOTH
+   * click and drag-drop (the browser only hints `accept` on the file picker,
+   * so drag-drop can otherwise smuggle a photo into the Videos slot — which
+   * then saves to the wrong column and never shows on the site).
+   */
+  function fileAccepted(file: File): boolean {
+    const tokens = accept.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
+    if (!tokens.length) return true;
+    const type = (file.type || '').toLowerCase();
+    const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
+    return tokens.some((tok) => {
+      if (tok.startsWith('.')) return tok === ext;
+      if (tok.endsWith('/*')) return type.startsWith(tok.slice(0, -1)); // e.g. image/
+      return type === tok;
+    });
+  }
+
   const initial: PhotoItem[] = (value ?? []).map((v) =>
     typeof v === 'string' ? { url: v, caption: initialCaptions[v] } : v,
   );
@@ -84,16 +102,30 @@ export function PhotoMultiUpload({
   const effectiveHint = hint ?? `Upload at least ${minRecommended} photos. Drag-drop or click. Camera on mobile.`;
 
   async function handleFiles(files: FileList | File[]) {
-    const fileArr = Array.from(files);
-    if (!fileArr.length) return;
+    const incoming = Array.from(files);
+    if (!incoming.length) return;
+
+    // Reject files that don't match this uploader's type (e.g. a photo dropped
+    // into the Videos slot). Surface a clear per-file reason and keep the rest.
+    const isVideoSlot = accept.includes('video') && !accept.includes('image');
+    const fileArr = incoming.filter((f) => fileAccepted(f));
+    const rejectErrors = incoming
+      .filter((f) => !fileAccepted(f))
+      .map((f) => ({
+        filename: f.name,
+        reason: isVideoSlot
+          ? 'This slot is for video clips only. Upload photos under "Project photos" so they appear on the website.'
+          : `File type not allowed here (${f.type || 'unknown'}).`,
+      }));
+    if (!fileArr.length) { setErrors(rejectErrors); return; }
 
     if (items.length + fileArr.length > max) {
-      setErrors([{ filename: '', reason: `Limit is ${max} files. You added ${items.length}; can add ${Math.max(0, max - items.length)} more.` }]);
+      setErrors([...rejectErrors, { filename: '', reason: `Limit is ${max} files. You added ${items.length}; can add ${Math.max(0, max - items.length)} more.` }]);
       return;
     }
 
     setUploading((n) => n + fileArr.length);
-    setErrors([]);
+    setErrors(rejectErrors);
 
     const previews: PhotoItem[] = await Promise.all(fileArr.map((f) => new Promise<PhotoItem>((resolve) => {
       const reader = new FileReader();
@@ -143,9 +175,9 @@ export function PhotoMultiUpload({
           return uploaded[idx - startIndex] != null;
         });
       });
-      setErrors(newErrors);
+      setErrors([...rejectErrors, ...newErrors]);
     } catch (e) {
-      setErrors([{ filename: '', reason: String(e) }]);
+      setErrors([...rejectErrors, { filename: '', reason: String(e) }]);
       setItems((cur) => cur.slice(0, startIndex));
     } finally {
       setUploading((n) => Math.max(0, n - fileArr.length));

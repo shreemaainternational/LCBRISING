@@ -82,7 +82,77 @@ export const emailTemplates = {
       `),
     };
   },
+  anniversary(name: string, years: number) {
+    return {
+      subject: years > 0
+        ? `Happy ${years}-year Lions anniversary, ${name}!`
+        : `Happy Lions anniversary, ${name}!`,
+      html: layout(`
+        <h2>Congratulations, ${escape(name)}! 🎉</h2>
+        <p>Today marks ${years > 0
+          ? `<strong>${years} year${years === 1 ? '' : 's'}</strong> of your`
+          : 'another year of'} service with the Lions Club of Baroda Rising Star.</p>
+        <p>Thank you for everything you do for our community. Here's to many
+        more years of <strong>"We Serve"</strong>. 🦁</p>
+      `),
+    };
+  },
+  officerDigest(
+    name: string,
+    stats: {
+      periodLabel: string;
+      activities: number;
+      beneficiaries: number;
+      donations: number;
+      newMembers: number;
+      events: { title: string; when: string }[];
+    },
+  ) {
+    const eventsHtml = stats.events.length
+      ? `<ul style="padding-left:18px;margin:8px 0">${stats.events
+          .map((e) => `<li>${escape(e.title)} — <span style="color:#666">${escape(e.when)}</span></li>`)
+          .join('')}</ul>`
+      : '<p style="color:#666">No events scheduled in the next 14 days.</p>';
+    return {
+      subject: `Weekly digest — ${stats.periodLabel}`,
+      html: layout(`
+        <h2>Weekly digest for the leadership team</h2>
+        <p>Hi ${escape(name)}, here is what happened at Baroda Rising Star this past week (${escape(
+          stats.periodLabel,
+        )}).</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">
+          <tr>
+            ${stat('Activities', String(stats.activities))}
+            ${stat('Lives reached', stats.beneficiaries.toLocaleString('en-IN'))}
+          </tr>
+          <tr>
+            ${stat('Funds raised', `₹${stats.donations.toLocaleString('en-IN')}`)}
+            ${stat('New members', String(stats.newMembers))}
+          </tr>
+        </table>
+        <h3 style="margin-bottom:4px">Upcoming events</h3>
+        ${eventsHtml}
+        <p style="margin-top:16px"><a href="${process.env.NEXT_PUBLIC_SITE_URL}/admin" style="display:inline-block;background:#1e3a8a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Open the dashboard</a></p>
+      `),
+    };
+  },
 };
+
+function stat(label: string, value: string) {
+  return `<td style="padding:8px"><div style="background:#f6f6f6;border-radius:8px;padding:12px">
+    <div style="font-size:22px;font-weight:700;color:#1e3a8a">${value}</div>
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#666">${label}</div>
+  </div></td>`;
+}
+
+/**
+ * Wrap a plain-text template body (as authored in the CRM template editor)
+ * into the branded email shell — escaping HTML and preserving line breaks.
+ */
+export function renderPlainEmail(text: string): string {
+  const safe = escape(text).replace(/\r?\n/g, '<br/>');
+  return layout(`<div>${safe}</div>`);
+}
 
 function layout(body: string) {
   return `<!doctype html><html><body style="font-family:system-ui,sans-serif;background:#f6f6f6;padding:24px">

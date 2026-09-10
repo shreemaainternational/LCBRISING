@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/server';
 import { buildInvoiceNo } from '@/lib/invoices';
 import { parseCsv } from '@/lib/csv';
-import { sendWhatsApp, whatsappTemplates } from '@/lib/whatsapp';
+import { sendWhatsApp, whatsAppConfigured, whatsappTemplates } from '@/lib/whatsapp';
 import { sendEmail } from '@/lib/email';
 import { env, integrations } from '@/lib/env';
 
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     const payUrl = `${env.NEXT_PUBLIC_SITE_URL}/pay/${inv.id}`;
     const sent: Record<string, boolean> = {};
 
-    if (send.includes('whatsapp') && d.customer_phone && integrations.twilio) {
+    if (send.includes('whatsapp') && d.customer_phone && whatsAppConfigured) {
       try {
         await sendWhatsApp(
           d.customer_phone,

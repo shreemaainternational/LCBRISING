@@ -3,6 +3,7 @@ import { Plus, FileText, Sparkles, Coins } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, integrations } from '@/lib/env';
 import { formatDate } from '@/lib/utils';
+import { LionsBlogSyncButton } from '@/components/admin/LionsBlogSyncButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,6 +84,7 @@ export default async function AdminBlogIndex() {
               </div>
             </div>
           )}
+          <LionsBlogSyncButton />
           <Link
             href="/admin/blog/new"
             className="btn-gold inline-flex h-11 px-5 rounded-md items-center gap-2"
