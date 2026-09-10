@@ -3,7 +3,7 @@ import { Mail, MapPin, Phone } from 'lucide-react';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, env } from '@/lib/env';
 
-// Force fresh per request so the district line updates without ISR delay.
+// Force fresh per request so the counter updates without ISR delay.
 export const revalidate = 30;
 
 const FOCUS_AREAS = [
@@ -16,6 +16,21 @@ const FOCUS_AREAS = [
   { label: 'Youth', href: '/activities/youth' },
   { label: 'Humanitarian', href: '/activities/humanitarian' },
 ];
+
+async function getVisitorCount(): Promise<number | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const supa = await createClient();
+    const { data } = await supa
+      .from('site_counters')
+      .select('value')
+      .eq('key', 'visits')
+      .maybeSingle();
+    return data?.value ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // Real Lions hierarchy for this club, read live from the DB. Replaces the old
 // hardcoded "District 3232 F1 · Region V · Zone I" — Region/Zone were never in
@@ -67,7 +82,7 @@ async function getDistrictLine(): Promise<string> {
 }
 
 export async function Footer() {
-  const districtLine = await getDistrictLine();
+  const [visits, districtLine] = await Promise.all([getVisitorCount(), getDistrictLine()]);
   const year = new Date().getFullYear();
 
   return (
@@ -174,6 +189,9 @@ export async function Footer() {
               </span>
             </li>
           </ul>
+
+          {/* Visitor counter */}
+          <VisitorCounter count={visits} />
         </div>
       </div>
 
@@ -204,6 +222,39 @@ function SocialIcon({
     >
       {children}
     </a>
+  );
+}
+
+// The public counter starts from a baseline so it never reads as a
+// brand-new site. `site_counters.value` holds only the real tracked
+// visits (seeded at 0), which are ADDED on top of this baseline.
+const VISITOR_BASELINE = 25_889;
+
+function VisitorCounter({ count }: { count: number | null }) {
+  // Baseline floor + every real tracked visit. Using addition (not
+  // Math.max) is what keeps the counter moving: with `Math.max` the
+  // baseline masked every real visit until they exceeded 25,889, so
+  // the number sat frozen at the baseline forever.
+  const total = VISITOR_BASELINE + Math.max(count ?? 0, 0);
+  const display = total.toString().padStart(5, '0');
+  const digits = display.split('');
+  return (
+    <div className="mt-6 rounded-lg bg-navy-800/60 border border-white/10 p-4">
+      <p className="text-[10px] tracking-[0.2em] text-gray-400 mb-2 text-center">
+        TOTAL VISITORS
+      </p>
+      <div className="flex justify-center gap-1.5">
+        {digits.map((d, i) => (
+          <span
+            key={i}
+            className="flex h-9 w-7 items-center justify-center rounded bg-navy-900 ring-1 ring-brand-400/40 text-brand-300 font-bold tabular-nums"
+          >
+            {d}
+          </span>
+        ))}
+      </div>
+      <p className="text-[10px] text-brand-300/80 mt-2 text-center">and counting…</p>
+    </div>
   );
 }
 
