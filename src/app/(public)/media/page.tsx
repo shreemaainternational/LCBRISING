@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { createClient } from '@/lib/supabase/server';
+import { isSupabaseConfigured } from '@/lib/env';
 import { MediaExplorer, type MediaItem } from '@/components/site/MediaExplorer';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
@@ -10,64 +12,46 @@ export const metadata: Metadata = {
 };
 export const revalidate = 300;
 
-const COVERAGE: MediaItem[] = [
-  {
-    id: 'm-eye-camp',
-    title: 'Lions Club Baroda Rising Star conducts free eye camp',
-    outlet: 'Times of India',
-    date: '15 January 2025',
-    type: 'Newspaper',
-    image:
-      'https://images.unsplash.com/photo-1577401239170-897942555fb3?auto=format&fit=crop&w=900&q=70',
-  },
-  {
-    id: 'm-wheelchairs',
-    title: 'Lions Club donates wheelchairs to disabled persons',
-    outlet: 'Gujarat Samachar',
-    date: '20 February 2025',
-    type: 'Online',
-    image:
-      'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=900&q=70',
-  },
-  {
-    id: 'm-blood-camp',
-    title: 'Blood donation camp organized by Lions Club',
-    outlet: 'VTV News',
-    date: '10 March 2025',
-    type: 'TV',
-    image:
-      'https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&w=900&q=70',
-  },
-  {
-    id: 'm-tree-drive',
-    title: 'Lions Club tree plantation drive covers 500 saplings',
-    outlet: 'Divya Bhaskar',
-    date: '22 April 2025',
-    type: 'Newspaper',
-    image:
-      'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=900&q=70',
-  },
-  {
-    id: 'm-youth-program',
-    title: 'Youth leadership program launched by Lions Club',
-    outlet: 'Vadodara News',
-    date: '15 May 2025',
-    type: 'Online',
-    image:
-      'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=900&q=70',
-  },
-  {
-    id: 'm-food-packets',
-    title: 'Lions Club distributes food packets to 500 families',
-    outlet: 'Sandesh',
-    date: '5 June 2025',
-    type: 'Newspaper',
-    image:
-      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&q=70',
-  },
-];
+function formatDate(value: string | null): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+}
 
-export default function MediaPage() {
+async function loadCoverage(): Promise<MediaItem[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supa = await createClient();
+    const { data } = await supa
+      .from('photos')
+      .select('id, url, title, source_name, source_url, media_type, taken_on, created_at')
+      .eq('category', 'press')
+      .is('deleted_at', null)
+      .not('source_name', 'is', null)
+      .order('taken_on', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    return (data ?? [])
+      .filter((p) => p.source_name)
+      .map((p) => ({
+        id: p.id,
+        title: p.title ?? 'Coverage of our service activities',
+        outlet: p.source_name as string,
+        date: formatDate(p.taken_on ?? p.created_at),
+        type: (p.media_type as MediaItem['type']) ?? 'Online',
+        image: p.url,
+        url: p.source_url ?? undefined,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export default async function MediaPage() {
+  const coverage = await loadCoverage();
+
   return (
     <>
       <PageHero
@@ -77,7 +61,13 @@ export default function MediaPage() {
         backgroundImage={PAGE_HERO_BG.media}
       />
 
-      <MediaExplorer items={COVERAGE} />
+      {coverage.length === 0 ? (
+        <section className="container-page py-16 text-center text-gray-500">
+          Press coverage will appear here as it's published. Check back soon!
+        </section>
+      ) : (
+        <MediaExplorer items={coverage} />
+      )}
     </>
   );
 }
