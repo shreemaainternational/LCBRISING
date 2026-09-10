@@ -49,6 +49,7 @@ const NAV: Item[] = [
   { href: '/admin/activities',  label: 'Activities',    icon: ActivityIcon },
   { href: '/admin/events',      label: 'Events',        icon: Calendar },
   { href: '/admin/blog',        label: 'Newsroom',      icon: BookOpen },
+  { href: '/admin/stories',     label: 'Human Stories', icon: HeartHandshake },
   { href: '/admin/gallery',     label: 'Gallery',       icon: Images },
   { href: '/admin/media',       label: 'Media library', icon: ImageIcon },
   { href: '/admin/creative',    label: 'Creative',      icon: Sparkles },
