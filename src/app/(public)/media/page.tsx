@@ -63,7 +63,7 @@ export default async function MediaPage() {
 
       {coverage.length === 0 ? (
         <section className="container-page py-16 text-center text-gray-500">
-          Press coverage will appear here as it's published. Check back soon!
+          Press coverage will appear here as it&apos;s published. Check back soon!
         </section>
       ) : (
         <MediaExplorer items={coverage} />
