@@ -284,11 +284,12 @@ export default async function CampaignDetailPage({
           {activities.length > 0 && (
             <div className="mt-10">
               <h2 className="text-xl font-bold text-navy-900 mb-4">Campaign statistics</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                 <Stat label="Activities" value={String(activities.length)} />
                 <Stat label="Beneficiaries" value={totals.beneficiaries.toLocaleString('en-IN')} />
                 <Stat label="Volunteers" value={totals.volunteers.toLocaleString('en-IN')} />
                 <Stat label="Lion hours" value={totals.lionHours.toLocaleString('en-IN')} />
+                {totals.expenses > 0 && <Stat label="Expenses" value={formatINR(totals.expenses)} />}
               </div>
             </div>
           )}
