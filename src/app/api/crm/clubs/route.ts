@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient, createAuthorizedWriteClient } from '@/lib/supabase/server';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { clubSchema } from '@/lib/validation/schemas';
 import { writeAudit } from '@/lib/audit';
@@ -15,6 +15,9 @@ function friendlyError(message: string): string {
     return process.env.SUPABASE_SERVICE_ROLE_KEY
       ? 'Database auth failed. Check that NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY both belong to the same project as NEXT_PUBLIC_SUPABASE_URL.'
       : 'Database auth failed and no SUPABASE_SERVICE_ROLE_KEY is configured to fall back to. Either sign in as an admin so RLS lets you write, or set SUPABASE_SERVICE_ROLE_KEY in your environment.';
+  }
+  if (/infinite recursion detected in policy/i.test(message)) {
+    return 'Row-level security hit infinite recursion in the members policy. Set SUPABASE_SERVICE_ROLE_KEY, or apply migration 0059_fix_members_rls_recursion.sql in the Supabase SQL Editor (idempotent).';
   }
   if (/row.level security/i.test(message)) {
     return 'Row-level security blocked the insert. Apply migration 0037_federation_rls.sql or set SUPABASE_SERVICE_ROLE_KEY.';
@@ -119,44 +122,20 @@ export async function POST(req: NextRequest) {
     payload.district = await resolveDefaultDistrictCode(payload.district_id as string | undefined);
   }
 
-  // 1) Try the user's SSR session first — RLS gates the insert.
-  const supa = await createClient();
+  // Trusted write (already gated by requirePermission). Prefer the
+  // service-role client so the INSERT and its read-back bypass RLS. Several
+  // policies in the federation tree sub-select public.members, whose
+  // self-referential policy trips "infinite recursion detected in policy for
+  // relation members" on databases missing migration 0059. Falls back to the
+  // user's session when no service-role key is configured.
+  const supa = await createAuthorizedWriteClient();
+  const { data, error } = await supa.from('clubs').insert(payload).select().single();
+  if (error) return NextResponse.json({ error: friendlyError(error.message) }, { status: 500 });
 
-  const first = await supa.from('clubs').insert(payload).select().single();
-  if (!first.error && first.data) {
-    await writeAudit({
-      action: 'club.create', entity: 'club', entity_id: first.data.id,
-      actor_user_id: actor.user_id, actor_member_id: actor.member_id ?? null,
-      payload: { name: parsed.data.name },
-    });
-    return NextResponse.json({ club: first.data }, { status: 201 });
-  }
-
-  const firstMsg = first.error?.message ?? '';
-  const isInfraFail = /invalid schema|invalid api key|jwt|row.level security/i.test(firstMsg);
-
-  // 2) Fall back to the admin client when SSR fails for infra reasons
-  //    and a service role is configured.
-  if (isInfraFail && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      const admin = createAdminClient();
-      if (!payload.district) {
-        payload.district = await resolveDefaultDistrictCode(payload.district_id as string | undefined);
-      }
-      const second = await admin.from('clubs').insert(payload).select().single();
-      if (!second.error && second.data) {
-        await writeAudit({
-          action: 'club.create', entity: 'club', entity_id: second.data.id,
-          actor_user_id: actor.user_id, actor_member_id: actor.member_id ?? null,
-          payload: { name: parsed.data.name, fallback: 'admin' },
-        });
-        return NextResponse.json({ club: second.data }, { status: 201 });
-      }
-      return NextResponse.json({ error: friendlyError(second.error?.message ?? 'unknown_error') }, { status: 500 });
-    } catch (e) {
-      return NextResponse.json({ error: friendlyError(String(e)) }, { status: 500 });
-    }
-  }
-
-  return NextResponse.json({ error: friendlyError(firstMsg || 'unknown_error') }, { status: 500 });
+  await writeAudit({
+    action: 'club.create', entity: 'club', entity_id: data.id,
+    actor_user_id: actor.user_id, actor_member_id: actor.member_id ?? null,
+    payload: { name: parsed.data.name },
+  });
+  return NextResponse.json({ club: data }, { status: 201 });
 }

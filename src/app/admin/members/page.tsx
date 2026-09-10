@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { BulkMemberUpload } from '@/components/admin/BulkMemberUpload';
 import { MembersTable, type MemberRow } from '@/components/admin/MembersTable';
@@ -11,6 +12,7 @@ import { Users } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function MembersPage() {
+  await requireAdminPage();
   // Read via the service-role client (this page is inside the admin-gated
   // layout) so the roster query bypasses RLS. The members SELECT policy is
   // self-referential on databases where migration 0059 has not been applied,

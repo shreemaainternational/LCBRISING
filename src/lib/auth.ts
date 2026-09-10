@@ -26,15 +26,6 @@ export function isBootstrapAdminEmail(email: string | null | undefined): boolean
 }
 
 /**
- * Synthesize an in-memory admin Member for a bootstrap-admin auth user
- * when the database has no row for them yet. Returns null for everyone
- * else, so it only ever grants access to the configured owner email(s).
- */
-function isBootstrapAdminEmail(email?: string | null): boolean {
-  return !!email && BOOTSTRAP_ADMIN_EMAILS.includes(email.toLowerCase());
-}
-
-/**
  * Bootstrap-admin safety net. The configured owner email(s) must always
  * resolve to a full admin, even when the database holds a stale, lower-
  * privilege row for them — e.g. one auto-provisioned by Tier 4 below as a
@@ -53,6 +44,11 @@ function promoteBootstrapAdmin(member: Member): Member {
   return member;
 }
 
+/**
+ * Synthesize an in-memory admin Member for a bootstrap-admin auth user
+ * when the database has no row for them yet. Returns null for everyone
+ * else, so it only ever grants access to the configured owner email(s).
+ */
 function bootstrapAdminMember(user: {
   id: string;
   email?: string | null;

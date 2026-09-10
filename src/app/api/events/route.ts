@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { eventSchema } from '@/lib/validation/schemas';
-import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { createClient, createAuthorizedWriteClient } from '@/lib/supabase/server';
 import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requireAdmin } from '@/lib/auth';
 
@@ -23,9 +23,8 @@ export async function POST(req: Request) {
   // client so the INSERT and its read-back bypass RLS. The events SELECT policy
   // sub-selects public.members, so on a database where migration 0059 has not
   // been applied the read-back trips "infinite recursion detected in policy for
-  // relation members". Bypassing RLS here avoids that regardless of DB state,
-  // and matches the pattern used by /api/social/post and /api/beneficiaries.
-  const db = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
+  // relation members". Bypassing RLS here avoids that regardless of DB state.
+  const db = await createAuthorizedWriteClient();
   const { data, error } = await db.from('events').insert(parsed.data).select().single();
   if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
   return NextResponse.json({ event: data }, { status: 201 });

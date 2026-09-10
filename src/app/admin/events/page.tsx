@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
@@ -20,7 +21,10 @@ export default async function AdminEventsPage({
 }: {
   searchParams: Promise<{ group?: string }>;
 }) {
-  const supabase = await createClient();
+  await requireAdminPage();
+  // Service-role read: the events select policy sub-selects members, which
+  // trips RLS recursion under the user session on DBs missing migration 0059.
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
   const { group: groupKey } = await searchParams;
   const activeGroup = groupKey ? getEventCategoryGroup(groupKey) : undefined;
 

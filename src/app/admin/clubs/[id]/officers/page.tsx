@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import ManageOfficers from './ManageOfficers';
 
 export const dynamic = 'force-dynamic';
@@ -49,6 +50,9 @@ export default async function ClubOfficersPage({
   params: Promise<{ id: string }>;
 }) {
   const { id: clubId } = await params;
+  await requireAdminPage();
+  // Service-role read: this page reads members, whose self-referential policy
+  // trips RLS recursion under the user session on DBs missing migration 0059.
   const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
   const [clubRes, officersRes] = await Promise.all([

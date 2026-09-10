@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { enterpriseMemberSchema } from '@/lib/validation/schemas';
+import { describeSupabaseError } from '@/lib/supabase/errors';
 import { writeAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';

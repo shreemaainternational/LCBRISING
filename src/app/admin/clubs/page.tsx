@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { requireAdminPage } from '@/lib/auth';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { ClubsTable } from '@/components/admin/ClubsTable';
@@ -10,6 +11,7 @@ import { Building2 } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function ClubsPage() {
+  await requireAdminPage();
   // Read via the service-role client (this page is gated by the admin layout)
   // so member counts survive databases where the `members` RLS policy recurses.
   const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();

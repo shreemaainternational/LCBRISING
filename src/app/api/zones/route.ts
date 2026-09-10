@@ -21,6 +21,9 @@ function friendlyError(message: string): string {
   if (/invalid api key/i.test(message)) {
     return 'Database auth failed. Set SUPABASE_SERVICE_ROLE_KEY for your project — or apply migration 0037_federation_rls.sql so admin members can write via their own session.';
   }
+  if (/infinite recursion detected in policy/i.test(message)) {
+    return 'Row-level security hit infinite recursion in the members policy. Set SUPABASE_SERVICE_ROLE_KEY, or apply migration 0059_fix_members_rls_recursion.sql in the Supabase SQL Editor (idempotent).';
+  }
   if (/row.level security|new row violates|permission denied/i.test(message)) {
     return 'Row-level security blocked the insert. Apply migration 0037_federation_rls.sql, or sign in as a member whose role is "admin", or set SUPABASE_SERVICE_ROLE_KEY.';
   }
