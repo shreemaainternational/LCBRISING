@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { transferSchema } from '@/lib/validation/schemas';
 import { writeAudit } from '@/lib/audit';
@@ -13,7 +14,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'invalid_input', detail: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supa = await createClient();
+  // Trusted admin write (gated by requirePermission below). Service-role client
+  // so member reads/writes bypass RLS and avoid the members-policy recursion.
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
   const { data: before } = await supa
     .from('members')
     .select('id, club_id, district_id, name, email')
@@ -34,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       district_id: parsed.data.to_district_id ?? null,
     })
     .eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
 
   await writeAudit({
     action: 'member.transfer',

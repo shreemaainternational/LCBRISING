@@ -92,6 +92,22 @@ export interface District {
   cabinet_treasurer_name: string | null;
   lions_year: string | null;
   source_id: string | null;
+  // Lions Portal-shaped fields (see migration 0065).
+  multiple_district_code: string | null;
+  constitutional_area: string | null;
+  status: string | null;
+  first_vice_governor_name: string | null;
+  second_vice_governor_name: string | null;
+  governor_email: string | null;
+  governor_phone: string | null;
+  club_count: number | null;
+  member_count: number | null;
+  region_count: number | null;
+  zone_count: number | null;
+  effective_date: string | null;
+  website: string | null;
+  last_portal_sync_at: string | null;
+  portal_raw: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -222,9 +238,55 @@ export interface Activity {
   service_hours: number;
   amount_raised: number;
   date: string;
+  start_at: string | null;
+  end_at: string | null;
   location: string | null;
   photos: string[];
   reported_to_district: boolean;
+}
+
+export interface ServiceActivity {
+  id: string;
+  sponsor_md: string | null;
+  sponsor_district: string | null;
+  sponsor_account_name: string | null;
+  sponsor_zone: string | null;
+  sponsor_region: string | null;
+  sponsor_account_id: string | null;
+  sponsor_parent_id: string | null;
+  sponsor_parent_parent_id: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  report_complete: boolean;
+  status: string | null;
+  title: string;
+  description: string | null;
+  activity_level: string | null;
+  cause: string | null;
+  project_type: string | null;
+  signature_activity: boolean;
+  funded_by_lcif_grant: boolean;
+  people_served: number;
+  people_served_capped: number;
+  total_volunteers: number;
+  total_volunteer_hours: number;
+  total_volunteer_hours_capped: number;
+  total_funds_donated: number;
+  total_funds_donated_usd_capped: number;
+  donation_to_lcif: boolean;
+  organization_benefited: string | null;
+  total_funds_raised: number;
+  total_funds_raised_usd_capped: number;
+  trees_planted: number;
+  created_by_full_name: string | null;
+  service_activity_id: string | null;
+  club_id: string | null;
+  activity_id: string | null;
+  category: string | null;
+  source_file: string | null;
+  imported_at: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Event {
@@ -270,6 +332,7 @@ export interface Database {
       payments: { Row: Payment; Insert: Partial<Payment> & Pick<Payment, 'amount' | 'type'>; Update: Partial<Payment> };
       donations: { Row: Donation; Insert: Partial<Donation> & Pick<Donation, 'donor_name' | 'amount'>; Update: Partial<Donation> };
       activities: { Row: Activity; Insert: Partial<Activity> & Pick<Activity, 'title'>; Update: Partial<Activity> };
+      service_activities: { Row: ServiceActivity; Insert: Partial<ServiceActivity> & Pick<ServiceActivity, 'title'>; Update: Partial<ServiceActivity> };
       events: { Row: Event; Insert: Partial<Event> & Pick<Event, 'title' | 'date'>; Update: Partial<Event> };
       event_rsvps: { Row: EventRSVP; Insert: Partial<EventRSVP> & Pick<EventRSVP, 'event_id'>; Update: Partial<EventRSVP> };
       automation_jobs: { Row: AutomationJob; Insert: Partial<AutomationJob> & Pick<AutomationJob, 'job_type'>; Update: Partial<AutomationJob> };

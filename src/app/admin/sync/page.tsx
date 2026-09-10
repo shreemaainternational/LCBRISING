@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/server';
 import SyncUploader from './SyncUploader';
 import { getEntityCoverage, getQueueSnapshot } from '@/lib/sync/coverage';
+import { getAutoSyncState } from '@/lib/sync/lions-auto';
 import { QueueActions } from './QueueActions';
 import Link from 'next/link';
 
@@ -53,12 +54,13 @@ function QTile({ label, value, tone }: { label: string; value: number; tone: 'am
 
 export default async function SyncPage() {
   const supa = await createClient();
-  const [logsRes, coverage, queue] = await Promise.all([
+  const [logsRes, coverage, queue, autoState] = await Promise.all([
     supa.from('sync_logs')
       .select('id, source, entity, status, started_at, finished_at, records_total, records_inserted, records_updated, records_failed, error_message')
       .order('created_at', { ascending: false }).limit(50),
     getEntityCoverage(),
     getQueueSnapshot(),
+    getAutoSyncState(),
   ]);
   const rows = (logsRes.data ?? []) as SyncLogRow[];
 
@@ -66,7 +68,7 @@ export default async function SyncPage() {
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Sync</h1>
       <p className="text-gray-600 mb-8">
-        Import member/club/officer/attendance data from CSV exports, and audit every sync run.
+        Import member/club/officer/attendance/activity data from CSV or Excel exports, and audit every sync run.
       </p>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
@@ -128,6 +130,19 @@ export default async function SyncPage() {
               <div className="text-sm text-gray-600 mt-1">
                 OIDC SSO and REST sync for districts, clubs, members and awards.
               </div>
+              <div className="text-xs text-gray-500 mt-2">
+                {autoState?.last_run_at ? (
+                  <>Auto-sync: <strong className={
+                    autoState.last_status === 'failed' ? 'text-rose-700'
+                    : autoState.last_status === 'partial' ? 'text-amber-700'
+                    : 'text-emerald-700'
+                  }>{autoState.last_status ?? '—'}</strong>
+                  {' · '}{new Date(autoState.last_run_at).toLocaleString('en-IN')}
+                  {autoState.last_duplicates > 0 && <> · <span className="text-purple-700">{autoState.last_duplicates} dup.</span></>}</>
+                ) : (
+                  <>Auto-sync: <strong>daily at 01:00</strong> — awaiting first run</>
+                )}
+              </div>
             </div>
             <span className="text-amber-600 font-medium">Open →</span>
           </div>
@@ -149,12 +164,12 @@ export default async function SyncPage() {
 
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>CSV import</CardTitle>
+          <CardTitle>CSV / Excel import</CardTitle>
         </CardHeader>
         <CardContent>
           <SyncUploader />
           <details className="mt-6 text-xs text-gray-600">
-            <summary className="cursor-pointer">Expected CSV columns</summary>
+            <summary className="cursor-pointer">Expected columns</summary>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <div>
                 <strong>members</strong>
@@ -171,6 +186,18 @@ export default async function SyncPage() {
               <div>
                 <strong>attendance</strong>
                 <code className="block mt-1 bg-gray-50 p-2 rounded">member_email|member_id,event_id,club_id,occurred_at,status,check_in_method,notes</code>
+              </div>
+              <div className="md:col-span-2">
+                <strong>activities</strong>
+                <code className="block mt-1 bg-gray-50 p-2 rounded">title,description,category,beneficiaries,service_hours,amount_raised,date,location,club_id</code>
+                <p className="mt-1">
+                  The Lion Portal <em>&ldquo;Service Activities Information&rdquo;</em> export (.xlsx or .csv)
+                  is auto-detected and imported as-is — the banner, filter block and subtotal rows are
+                  skipped. Every column is preserved in <code>service_activities</code> and mapped down to
+                  an <code>activities</code> row (Title → Project, Cause/Project Type → Category,
+                  People Served → Beneficiaries, Total Volunteers → Lion Members, Volunteer Hours → Service
+                  Hours, Funds Raised → Amount Raised, End Date → Date).
+                </p>
               </div>
             </div>
           </details>

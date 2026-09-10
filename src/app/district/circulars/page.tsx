@@ -1,7 +1,8 @@
+import Link from 'next/link';
 import { requireDistrictGovernor } from '@/lib/district-portal';
 import { DistrictTabs } from '../DistrictTabs';
 import { createAdminClient } from '@/lib/supabase/server';
-import { Megaphone, Pin, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Megaphone, Pin, CheckCircle2, AlertTriangle, Table2 } from 'lucide-react';
 import { CircularComposer } from './CircularComposer';
 
 export const dynamic = 'force-dynamic';
@@ -36,16 +37,22 @@ export default async function DistrictCircularsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-extrabold text-navy-900 tracking-tight inline-flex items-center gap-2">
-          <Megaphone className="text-amber-500" size={28} />
-          District Circulars
-        </h2>
-        <p className="text-gray-600 text-sm mt-1 max-w-3xl">
-          Broadcast official communications to every club in District {ctx.district.code}.
-          Choose channels (portal, email, push, WhatsApp), target zones or specific clubs,
-          and track per-club delivery + read receipts.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-3xl font-extrabold text-navy-900 tracking-tight inline-flex items-center gap-2">
+            <Megaphone className="text-amber-500" size={28} />
+            District Circulars
+          </h2>
+          <p className="text-gray-600 text-sm mt-1 max-w-3xl">
+            Broadcast official communications to every club in District {ctx.district.code}.
+            Choose channels (portal, email, push, WhatsApp), target zones or specific clubs,
+            and track per-club delivery + read receipts.
+          </p>
+        </div>
+        <Link href="/district/circulars/bulk"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-amber-300 bg-white text-amber-700 text-sm font-semibold shadow-sm hover:bg-amber-50 transition-colors">
+          <Table2 size={16} /> Bulk upload &amp; auto-generate
+        </Link>
       </div>
       <DistrictTabs />
 

@@ -4,7 +4,8 @@ import { AlertCircle, ArrowRight, Heart, Target } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
-import { formatINR, formatINRShort, formatDate } from '@/lib/utils';
+import { formatINR, formatINRShort } from '@/lib/utils';
+import { CampaignsGrid } from './CampaignsGrid';
 
 export const metadata: Metadata = {
   title: 'Campaigns',
@@ -105,11 +106,22 @@ export default async function CampaignsPage() {
           {campaigns.length === 0 ? (
             <EmptyCampaigns />
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
-              {grid.map((c) => (
-                <CampaignCard key={c.id} campaign={c} raised={raised.get(c.id) ?? 0} />
-              ))}
-            </div>
+            <CampaignsGrid
+              campaigns={grid.map((c) => ({
+                id: c.id,
+                slug: c.slug,
+                title: c.title,
+                description: c.description,
+                tagline: c.tagline,
+                goal_amount: Number(c.goal_amount),
+                ends_at: c.ends_at,
+                hero_image: c.hero_image,
+                urgency: c.urgency,
+                category: c.category,
+                match_campaign: c.match_campaign,
+                raised: raised.get(c.id) ?? 0,
+              }))}
+            />
           )}
         </div>
       </section>
@@ -205,68 +217,6 @@ function FeaturedCampaign({ campaign, raised }: { campaign: Campaign; raised: nu
         </div>
       </div>
     </section>
-  );
-}
-
-function CampaignCard({ campaign, raised }: { campaign: Campaign; raised: number }) {
-  const pct = campaign.goal_amount > 0 ? Math.min(100, (raised / campaign.goal_amount) * 100) : 0;
-  return (
-    <Link
-      href={`/donate?campaign=${campaign.slug}`}
-      className="group block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
-    >
-      <div className="relative aspect-[16/10] overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={campaign.hero_image || FALLBACK_HERO}
-          alt={campaign.title}
-          className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-        />
-        {campaign.urgency === 'urgent' && (
-          <span className="absolute top-3 left-3 bg-red-600 text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full">
-            Urgent
-          </span>
-        )}
-        {campaign.match_campaign && (
-          <span className="absolute top-3 right-3 bg-brand-500 text-navy-900 text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full">
-            Donation matched
-          </span>
-        )}
-      </div>
-      <div className="p-5">
-        {campaign.category && (
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-brand-600">
-            {campaign.category}
-          </p>
-        )}
-        <h3 className="mt-1 font-bold text-lg text-navy-800 group-hover:text-brand-600 line-clamp-2">
-          {campaign.title}
-        </h3>
-        {(campaign.tagline ?? campaign.description) && (
-          <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-            {campaign.tagline ?? campaign.description}
-          </p>
-        )}
-
-        <div className="mt-4">
-          <div className="flex justify-between text-xs font-semibold text-gray-700">
-            <span>{formatINRShort(raised)} raised</span>
-            <span className="text-gray-500">of {formatINRShort(Number(campaign.goal_amount))}</span>
-          </div>
-          <div className="mt-1.5 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-brand-500 to-brand-600"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          {campaign.ends_at && (
-            <p className="mt-2 text-[11px] text-gray-500">
-              Closes {formatDate(campaign.ends_at)}
-            </p>
-          )}
-        </div>
-      </div>
-    </Link>
   );
 }
 

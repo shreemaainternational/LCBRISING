@@ -2,7 +2,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Copy, RotateCw, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle, Save,
+  Copy, RotateCw, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle, Save, ClipboardPaste,
 } from 'lucide-react';
 
 interface Props {
@@ -20,7 +20,7 @@ export function PushKeyCard({
   const router = useRouter();
   const [revealedPrivate, setRevealedPrivate] = useState<string | null>(null);
   const [showing, setShowing] = useState(false);
-  const [copied, setCopied] = useState<'public' | 'private' | null>(null);
+  const [copied, setCopied] = useState<'public' | 'private' | 'env' | null>(null);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [subjectInput, setSubjectInput] = useState(subject ?? 'mailto:admin@lcbaroda.org');
@@ -54,6 +54,24 @@ export function PushKeyCard({
     try {
       await navigator.clipboard.writeText(v);
       setCopied('private');
+      setTimeout(() => setCopied(null), 2500);
+    } catch { setError('Clipboard unavailable'); }
+  }
+
+  /** Copy the full ready-to-paste Vercel VAPID env block (reveals the private key first). */
+  async function copyAllForVercel() {
+    if (!publicKey) { setError('Public key unavailable'); return; }
+    const priv = revealedPrivate ?? await reveal();
+    if (!priv) return;
+    const block = [
+      `VAPID_PUBLIC_KEY=${publicKey}`,
+      `NEXT_PUBLIC_VAPID_PUBLIC_KEY=${publicKey}`,
+      `VAPID_PRIVATE_KEY=${priv}`,
+      `VAPID_SUBJECT=${subjectInput}`,
+    ].join('\n');
+    try {
+      await navigator.clipboard.writeText(block);
+      setCopied('env');
       setTimeout(() => setCopied(null), 2500);
     } catch { setError('Clipboard unavailable'); }
   }
@@ -148,6 +166,19 @@ export function PushKeyCard({
             {saved ? 'Saved' : 'Save'}
           </button>
         </div>
+      </div>
+
+      <div className="pt-2 border-t space-y-2">
+        <button type="button" onClick={copyAllForVercel} disabled={pending || !publicKey}
+          title="Copies all four VAPID_* lines — paste straight into Vercel → Settings → Environment Variables"
+          className="inline-flex items-center gap-1 px-2.5 py-2 rounded-md bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold disabled:opacity-60">
+          {pending && !revealedPrivate ? <Loader2 className="animate-spin" size={12} /> : copied === 'env' ? <CheckCircle2 size={12} /> : <ClipboardPaste size={12} />}
+          {copied === 'env' ? 'Copied all 4 lines' : 'Copy all for Vercel'}
+        </button>
+        <p className="text-xs text-gray-500">
+          Copies the full <code>VAPID_*</code> env block — paste into Vercel → Settings → Environment
+          Variables (Production + Preview), then redeploy to pin the keypair and flip Web Push to 🟢 Live.
+        </p>
       </div>
 
       <div className="flex items-center justify-between gap-2 pt-2 border-t">

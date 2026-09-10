@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { cookies } from 'next/headers';
-import { createClient, createAuthorizedWriteClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { resolveOrBootstrapDefaultDistrict, explainBootstrapFailure } from '@/lib/default-district';
 
@@ -41,7 +41,9 @@ function friendlyError(message: string): string {
 
 export async function GET() {
   try { await requireAdmin(); } catch (err) { if (err instanceof Response) return err; throw err; }
-  const supa = await createClient();
+  // Prefer the service-role client so the read survives databases where the
+  // `zones`/`members` RLS policies recurse; fall back to the SSR session.
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
   const { data, error } = await supa.from('zones').select('*').is('deleted_at', null).order('name');
   if (error) return NextResponse.json({ error: friendlyError(error.message) }, { status: 500 });
   return NextResponse.json({ zones: data ?? [] });
@@ -96,15 +98,31 @@ export async function POST(req: Request) {
     }
   }
 
-  // Trusted admin write (already gated by requireAdmin). Prefer the
-  // service-role client so the INSERT and its read-back bypass RLS: the
-  // zones_admin_write policy (migration 0037) sub-selects public.members,
-  // whose self-referential policy trips "infinite recursion detected in
-  // policy for relation members" on databases where migration 0059 has not
-  // been applied. Falls back to the user session when no service-role key is
-  // configured (relies on migrations 0037 + 0059 being present).
-  const db = await createAuthorizedWriteClient();
-  const { data, error } = await db.from('zones').insert(payload).select().single();
-  if (error) return NextResponse.json({ error: friendlyError(error.message) }, { status: 500 });
-  return NextResponse.json({ zone: data }, { status: 201 });
+  // 1) Try the user's authenticated session first — RLS lets admin
+  //    members write (migration 0037). No service-role key required.
+  const supa = await createClient();
+  const first = await supa.from('zones').insert(payload).select().single();
+  if (!first.error && first.data) return NextResponse.json({ zone: first.data }, { status: 201 });
+
+  const firstMsg = first.error?.message ?? '';
+  const isAuthFail = /invalid api key|jwt/i.test(firstMsg)
+    || /row.level security|new row violates|permission denied/i.test(firstMsg)
+    // The recursive `members` RLS policy surfaces as this string, not an
+    // RLS-denied message, so the fallback must trigger on it too.
+    || /infinite recursion detected in policy/i.test(firstMsg);
+
+  // 2) Fall back to the admin client only when RLS/auth blocked us
+  //    and a service role is configured.
+  if (isAuthFail && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const admin = createAdminClient();
+      const second = await admin.from('zones').insert(payload).select().single();
+      if (!second.error && second.data) return NextResponse.json({ zone: second.data }, { status: 201 });
+      return NextResponse.json({ error: friendlyError(second.error?.message ?? 'unknown_error') }, { status: 500 });
+    } catch (e) {
+      return NextResponse.json({ error: friendlyError(String(e)) }, { status: 500 });
+    }
+  }
+
+  return NextResponse.json({ error: friendlyError(firstMsg || 'unknown_error') }, { status: 500 });
 }

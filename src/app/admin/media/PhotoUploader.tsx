@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 const CATEGORIES = ['gallery', 'about', 'hero', 'press', 'event'] as const;
+const MEDIA_TYPES = ['Newspaper', 'Online', 'TV'] as const;
 
 export default function PhotoUploader() {
   const router = useRouter();
@@ -12,8 +13,13 @@ export default function PhotoUploader() {
   const [caption, setCaption] = useState('');
   const [category, setCategory] = useState<typeof CATEGORIES[number]>('gallery');
   const [isFeatured, setIsFeatured] = useState(false);
+  const [sourceName, setSourceName] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [mediaType, setMediaType] = useState<typeof MEDIA_TYPES[number]>('Online');
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const isPress = category === 'press';
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +34,13 @@ export default function PhotoUploader() {
         alt: title || undefined,
         category,
         is_featured: isFeatured,
+        ...(isPress
+          ? {
+              source_name: sourceName || undefined,
+              source_url: sourceUrl || undefined,
+              media_type: mediaType,
+            }
+          : {}),
       }),
     });
     if (!res.ok) {
@@ -39,6 +52,8 @@ export default function PhotoUploader() {
     setTitle('');
     setCaption('');
     setIsFeatured(false);
+    setSourceName('');
+    setSourceUrl('');
     startTransition(() => router.refresh());
   }
 
@@ -98,6 +113,47 @@ export default function PhotoUploader() {
         />
         Featured (appears in About-section collage or homepage strip)
       </label>
+      {isPress && (
+        <>
+          <label className="text-sm">
+            <span className="block mb-1 text-gray-600">Outlet name</span>
+            <input
+              required={isPress}
+              type="text"
+              value={sourceName}
+              onChange={(e) => setSourceName(e.target.value)}
+              placeholder="e.g. Times of India"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="block mb-1 text-gray-600">Coverage type</span>
+            <select
+              value={mediaType}
+              onChange={(e) => setMediaType(e.target.value as typeof MEDIA_TYPES[number])}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white"
+            >
+              {MEDIA_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm md:col-span-2">
+            <span className="block mb-1 text-gray-600">Link to original coverage</span>
+            <input
+              required={isPress}
+              type="url"
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              placeholder="https://timesofindia.indiatimes.com/..."
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+            <span className="block mt-1 text-xs text-gray-500">
+              Only add real, verifiable coverage — this is shown publicly as a citation to the outlet.
+            </span>
+          </label>
+        </>
+      )}
       <div className="md:col-span-2 flex items-center gap-3">
         <button
           type="submit"

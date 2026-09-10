@@ -1,20 +1,20 @@
 import Link from 'next/link';
 import { Mail, MapPin, Phone } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, env } from '@/lib/env';
 
 // Force fresh per request so the counter updates without ISR delay.
 export const revalidate = 30;
 
 const FOCUS_AREAS = [
-  { label: 'Environment', href: '/activities#environment' },
-  { label: 'Vision', href: '/activities#vision' },
-  { label: 'Hunger Relief', href: '/activities#hunger' },
-  { label: 'Disaster Relief', href: '/activities#relief' },
-  { label: 'Childhood Cancer', href: '/activities#cancer' },
-  { label: 'Diabetes', href: '/activities#diabetes' },
-  { label: 'Youth', href: '/activities#youth' },
-  { label: 'Humanitarian', href: '/activities#humanitarian' },
+  { label: 'Environment', href: '/activities/environment' },
+  { label: 'Vision', href: '/activities/vision' },
+  { label: 'Hunger Relief', href: '/activities/hunger' },
+  { label: 'Disaster Relief', href: '/activities/relief' },
+  { label: 'Childhood Cancer', href: '/activities/cancer' },
+  { label: 'Diabetes', href: '/activities/diabetes' },
+  { label: 'Youth', href: '/activities/youth' },
+  { label: 'Humanitarian', href: '/activities/humanitarian' },
 ];
 
 async function getVisitorCount(): Promise<number | null> {
@@ -32,8 +32,57 @@ async function getVisitorCount(): Promise<number | null> {
   }
 }
 
+// Real Lions hierarchy for this club, read live from the DB. Replaces the old
+// hardcoded "District 3232 F1 · Region V · Zone I" — Region/Zone were never in
+// the data. Mirrors the About page's OrgHierarchy MD-fallback so both agree.
+const DISTRICT_LINE_FALLBACK = 'Multiple District 3232 · District 3232 F1';
+
+async function getDistrictLine(): Promise<string> {
+  if (!isSupabaseConfigured()) return DISTRICT_LINE_FALLBACK;
+  try {
+    const db = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
+    const { data: district } = await db
+      .from('districts')
+      .select('code, name, multiple_district_id')
+      .is('deleted_at', null)
+      .order('code')
+      .limit(1)
+      .maybeSingle();
+    if (!district) return DISTRICT_LINE_FALLBACK;
+
+    const districtLabel = district.name ?? (district.code ? `District ${district.code}` : 'District');
+
+    // Prefer the linked MD; otherwise fall back to any MD row (same as OrgHierarchy).
+    let md: { code: string | null; name: string | null } | null = null;
+    if (district.multiple_district_id) {
+      const { data } = await db
+        .from('multiple_districts')
+        .select('code, name')
+        .eq('id', district.multiple_district_id)
+        .is('deleted_at', null)
+        .maybeSingle();
+      md = data ?? null;
+    }
+    if (!md) {
+      const { data } = await db
+        .from('multiple_districts')
+        .select('code, name')
+        .is('deleted_at', null)
+        .order('code')
+        .limit(1)
+        .maybeSingle();
+      md = data ?? null;
+    }
+    const mdLabel = md ? (md.name ?? (md.code ? `Multiple District ${md.code}` : null)) : null;
+
+    return mdLabel ? `${mdLabel} · ${districtLabel}` : districtLabel;
+  } catch {
+    return DISTRICT_LINE_FALLBACK;
+  }
+}
+
 export async function Footer() {
-  const visits = await getVisitorCount();
+  const [visits, districtLine] = await Promise.all([getVisitorCount(), getDistrictLine()]);
   const year = new Date().getFullYear();
 
   return (
@@ -66,7 +115,7 @@ export async function Footer() {
             href="/about"
             className="text-sm text-brand-300 hover:text-brand-200 transition-colors"
           >
-            District 3232 F1 · Region V · Zone I
+            {districtLine}
           </Link>
           <div className="flex gap-2 mt-5">
             <SocialIcon href="https://facebook.com/lcbrisingstar" label="Facebook">
@@ -177,13 +226,16 @@ function SocialIcon({
 }
 
 // The public counter starts from a baseline so it never reads as a
-// brand-new site. Real tracked visits (site_counters.value) are added
-// on top once they exceed the baseline.
+// brand-new site. `site_counters.value` holds only the real tracked
+// visits (seeded at 0), which are ADDED on top of this baseline.
 const VISITOR_BASELINE = 25_889;
 
 function VisitorCounter({ count }: { count: number | null }) {
-  // Show the larger of the baseline or the real tracked value.
-  const total = Math.max(count ?? 0, VISITOR_BASELINE);
+  // Baseline floor + every real tracked visit. Using addition (not
+  // Math.max) is what keeps the counter moving: with `Math.max` the
+  // baseline masked every real visit until they exceeded 25,889, so
+  // the number sat frozen at the baseline forever.
+  const total = VISITOR_BASELINE + Math.max(count ?? 0, 0);
   const display = total.toString().padStart(5, '0');
   const digits = display.split('');
   return (

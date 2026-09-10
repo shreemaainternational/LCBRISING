@@ -70,10 +70,10 @@ export default function SyncUploader() {
         </label>
 
         <label className="text-sm flex-1 min-w-[240px]">
-          <span className="block mb-1 text-gray-600">CSV file</span>
+          <span className="block mb-1 text-gray-600">CSV / Excel file</span>
           <input
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,text/csv,.xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-navy-700 file:text-white file:px-3 file:py-2 file:text-sm hover:file:bg-navy-800"
           />

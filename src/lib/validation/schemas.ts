@@ -18,7 +18,9 @@ export const LIONS_ROLE_VALUES = [
 
 export const enterpriseMemberSchema = memberSchema.extend({
   district_id: z.string().uuid().optional().nullable(),
-  lions_member_id: z.string().max(64).optional().nullable(),
+  // Membership number (LCI member ID) is mandatory when adding a member.
+  // Updates use enterpriseMemberSchema.partial(), so this stays optional there.
+  lions_member_id: z.string().trim().min(1, 'Membership number is required').max(64),
   lions_role: z.enum(LIONS_ROLE_VALUES).optional().nullable(),
   whatsapp: z.string().max(32).optional().nullable(),
   birthday: z.string().optional().nullable(),
@@ -55,6 +57,22 @@ export const officerSchema = z.object({
   term_start: z.string(),
   term_end: z.string().optional().nullable(),
   status: z.enum(['active', 'past', 'pending']).default('active'),
+  notes: z.string().max(2000).optional().nullable(),
+  // Lions portal "Manage Officers" fields.
+  officer_type: z.enum(['officer', 'chairperson']).optional().nullable(),
+  is_district_cabinet: z.boolean().optional(),
+  address: z.string().max(2000).optional().nullable(),
+  contact_phone: z.string().max(50).optional().nullable(),
+  contact_email: z.string().max(200).optional().nullable(),
+});
+
+/** PATCH payload for ending an assignment or adding an officer address. */
+export const officerUpdateSchema = z.object({
+  status: z.enum(['active', 'past', 'pending']).optional(),
+  term_end: z.string().optional().nullable(),
+  address: z.string().max(2000).optional().nullable(),
+  contact_phone: z.string().max(50).optional().nullable(),
+  contact_email: z.string().max(200).optional().nullable(),
   notes: z.string().max(2000).optional().nullable(),
 });
 
@@ -117,6 +135,7 @@ export const eventSchema = z.object({
   capacity: z.number().int().positive().optional(),
   is_public: z.boolean().default(true),
   cover_url: z.string().url().optional(),
+  category: z.string().max(60).optional(),
 });
 
 export const rsvpSchema = z.object({

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/server';
 import { ArrowLeft, Calendar, MapPin, Users, Clock, Banknote } from 'lucide-react';
 import { formatINR } from '@/lib/utils';
+import { collectActivityPhotos, collectActivityVideos } from '@/lib/activity-media';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,17 +39,31 @@ export default async function MobileActivityDetail({ params }: { params: Promise
         <Stat icon={Banknote} label="Funds Raised" value={formatINR(Number(a.amount_raised ?? 0))} color="bg-blue-100 text-blue-800" />
       </div>
 
-      {(a.before_photos?.length || a.after_photos?.length || a.photos?.length) ? (
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Photos</h3>
-          <div className="grid grid-cols-3 gap-2">
-            {[...(a.before_photos ?? []), ...(a.after_photos ?? []), ...(a.photos ?? [])].slice(0, 9).map((url: string, i: number) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={url} alt="" className="aspect-square w-full object-cover rounded-lg" />
-            ))}
+      {(() => {
+        const photos = collectActivityPhotos(a);
+        const videos = collectActivityVideos(a);
+        if (!photos.length && !videos.length) return null;
+        return (
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Photos</h3>
+            {photos.length > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {photos.slice(0, 9).map((url: string, i: number) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={i} src={url} alt="" className="aspect-square w-full object-cover rounded-lg" />
+                ))}
+              </div>
+            )}
+            {videos.length > 0 && (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {videos.slice(0, 4).map((url: string, i: number) => (
+                  <video key={i} src={url} controls playsInline className="w-full rounded-lg bg-black" />
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      ) : null}
+        );
+      })()}
     </div>
   );
 }

@@ -30,7 +30,7 @@ interface AiOutput {
   scenes?: { text: string; duration_seconds?: number }[];
 }
 
-export function CreativeBuilder() {
+export function CreativeBuilder({ canvaConnected = false }: { canvaConnected?: boolean }) {
   const [type, setType] = useState<ContentType>('social_post');
   const [form, setForm] = useState({
     title: '', description: '', location: 'Vadodara',
@@ -76,6 +76,10 @@ export function CreativeBuilder() {
 
   async function design() {
     if (!tpl.canvaTemplate) return;
+    if (!canvaConnected) {
+      setNotice('Canva is not connected yet. Connect an account at /admin/integrations/canva to generate designs.');
+      return;
+    }
     setBusy('canva'); setError(null); setCreative(null);
     try {
       const res = await fetch('/api/canva/generate-design', {
@@ -206,14 +210,31 @@ export function CreativeBuilder() {
 
         <Card>
           <CardHeader><CardTitle>3. Generate</CardTitle></CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
-            <Button onClick={generate} disabled={!form.title || busy !== null}>
-              {busy === 'ai' ? 'Generating…' : '✨ Generate Content (AI)'}
-            </Button>
-            {tpl.canvaTemplate && (
-              <Button onClick={design} variant="outline" disabled={busy !== null || !content}>
-                {busy === 'canva' ? 'Designing…' : `🎨 Generate Design (Canva: ${tpl.canvaTemplate})`}
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={generate} disabled={!form.title || busy !== null}>
+                {busy === 'ai' ? 'Generating…' : '✨ Generate Content (AI)'}
               </Button>
+              {tpl.canvaTemplate && (
+                canvaConnected ? (
+                  <Button onClick={design} variant="outline" disabled={busy !== null || !content}>
+                    {busy === 'canva' ? 'Designing…' : `🎨 Generate Design (Canva: ${tpl.canvaTemplate})`}
+                  </Button>
+                ) : (
+                  <a
+                    href="/admin/integrations/canva"
+                    className="inline-flex items-center gap-2 h-10 px-4 rounded-md border border-navy-800 text-navy-800 text-sm font-medium hover:bg-navy-800 hover:text-white transition-colors"
+                  >
+                    🎨 Connect Canva to generate designs →
+                  </a>
+                )
+              )}
+            </div>
+            {tpl.canvaTemplate && !canvaConnected && (
+              <p className="text-xs text-gray-500">
+                AI text still works without Canva — only the flyer/design step needs a connected
+                Canva account.
+              </p>
             )}
           </CardContent>
         </Card>

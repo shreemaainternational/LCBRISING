@@ -19,6 +19,9 @@ const Body = z.object({
   is_featured: z.boolean().default(false),
   display_order: z.number().int().default(0),
   taken_on: z.string().optional(),
+  source_name: z.string().max(200).optional(),
+  source_url: z.string().url().optional(),
+  media_type: z.enum(['Newspaper', 'Online', 'TV']).optional(),
 });
 
 export async function GET(req: NextRequest) {

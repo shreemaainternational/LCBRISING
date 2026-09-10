@@ -19,7 +19,11 @@ export default async function MobileLayout({ children }: { children: React.React
   if (!member) redirect('/login?redirectTo=/m');
 
   return (
-    <div className="min-h-screen bg-[#eef1f5] flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    // Neutral backdrop that only shows on ≥sm screens, so the mobile app
+    // renders as a centered phone-width column (a device frame) on desktop
+    // while staying edge-to-edge on real phones.
+    <div className="min-h-screen bg-[#eef1f5] sm:bg-gradient-to-b sm:from-slate-200 sm:to-slate-300">
+      <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col bg-[#eef1f5] sm:shadow-2xl sm:ring-1 sm:ring-black/5">
       <header
         className="sticky top-0 z-30 bg-[#1e40af] text-white shadow-md"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
@@ -50,9 +54,10 @@ export default async function MobileLayout({ children }: { children: React.React
         </div>
       </header>
 
-      <main className="flex-1 pb-24 px-4 pt-4 max-w-screen-sm w-full mx-auto space-y-4">
+      <main className="flex-1 pb-24 px-4 pt-4 w-full space-y-4">
         {children}
       </main>
+      </div>
 
       <MobileTabBar />
       <MobileServiceWorker />

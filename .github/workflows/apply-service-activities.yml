@@ -1,0 +1,91 @@
+name: Apply service_activities migration (one-shot)
+
+# Push-triggered one-shot that applies supabase/migrations/0062_service_activities.sql
+# to the LCBRising production Supabase project via the Management API. The
+# migration is idempotent (create table/index if not exists, drop policy if
+# exists), so re-running is safe.
+#
+# Required GitHub repo secret (either name works):
+#   SUPABASE_ACCESS_TOKEN  - Personal Access Token, sbp_*  (Supabase Dashboard
+#                            -> Account -> Tokens). Must belong to the account
+#                            that owns the LCBRISING organization.
+#
+# If the token is missing/expired the run fails with HTTP 401 and clear
+# guidance — refresh the secret and re-run (push an empty commit or re-run
+# the job from the Actions tab).
+
+on:
+  push:
+    branches: [claude/table-excel-sheet-ji0sef]
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      REF: mvtqqlfzawyhntnsavbx
+      SQL_PATH: supabase/migrations/0062_service_activities.sql
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply migration via Supabase Management API
+        env:
+          PAT1: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PAT2: ${{ secrets.SUPABASE_PAT }}
+        run: |
+          set -uo pipefail
+          PAT="${PAT1:-${PAT2:-}}"
+          if [ -z "$PAT" ]; then
+            echo "::error::Missing SUPABASE_ACCESS_TOKEN repo secret."
+            echo "Add it at: https://github.com/${{ github.repository }}/settings/secrets/actions"
+            exit 1
+          fi
+
+          # Fail fast with a clear message if the token can't see the project.
+          code=$(curl -sS -o /tmp/proj.json -w "%{http_code}" \
+            -H "Authorization: Bearer $PAT" \
+            "https://api.supabase.com/v1/projects/$REF")
+          if [ "$code" != "200" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN cannot access project $REF (HTTP $code). It is likely expired — refresh it in the Supabase dashboard and re-run."
+            cat /tmp/proj.json
+            exit 1
+          fi
+          echo "Verified project: $(jq -r '.name // empty' /tmp/proj.json) ($REF)"
+
+          if [ ! -f "$SQL_PATH" ]; then
+            echo "::error::SQL file not found: $SQL_PATH"; exit 1
+          fi
+          jq -Rs '{query: .}' "$SQL_PATH" > /tmp/body.json
+          code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+            -H "Authorization: Bearer $PAT" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/body.json \
+            "https://api.supabase.com/v1/projects/$REF/database/query")
+          echo "HTTP $code"
+          jq . /tmp/resp.json 2>/dev/null || cat /tmp/resp.json
+          if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+            echo "::error::Migration failed (HTTP $code)"; exit 1
+          fi
+
+      - name: Verify service_activities table exists
+        env:
+          PAT1: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PAT2: ${{ secrets.SUPABASE_PAT }}
+        run: |
+          set -uo pipefail
+          PAT="${PAT1:-${PAT2:-}}"
+          verify_sql="select column_name from information_schema.columns where table_schema='public' and table_name='service_activities' order by ordinal_position;"
+          jq -n --arg q "$verify_sql" '{query:$q}' > /tmp/v.json
+          echo "--- service_activities columns ---"
+          curl -sSf \
+            -H "Authorization: Bearer $PAT" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/v.json \
+            "https://api.supabase.com/v1/projects/$REF/database/query" \
+            | jq -r '.[].column_name'
+
+      - name: Done
+        run: echo "0062_service_activities applied and verified on project ${{ env.REF }}."

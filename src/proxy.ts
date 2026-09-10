@@ -5,6 +5,11 @@ import { isSupabaseConfigured, isDevAuthBypass, env } from '@/lib/env';
 const ADMIN_PREFIX = '/admin';
 const LOGIN_PATH = '/login';
 
+// Coarse mobile-device sniff used only to auto-route the landing page to the
+// mobile app. Not a security boundary — just a routing convenience.
+const MOBILE_UA =
+  /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Windows Phone|Mobile/i;
+
 /**
  * Auth middleware with two jobs:
  *
@@ -35,6 +40,27 @@ const LOGIN_PATH = '/login';
  * return must carry that cookie jar — see redirectWithCookies().
  */
 export async function proxy(request: NextRequest) {
+  // Mobile auto-route: send phone visitors from the marketing landing page
+  // (`/`) to the installable mobile app at `/m`. Only the root path is
+  // intercepted, so shared deep links open directly on any device. Append
+  // `?desktop=1` to stay on the desktop site — the choice is remembered via a
+  // `prefer-desktop` cookie.
+  if (request.nextUrl.pathname === '/') {
+    if (request.nextUrl.searchParams.get('desktop') === '1') {
+      const res = NextResponse.next({ request });
+      res.cookies.set('prefer-desktop', '1', { path: '/', maxAge: 60 * 60 * 24 * 30 });
+      return res;
+    }
+    if (
+      request.cookies.get('prefer-desktop')?.value !== '1' &&
+      MOBILE_UA.test(request.headers.get('user-agent') ?? '')
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/m';
+      return NextResponse.redirect(url);
+    }
+  }
+
   let response = NextResponse.next({ request });
 
   if (!isSupabaseConfigured()) return response;
@@ -86,7 +112,18 @@ export async function proxy(request: NextRequest) {
   );
 
   // IMPORTANT: refreshes and persists the session for this request.
-  const { data: { user } } = await supabase.auth.getUser();
+  // getUser() throws (rather than returning { user: null }) when the
+  // refresh token cookie is present but invalid/revoked — e.g. after a
+  // Supabase project reset or a token consumed by a concurrent request.
+  // Left uncaught this crashed the middleware and 500'd every request
+  // carrying that cookie, admin and public alike. Treat it the same as
+  // "no session" instead.
+  let user = null;
+  try {
+    ({ data: { user } } = await supabase.auth.getUser());
+  } catch {
+    user = null;
+  }
 
   // Only /admin/* gets the redirect-to-login treatment.
   if (isAdminPath && !user) {

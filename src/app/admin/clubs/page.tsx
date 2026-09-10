@@ -1,24 +1,26 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requireAdminPage } from '@/lib/auth';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
+import { ClubsTable } from '@/components/admin/ClubsTable';
 import { clubsPreset } from '@/components/admin/quick-add-presets';
-import { Users, MapPin, Calendar, Building2 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ClubsPage() {
   await requireAdminPage();
-  // Service-role read: the club member-count query reads members, whose
-  // self-referential policy trips RLS recursion under the user session on
-  // DBs missing migration 0059.
-  const supa = createAdminClient();
-  const [{ data: clubs }, { data: districts }, { data: members }] = await Promise.all([
-    supa.from('clubs').select('id, name, district, city, state, charter_date, club_number, district_id')
+  // Read via the service-role client (this page is gated by the admin layout)
+  // so member counts survive databases where the `members` RLS policy recurses.
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
+  const [{ data: clubs }, { data: districts }, { data: zones }, { data: regions }, { data: members }] = await Promise.all([
+    supa.from('clubs').select('id, name, district, city, state, charter_date, club_number, district_id, zone_id, region_id')
       .is('deleted_at', null).order('name'),
     supa.from('districts').select('id, code, name').is('deleted_at', null).order('code'),
+    supa.from('zones').select('id, code, name, district_id').is('deleted_at', null).order('code'),
+    supa.from('regions').select('id, code, name, district_id').is('deleted_at', null).order('code'),
     supa.from('members').select('club_id').is('deleted_at', null),
   ]);
 
@@ -51,43 +53,13 @@ export default async function ClubsPage() {
         <Card>
           <CardHeader><CardTitle>{clubs.length} clubs</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-3">Name</th>
-                  <th className="text-left p-3">District</th>
-                  <th className="text-left p-3">City</th>
-                  <th className="text-right p-3">Members</th>
-                  <th className="text-left p-3">Chartered</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {clubs.map((c) => (
-                  <tr key={c.id} className="border-t hover:bg-gray-50">
-                    <td className="p-3 font-medium">
-                      <Link href={`/admin/clubs/${c.id}`} className="text-navy-800 hover:underline">{c.name}</Link>
-                      {c.club_number && <div className="text-xs text-gray-500">LCI #{c.club_number}</div>}
-                    </td>
-                    <td className="p-3 text-gray-600">{c.district ?? '—'}</td>
-                    <td className="p-3 text-gray-600">
-                      {c.city
-                        ? <span className="inline-flex items-center gap-1"><MapPin size={11} />{c.city}{c.state ? `, ${c.state}` : ''}</span>
-                        : '—'}
-                    </td>
-                    <td className="p-3 text-right">
-                      <span className="inline-flex items-center gap-1 text-xs"><Users size={11} />{memberCount.get(c.id) ?? 0}</span>
-                    </td>
-                    <td className="p-3 text-xs text-gray-600">
-                      {c.charter_date ? <span className="inline-flex items-center gap-1"><Calendar size={11} />{new Date(c.charter_date).toLocaleDateString('en-IN')}</span> : '—'}
-                    </td>
-                    <td className="p-3 text-right">
-                      <Link href={`/admin/clubs/${c.id}`} className="text-xs text-amber-600 hover:text-amber-800">View →</Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ClubsTable
+              clubs={clubs}
+              districts={districts ?? []}
+              zones={zones ?? []}
+              regions={regions ?? []}
+              memberCounts={Object.fromEntries(memberCount)}
+            />
           </CardContent>
         </Card>
       )}

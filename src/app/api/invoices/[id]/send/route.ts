@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { getInvoiceById } from '@/lib/invoices';
 import { createAdminClient } from '@/lib/supabase/server';
-import { sendWhatsApp, whatsappTemplates } from '@/lib/whatsapp';
+import { sendWhatsApp, whatsAppConfigured, whatsappTemplates } from '@/lib/whatsapp';
 import { sendEmail } from '@/lib/email';
 import { env, integrations } from '@/lib/env';
 
@@ -30,8 +30,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (channels.includes('whatsapp')) {
     if (!inv.customer_phone) {
       results.whatsapp = { ok: false, error: 'customer has no phone' };
-    } else if (!integrations.twilio) {
-      results.whatsapp = { ok: false, error: 'Twilio not configured' };
+    } else if (!whatsAppConfigured) {
+      results.whatsapp = { ok: false, error: 'WhatsApp not configured' };
     } else {
       try {
         await sendWhatsApp(

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, Building2, Users, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requireAdminPage } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -37,10 +37,7 @@ export default async function ZoneDetailPage({
 }) {
   const { id } = await params;
   await requireAdminPage();
-  // Service-role read: this page reads members and events, whose policies
-  // sub-select members and trip RLS recursion under the user session on DBs
-  // missing migration 0059.
-  const supa = createAdminClient();
+  const supa = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
 
   const [zoneRes, clubsRes] = await Promise.all([
     supa.from('zones').select('*').eq('id', id).maybeSingle(),

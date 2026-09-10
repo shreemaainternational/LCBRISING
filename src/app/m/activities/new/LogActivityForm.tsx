@@ -6,8 +6,15 @@ import { PhotoMultiUpload } from '@/components/admin/PhotoMultiUpload';
 
 const CATEGORIES = [
   'vision', 'hunger', 'environment', 'diabetes', 'childhood_cancer',
-  'humanitarian', 'youth', 'education', 'healthcare', 'women', 'senior', 'other',
+  'humanitarian', 'youth', 'education', 'healthcare', 'women', 'senior',
+  'meeting', 'leadership_program', 'event', 'other',
 ];
+
+/** Local "YYYY-MM-DDTHH:mm" string suitable for a datetime-local input. */
+function nowLocalInput() {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
 
 export function LogActivityForm() {
   const router = useRouter();
@@ -17,7 +24,8 @@ export function LogActivityForm() {
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('healthcare');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [startAt, setStartAt] = useState(nowLocalInput());
+  const [endAt, setEndAt] = useState('');
   const [location, setLocation] = useState('');
   const [beneficiaries, setBeneficiaries] = useState('0');
   const [hours, setHours] = useState('0');
@@ -42,7 +50,7 @@ export function LogActivityForm() {
       if (!res.ok) { setOcrNotice(j.error === 'ocr_failed_or_not_configured' ? 'Enable OPENAI_API_KEY for bill OCR' : 'Could not read bill'); return; }
       const r = j.result as { merchant_name?: string; total?: number; invoice_date?: string; notes?: string; confidence?: string };
       if (r.total) setExpenses(String(r.total));
-      if (r.invoice_date) setDate(r.invoice_date);
+      if (r.invoice_date) setStartAt((prev) => `${r.invoice_date}T${prev.slice(11) || '09:00'}`);
       if (r.merchant_name) {
         setDescription((d) => d ? d : `Expense bill from ${r.merchant_name}${r.notes ? ` — ${r.notes}` : ''}`);
       }
@@ -66,12 +74,15 @@ export function LogActivityForm() {
   function submit() {
     setError(null); setOk(false);
     if (title.trim().length < 3) { setError('Title needs at least 3 characters'); return; }
+    if (!startAt) { setError('Please pick a start date and time'); return; }
+    if (endAt && endAt < startAt) { setError('End must be after the start'); return; }
     start(async () => {
       const res = await fetch('/api/activities', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title, category, date,
+          title, category,
+          date: startAt.slice(0, 10),
           location: location || undefined,
           beneficiaries: Number(beneficiaries) || 0,
           service_hours: Number(hours) || 0,
@@ -99,6 +110,20 @@ export function LogActivityForm() {
           });
         }
       } catch { /* ignore */ }
+      // Best-effort: attach precise start/end timestamps in a separate pass so
+      // a not-yet-applied migration can't drop the extended fields above.
+      try {
+        if (j.activity?.id && startAt) {
+          await fetch(`/api/activities/${j.activity.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              start_at: new Date(startAt).toISOString(),
+              end_at: endAt ? new Date(endAt).toISOString() : null,
+            }),
+          });
+        }
+      } catch { /* ignore */ }
       setTimeout(() => router.push(`/m/activities`), 700);
     });
   }
@@ -110,15 +135,19 @@ export function LogActivityForm() {
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Date">
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input} />
+        <Field label="Starts">
+          <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} className={input} />
         </Field>
-        <Field label="Category">
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className={input}>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
-          </select>
+        <Field label="Ends">
+          <input type="datetime-local" value={endAt} min={startAt} onChange={(e) => setEndAt(e.target.value)} className={input} />
         </Field>
       </div>
+
+      <Field label="Category">
+        <select value={category} onChange={(e) => setCategory(e.target.value)} className={input}>
+          {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
+        </select>
+      </Field>
 
       <Field label="Location">
         <div className="flex gap-2">

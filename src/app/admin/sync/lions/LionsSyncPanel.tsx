@@ -13,7 +13,7 @@ interface SyncReport {
   dryRun: boolean;
 }
 
-export function LionsSyncPanel({ apiConfigured }: { apiConfigured: boolean }) {
+export function LionsSyncPanel({ apiConfigured, portalConfigured = false }: { apiConfigured: boolean; portalConfigured?: boolean }) {
   const [pending, start] = useTransition();
   const [reports, setReports] = useState<SyncReport[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +32,16 @@ export function LionsSyncPanel({ apiConfigured }: { apiConfigured: boolean }) {
     });
   }
 
+  function runPortalDistricts() {
+    setError(null); setReports([]);
+    start(async () => {
+      const res = await fetch('/api/sync/lions-portal', { method: 'POST' });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(j.error ?? 'District sync failed'); return; }
+      setReports(j.reports ?? []);
+    });
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -43,7 +53,18 @@ export function LionsSyncPanel({ apiConfigured }: { apiConfigured: boolean }) {
         <Btn onClick={() => run('club')} disabled={pending}>Clubs only</Btn>
         <Btn onClick={() => run('member')} disabled={pending}>Members only</Btn>
       </div>
-      {!apiConfigured && (
+      {portalConfigured && (
+        <div className="flex flex-wrap gap-2 pt-1 border-t">
+          <Btn onClick={runPortalDistricts} disabled={pending}>
+            {pending ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+            District data (DG login)
+          </Btn>
+          <span className="text-xs text-gray-500 self-center">
+            Pulls district data from the Lions Portal using the stored District Governor credentials.
+          </span>
+        </div>
+      )}
+      {!apiConfigured && !portalConfigured && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
           <strong>Dry-run mode:</strong> <code>LIONS_API_BASE_URL</code> is not set, so the
           adapter returns zeroed counts. Configure the env vars to enable live sync.

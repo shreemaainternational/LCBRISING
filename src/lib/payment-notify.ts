@@ -1,4 +1,4 @@
-import { sendWhatsApp, whatsappTemplates } from '@/lib/whatsapp';
+import { sendWhatsApp, whatsAppConfigured, whatsappTemplates } from '@/lib/whatsapp';
 import { sendEmail } from '@/lib/email';
 import { env, integrations } from '@/lib/env';
 
@@ -27,7 +27,7 @@ export async function sendPaymentConfirmation(input: ConfirmationInput): Promise
 
   const whatsappResult: ChannelResult = await (async () => {
     if (!input.customerPhone) return { ok: false, skipped: 'no phone' };
-    if (!integrations.twilio) return { ok: false, skipped: 'twilio not configured' };
+    if (!whatsAppConfigured) return { ok: false, skipped: 'whatsapp not configured' };
     try {
       await sendWhatsApp(
         input.customerPhone,

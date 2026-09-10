@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { describeSupabaseError } from '@/lib/supabase/errors';
 import { requirePermission, isGuardFailure } from '@/lib/rbac';
 import { enterpriseMemberSchema } from '@/lib/validation/schemas';
 import { writeAudit } from '@/lib/audit';
@@ -7,8 +8,16 @@ import { writeAudit } from '@/lib/audit';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+// Trusted admin reads/writes (gated by requirePermission at each call site).
+// Use the service-role client so queries against public.members bypass RLS and
+// avoid "infinite recursion detected in policy for relation members" on
+// databases where migration 0059 has not been applied.
+function memberDb() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : null;
+}
+
 async function fetchMember(id: string) {
-  const supa = await createClient();
+  const supa = memberDb() ?? await createClient();
   const { data } = await supa
     .from('members')
     .select('id, name, email, phone, whatsapp, club_id, district_id, lions_role, lions_member_id, status, joined_at, birthday, avatar_url')
@@ -44,14 +53,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   });
   if (isGuardFailure(actor)) return actor;
 
-  const supa = await createClient();
+  const supa = memberDb() ?? await createClient();
   const { data, error } = await supa
     .from('members')
     .update(parsed.data)
     .eq('id', id)
     .select()
     .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
 
   await writeAudit({
     action: 'member.update',
@@ -76,12 +85,12 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   });
   if (isGuardFailure(actor)) return actor;
 
-  const supa = await createClient();
+  const supa = memberDb() ?? await createClient();
   const { error } = await supa
     .from('members')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: describeSupabaseError(error.message) }, { status: 500 });
 
   await writeAudit({
     action: 'member.delete',

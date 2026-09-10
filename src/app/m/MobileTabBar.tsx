@@ -15,10 +15,10 @@ export function MobileTabBar() {
   const pathname = usePathname();
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(30,64,175,0.08)]"
+      className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(30,64,175,0.08)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="max-w-screen-sm mx-auto grid grid-cols-5">
+      <div className="grid grid-cols-5">
         {TABS.map((t) => {
           const active = t.match(pathname);
           const Icon = t.icon;

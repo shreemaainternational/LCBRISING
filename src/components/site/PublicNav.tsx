@@ -3,57 +3,30 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import {
-  ChevronDown,
-  Menu,
-  Phone,
-  X,
-  Leaf,
-  Eye,
-  Utensils,
-  Shield,
-  Ribbon,
-  Droplet,
-  Users,
-  Heart,
-  ArrowRight,
-} from 'lucide-react';
+import { ChevronDown, Menu, Phone, X, ArrowRight } from 'lucide-react';
 import { env } from '@/lib/env';
+import { CAUSES } from '@/lib/causes';
+import { PROGRAMME_GROUPS } from '@/lib/event-categories';
+
+type DropdownKind = 'services';
 
 type NavItem = {
   href: string;
   label: string;
-  hasDropdown?: boolean;
-};
-
-type Cause = {
-  href: string;
-  label: string;
-  icon: typeof Leaf;
+  dropdown?: DropdownKind;
 };
 
 const NAV: NavItem[] = [
   { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
-  { href: '/activities', label: 'Service Activities', hasDropdown: true },
+  { href: '/activities', label: 'Service Activities', dropdown: 'services' },
   { href: '/stories', label: 'Stories' },
   { href: '/campaigns', label: 'Campaigns' },
-  { href: '/impact', label: 'Impact' },
   { href: '/blog', label: 'Newsroom' },
   { href: '/events', label: 'Events' },
   { href: '/media', label: 'Media' },
+  { href: '/gallery', label: 'Gallery' },
   { href: '/contact', label: 'Contact' },
-];
-
-const CAUSES: Cause[] = [
-  { href: '/activities#environment', label: 'Environment', icon: Leaf },
-  { href: '/activities#vision', label: 'Vision', icon: Eye },
-  { href: '/activities#hunger', label: 'Hunger Relief', icon: Utensils },
-  { href: '/activities#relief', label: 'Disaster Relief', icon: Shield },
-  { href: '/activities#cancer', label: 'Childhood Cancer', icon: Ribbon },
-  { href: '/activities#diabetes', label: 'Diabetes', icon: Droplet },
-  { href: '/activities#youth', label: 'Youth', icon: Users },
-  { href: '/activities#humanitarian', label: 'Humanitarian', icon: Heart },
 ];
 
 const DISTRICT_LINE = 'District 3232 F1  |  Region V  |  Zone I';
@@ -113,7 +86,7 @@ export function PublicNav() {
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
             {NAV.map((item) =>
-              item.hasDropdown ? (
+              item.dropdown === 'services' ? (
                 <ServiceActivitiesDropdown
                   key={item.href}
                   item={item}
@@ -172,19 +145,35 @@ export function PublicNav() {
                 >
                   {item.label}
                 </Link>
-                {item.hasDropdown && (
-                  <div className="ml-3 mb-2 grid grid-cols-2 gap-1">
-                    {CAUSES.map((c) => (
-                      <Link
-                        key={c.href}
-                        href={c.href}
-                        className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
-                        onClick={() => setOpen(false)}
-                      >
-                        <c.icon size={14} className="text-brand-400" aria-hidden />
-                        {c.label}
-                      </Link>
-                    ))}
+
+                {item.dropdown === 'services' && (
+                  <div className="ml-3 mb-2">
+                    <div className="grid grid-cols-2 gap-1">
+                      {CAUSES.map((c) => (
+                        <Link
+                          key={c.slug}
+                          href={`/activities/${c.slug}`}
+                          className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
+                          onClick={() => setOpen(false)}
+                        >
+                          <c.icon size={14} className="text-brand-400" aria-hidden />
+                          {c.title}
+                        </Link>
+                      ))}
+                    </div>
+                    <div className="mt-2 grid grid-cols-1 gap-1">
+                      {PROGRAMME_GROUPS.map((group) => (
+                        <Link
+                          key={group.key}
+                          href={group.route!}
+                          className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
+                          onClick={() => setOpen(false)}
+                        >
+                          <group.icon size={14} className="text-brand-400 flex-shrink-0" aria-hidden />
+                          {group.title}
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -205,12 +194,15 @@ export function PublicNav() {
   );
 }
 
-function ServiceActivitiesDropdown({
+/** Shared shell: a top-nav link with a hover-revealed dropdown panel. */
+function DropdownShell({
   item,
   active,
+  children,
 }: {
   item: NavItem;
   active: boolean;
+  children: React.ReactNode;
 }) {
   return (
     <div className="relative group">
@@ -227,31 +219,62 @@ function ServiceActivitiesDropdown({
         />
       </Link>
       <div className="absolute left-0 top-full pt-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity">
-        <div className="bg-navy-800 text-white rounded-lg shadow-xl border border-white/10 w-[260px] overflow-hidden">
-          <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
-            LIONS GLOBAL CAUSES
-          </div>
-          <div className="pb-2">
-            {CAUSES.map((c) => (
-              <Link
-                key={c.href}
-                href={c.href}
-                className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
-              >
-                <c.icon size={16} className="text-brand-400" aria-hidden />
-                {c.label}
-              </Link>
-            ))}
-          </div>
-          <Link
-            href="/activities"
-            className="flex items-center justify-center gap-1.5 border-t border-white/10 px-4 py-3 text-sm font-semibold text-brand-300 hover:bg-white/5"
-          >
-            View All Activities
-            <ArrowRight size={14} aria-hidden />
-          </Link>
+        <div className="bg-navy-800 text-white rounded-lg shadow-xl border border-white/10 w-[280px] max-h-[80vh] overflow-y-auto">
+          {children}
         </div>
       </div>
     </div>
+  );
+}
+
+function ServiceActivitiesDropdown({
+  item,
+  active,
+}: {
+  item: NavItem;
+  active: boolean;
+}) {
+  return (
+    <DropdownShell item={item} active={active}>
+      <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
+        LIONS GLOBAL CAUSES
+      </div>
+      <div className="pb-2">
+        {CAUSES.map((c) => (
+          <Link
+            key={c.slug}
+            href={`/activities/${c.slug}`}
+            className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
+          >
+            <c.icon size={16} className="text-brand-400" aria-hidden />
+            {c.title}
+          </Link>
+        ))}
+      </div>
+      <div className="border-t border-white/10">
+        <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
+          MEETINGS &amp; LEADERSHIP
+        </div>
+        <div className="pb-2">
+          {PROGRAMME_GROUPS.map((group) => (
+            <Link
+              key={group.key}
+              href={group.route!}
+              className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
+            >
+              <group.icon size={16} className="text-brand-400 flex-shrink-0" aria-hidden />
+              {group.title}
+            </Link>
+          ))}
+        </div>
+      </div>
+      <Link
+        href="/activities"
+        className="flex items-center justify-center gap-1.5 border-t border-white/10 px-4 py-3 text-sm font-semibold text-brand-300 hover:bg-white/5"
+      >
+        View All Activities
+        <ArrowRight size={14} aria-hidden />
+      </Link>
+    </DropdownShell>
   );
 }
