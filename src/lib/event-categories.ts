@@ -2,6 +2,8 @@ import {
   Users,
   GraduationCap,
   PartyPopper,
+  Globe,
+  Handshake,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -70,10 +72,36 @@ export const EVENT_CATEGORY_GROUPS: EventCategoryGroup[] = [
     key: 'celebration',
     title: 'Celebrations & Festivals',
     icon: PartyPopper,
+    route: '/celebrations',
+    blurb: 'Nand Mahotsav, festivals and other club celebration days.',
     items: [
       { slug: 'nand_mahotsav', label: 'Nand Mahotsav' },
       { slug: 'festival', label: 'Festival' },
       { slug: 'celebration', label: 'Celebration' },
+    ],
+  },
+  {
+    key: 'international_day',
+    title: 'International Days',
+    icon: Globe,
+    route: '/international-days',
+    blurb: 'World Lions Day, United Nations Day and other international observance days.',
+    items: [
+      { slug: 'international_day', label: 'International Day' },
+      { slug: 'lions_day', label: 'World Lions Day' },
+      { slug: 'un_day', label: 'United Nations Day' },
+    ],
+  },
+  {
+    key: 'international_committee',
+    title: 'International Committee',
+    icon: Handshake,
+    route: '/international-committee',
+    blurb: 'International relations, club twinning and international committee programmes.',
+    items: [
+      { slug: 'international_committee', label: 'International Committee Programme' },
+      { slug: 'international_relations', label: 'International Relations' },
+      { slug: 'twinning', label: 'Club Twinning' },
     ],
   },
 ];
