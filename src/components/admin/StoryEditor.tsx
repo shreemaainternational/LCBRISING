@@ -19,11 +19,24 @@ export type StoryForm = {
   impact_quote: string;
   impact_metric: string;
   tags: string[];
+  campaign_id: string;
+  activity_id: string;
   is_published: boolean;
   is_featured: boolean;
 };
 
-export function StoryEditor({ initial }: { initial: StoryForm }) {
+export type CampaignOption = { id: string; title: string };
+export type ActivityOption = { id: string; title: string; date: string };
+
+export function StoryEditor({
+  initial,
+  campaignOptions = [],
+  activityOptions = [],
+}: {
+  initial: StoryForm;
+  campaignOptions?: CampaignOption[];
+  activityOptions?: ActivityOption[];
+}) {
   const router = useRouter();
   const [form, setForm] = useState<StoryForm>(initial);
   const [error, setError] = useState<string | null>(null);
@@ -263,6 +276,34 @@ export function StoryEditor({ initial }: { initial: StoryForm }) {
               }
               className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
             />
+          </Field>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 p-5 bg-white space-y-3">
+          <h3 className="font-bold text-navy-800 mb-1">Cross-links</h3>
+          <Field label="Related campaign (optional)">
+            <select
+              value={form.campaign_id}
+              onChange={(e) => update('campaign_id', e.target.value)}
+              className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm bg-white"
+            >
+              <option value="">None</option>
+              {campaignOptions.map((c) => (
+                <option key={c.id} value={c.id}>{c.title}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Related service activity (optional)">
+            <select
+              value={form.activity_id}
+              onChange={(e) => update('activity_id', e.target.value)}
+              className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm bg-white"
+            >
+              <option value="">None</option>
+              {activityOptions.map((a) => (
+                <option key={a.id} value={a.id}>{a.title} ({a.date})</option>
+              ))}
+            </select>
           </Field>
         </div>
       </aside>
