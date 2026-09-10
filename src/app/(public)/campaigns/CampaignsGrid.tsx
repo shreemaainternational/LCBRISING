@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
-import { formatINR, formatINRShort, formatDate } from '@/lib/utils';
+import Link from 'next/link';
+import { formatINRShort, formatDate } from '@/lib/utils';
 
 export type CampaignCardData = {
   id: string;
@@ -26,39 +25,17 @@ function pctOf(raised: number, goal: number) {
   return goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
 }
 
-function toDetail(c: CampaignCardData): DetailItem {
-  return {
-    id: c.id,
-    title: c.title,
-    kicker: c.category ?? 'Campaign',
-    dateLabel: c.ends_at ? `Closes ${formatDate(c.ends_at)}` : undefined,
-    photos: [c.hero_image || FALLBACK_HERO],
-    body: c.description ?? c.tagline ?? undefined,
-    stats: [
-      { label: 'Raised', value: formatINR(c.raised) },
-      { label: 'Goal', value: formatINR(Number(c.goal_amount)) },
-      { label: 'Progress', value: `${pctOf(c.raised, c.goal_amount)}%` },
-    ],
-    ctas: [{ href: `/donate?campaign=${c.slug}`, label: 'Donate', variant: 'gold' }],
-    sharePath: '/campaigns',
-  };
-}
-
 export function CampaignsGrid({ campaigns }: { campaigns: CampaignCardData[] }) {
-  const [open, setOpen] = useState<DetailItem | null>(null);
-
   return (
-    <>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
-        {campaigns.map((c) => {
-          const pct = pctOf(c.raised, c.goal_amount);
-          return (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setOpen(toDetail(c))}
-              className="group text-left block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-            >
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
+      {campaigns.map((c) => {
+        const pct = pctOf(c.raised, c.goal_amount);
+        return (
+          <Link
+            key={c.id}
+            href={`/campaigns/${c.slug}`}
+            className="group text-left block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+          >
               <div className="relative aspect-[16/10] overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -108,12 +85,9 @@ export function CampaignsGrid({ campaigns }: { campaigns: CampaignCardData[] }) 
                   )}
                 </div>
               </div>
-            </button>
-          );
-        })}
-      </div>
-
-      <DetailModal item={open} onClose={() => setOpen(null)} />
-    </>
+          </Link>
+        );
+      })}
+    </div>
   );
 }
