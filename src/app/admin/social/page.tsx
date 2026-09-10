@@ -59,7 +59,7 @@ export default async function SocialPage() {
             ] },
             { name: 'caption', label: 'Caption', type: 'textarea', required: true, placeholder: 'Write or paste the post copy…' },
             { name: 'image_url', label: 'Image URL', type: 'url', hint: 'Optional cover image' },
-            { name: 'scheduled_at', label: 'Schedule (optional)', type: 'datetime-local', hint: 'Leave blank to publish immediately' },
+            { name: 'scheduled_at', label: 'Schedule (optional)', type: 'datetime-local', cast: 'datetime', hint: 'Leave blank to publish immediately' },
           ]}
         />
       </div>
