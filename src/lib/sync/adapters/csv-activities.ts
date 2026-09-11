@@ -266,8 +266,13 @@ async function runLions(
     const category = mapCategory(cause, title, projectType);
     const accountName = account || get(r, 'sponsor_account_name');
     const clubId = accountName ? await resolveClub(accountName) : null;
+    const serviceActivityId = get(r, 'service_activity_id');
 
-    // 1) Map down to the app activities model.
+    // 1) Map down to the app activities model. A row carrying a portal
+    //    Service Activity ID closes the "Export from Lion Portal ->
+    //    CRM Reconciliation" loop: it confirms the activity was filed,
+    //    so the Lions Report Validator status advances to 'submitted'
+    //    even if no CRM officer recorded the confirmation by hand.
     const activityId = await upsertActivity(
       supa,
       {
@@ -283,13 +288,19 @@ async function runLions(
         ...(col.total_volunteers !== undefined
           ? { lion_members_count: Math.round(num(get(r, 'total_volunteers'))) }
           : {}),
+        ...(serviceActivityId
+          ? {
+              lions_status: 'submitted',
+              lions_report_id: serviceActivityId,
+              lions_submitted_at: new Date().toISOString(),
+            }
+          : {}),
       },
       result,
       rowNo,
     );
 
     // 2) Preserve the full-fidelity portal row.
-    const serviceActivityId = get(r, 'service_activity_id');
     const sa: Record<string, unknown> = {
       sponsor_md: get(r, 'sponsor_md') || null,
       sponsor_district: get(r, 'sponsor_district') || null,

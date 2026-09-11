@@ -3,11 +3,14 @@ import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createAdminClient } from '@/lib/supabase/server';
 import { formatINR, formatDate, formatActivityWhen } from '@/lib/utils';
+import { activityCategoryLabel } from '@/lib/activity-categories';
+import { env } from '@/lib/env';
 import {
   ArrowLeft, MapPin, Calendar, Users, Clock, Banknote,
   HeartPulse, Sparkles, Image as ImageIcon, Pencil,
 } from 'lucide-react';
 import { ActivityGallery } from './ActivityGallery';
+import { LionsPortalPanel } from './LionsPortalPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -125,6 +128,17 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         </Card>
       )}
 
+      <LionsPortalPanel
+        activityId={a.id}
+        activityRef={a.id.slice(0, 8).toUpperCase()}
+        title={a.title}
+        date={a.date}
+        cause={activityCategoryLabel(a.category)}
+        beneficiaries={Number(a.beneficiaries ?? 0)}
+        lionHours={Number(a.service_hours ?? 0)}
+        portalUrl={env.LIONS_PORTAL_LOGIN_URL ?? null}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <Card>
           <CardHeader><CardTitle>Project Financials</CardTitle></CardHeader>
@@ -145,6 +159,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             <Row label="Status"             value={String(a.status ?? 'completed')} />
             <Row label="Impact Score"       value={a.impact_score == null ? '—' : `${a.impact_score} / 100`} />
             <Row label="Reported to District" value={a.reported_to_district ? 'Yes' : 'No'} />
+            <Row label="Lions Portal" value={String(a.lions_report_id ? `Submitted (${a.lions_report_id})` : (a.lions_status ?? 'not_submitted').replace(/_/g, ' '))} />
             <Row label="GPS"                value={a.gps_lat && a.gps_lng ? `${Number(a.gps_lat).toFixed(4)}, ${Number(a.gps_lng).toFixed(4)}` : '—'} />
             <Row label="Created"            value={new Date(a.created_at).toLocaleString('en-IN')} />
             <Row label="Last Updated"       value={new Date(a.updated_at).toLocaleString('en-IN')} />

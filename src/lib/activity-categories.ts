@@ -37,6 +37,9 @@ export const ACTIVITY_CATEGORY_OPTIONS: ActivityCategoryOption[] = [
   { value: 'other', label: 'Other' },
 ];
 
+/** Category slugs that are real Lions global causes (not Meeting/Event/Other). */
+export const CAUSE_CATEGORIES_SET: ReadonlySet<string> = new Set(CAUSE_CATEGORIES.map((c) => c.value));
+
 const LABEL_BY_VALUE: Record<string, string> = Object.fromEntries(
   ACTIVITY_CATEGORY_OPTIONS.map((o) => [o.value, o.label]),
 );
