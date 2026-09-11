@@ -39,7 +39,10 @@ function toDetail(c: CampaignCardData): DetailItem {
       { label: 'Goal', value: formatINR(Number(c.goal_amount)) },
       { label: 'Progress', value: `${pctOf(c.raised, c.goal_amount)}%` },
     ],
-    ctas: [{ href: `/donate?campaign=${c.slug}`, label: 'Donate', variant: 'gold' }],
+    ctas: [
+      { href: `/campaigns/${c.slug}`, label: 'View campaign', variant: 'navy' },
+      { href: `/donate?campaign=${c.slug}`, label: 'Donate', variant: 'gold' },
+    ],
     sharePath: '/campaigns',
   };
 }

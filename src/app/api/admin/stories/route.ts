@@ -24,6 +24,8 @@ const baseSchema = z.object({
   tags: z.array(z.string()).default([]),
   is_published: z.boolean().default(false),
   is_featured: z.boolean().default(false),
+  activity_id: z.string().uuid().optional().or(z.literal('')).nullable(),
+  campaign_id: z.string().uuid().optional().or(z.literal('')).nullable(),
 });
 
 const createSchema = baseSchema;
@@ -47,6 +49,8 @@ function normalisePayload(p: z.infer<typeof baseSchema>) {
     tags: p.tags,
     is_published: p.is_published,
     is_featured: p.is_featured,
+    activity_id: p.activity_id || null,
+    campaign_id: p.campaign_id || null,
   };
   if (p.is_published) {
     out.published_at = new Date().toISOString();

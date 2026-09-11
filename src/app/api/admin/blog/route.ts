@@ -24,6 +24,8 @@ const baseSchema = z.object({
   is_featured: z.boolean().default(false),
   seo_title: z.string().max(200).optional().or(z.literal('')),
   seo_description: z.string().max(400).optional().or(z.literal('')),
+  story_id: z.string().uuid().optional().or(z.literal('')).nullable(),
+  campaign_id: z.string().uuid().optional().or(z.literal('')).nullable(),
 });
 
 const createSchema = baseSchema;
@@ -50,6 +52,8 @@ function normalisePayload(p: z.infer<typeof baseSchema> & { id?: string }) {
     seo_title: p.seo_title || null,
     seo_description: p.seo_description || null,
     reading_time,
+    story_id: p.story_id || null,
+    campaign_id: p.campaign_id || null,
   };
   if (p.is_published) {
     out.published_at = new Date().toISOString();
