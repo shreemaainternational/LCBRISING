@@ -281,7 +281,7 @@ export function BlogEditor({
               onChange={(e) => update('is_featured', e.target.checked)}
               className="h-4 w-4"
             />
-            <label htmlFor="featured" className="text-sm">Pin to newsroom hero</label>
+            <label htmlFor="featured" className="text-sm">Pin to blog hero</label>
           </div>
 
           <button
