@@ -13,19 +13,26 @@ export default async function MobileGallery() {
 
   const { data } = await createAdminClient()
     .from('photos')
-    .select('id, url, title, caption, category, display_order, created_at')
+    .select('id, url, title, caption, category, display_order, created_at, activities(id, title, date)')
     .is('deleted_at', null)
     .neq('category', 'hero')
     .order('display_order', { ascending: true })
     .order('created_at', { ascending: false })
     .limit(500);
 
-  const photos = ((data ?? []) as (GalleryPhoto & { created_at?: string })[]).map((p) => ({
+  type PhotoRow = GalleryPhoto & {
+    created_at?: string;
+    activities: { id: string; title: string; date: string } | null;
+  };
+  const photos = ((data ?? []) as unknown as PhotoRow[]).map((p) => ({
     id: p.id,
     url: p.url,
     title: p.title,
     caption: p.caption,
     date: p.created_at ?? null,
+    album: p.activities
+      ? { id: p.activities.id, title: p.activities.title, date: p.activities.date }
+      : null,
   }));
 
   return (

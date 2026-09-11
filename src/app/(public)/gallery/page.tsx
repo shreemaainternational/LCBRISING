@@ -13,24 +13,36 @@ export const metadata: Metadata = {
 
 export const revalidate = 120;
 
+type PhotoRow = {
+  id: string;
+  url: string;
+  title: string | null;
+  caption: string | null;
+  created_at?: string;
+  activities: { id: string; title: string; date: string } | null;
+};
+
 async function loadPhotos(): Promise<GalleryPhoto[]> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = await createClient();
     const { data } = await supabase
       .from('photos')
-      .select('id, url, title, caption, category, display_order, created_at')
+      .select('id, url, title, caption, category, display_order, created_at, activities(id, title, date)')
       .is('deleted_at', null)
       .neq('category', 'hero')
       .order('display_order', { ascending: true })
       .order('created_at', { ascending: false })
       .limit(500);
-    return ((data ?? []) as (GalleryPhoto & { created_at?: string })[]).map((p) => ({
+    return ((data ?? []) as unknown as PhotoRow[]).map((p) => ({
       id: p.id,
       url: p.url,
       title: p.title,
       caption: p.caption,
       date: p.created_at ?? null,
+      album: p.activities
+        ? { id: p.activities.id, title: p.activities.title, date: p.activities.date }
+        : null,
     }));
   } catch {
     return [];
