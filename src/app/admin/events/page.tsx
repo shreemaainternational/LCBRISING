@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requireAdminPage } from '@/lib/auth';
-import { formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { eventsPreset } from '@/components/admin/quick-add-presets';
+import { EventsTable } from '@/components/admin/EventsTable';
 import { Calendar } from 'lucide-react';
-import { getEventCategory, getEventCategoryGroup, groupCategorySlugs } from '@/lib/event-categories';
+import { getEventCategoryGroup, groupCategorySlugs } from '@/lib/event-categories';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,34 +48,7 @@ export default async function AdminEventsPage({
         <Card>
           <CardHeader><CardTitle>{events.length} events</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-3">Title</th>
-                  <th className="text-left p-3">Category</th>
-                  <th className="text-left p-3">When</th>
-                  <th className="text-left p-3">Location</th>
-                  <th className="text-right p-3">Capacity</th>
-                  <th className="text-left p-3">Public</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((e) => (
-                  <tr key={e.id} className="border-t">
-                    <td className="p-3 font-medium">{e.title}</td>
-                    <td className="p-3">
-                      {e.category
-                        ? getEventCategory(e.category)?.label ?? e.category
-                        : '—'}
-                    </td>
-                    <td className="p-3">{formatDate(e.date, { hour: '2-digit', minute: '2-digit' })}</td>
-                    <td className="p-3">{e.location ?? '—'}</td>
-                    <td className="p-3 text-right">{e.capacity ?? '—'}</td>
-                    <td className="p-3">{e.is_public ? 'Yes' : 'No'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <EventsTable events={events} />
           </CardContent>
         </Card>
       )}
