@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, integrations } from '@/lib/env';
 import { formatDate } from '@/lib/utils';
 import { LionsBlogSyncButton } from '@/components/admin/LionsBlogSyncButton';
+import { BlogRowActions } from '@/components/admin/BlogRowActions';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +66,7 @@ export default async function AdminBlogIndex() {
     <div>
       <div className="flex items-start justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-navy-800 mb-1">Newsroom</h1>
+          <h1 className="text-3xl font-bold text-navy-800 mb-1">Blog</h1>
           <p className="text-gray-600">
             Manage blog posts, news, and stories. {published} published · {drafts} drafts.
           </p>
@@ -137,6 +138,7 @@ export default async function AdminBlogIndex() {
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Published</th>
                 <th className="px-4 py-3 text-right">Views</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -176,6 +178,9 @@ export default async function AdminBlogIndex() {
                     {p.published_at ? formatDate(p.published_at) : '—'}
                   </td>
                   <td className="px-4 py-3 text-right text-gray-700">{p.view_count ?? 0}</td>
+                  <td className="px-4 py-3">
+                    <BlogRowActions id={p.id} title={p.title} />
+                  </td>
                 </tr>
               ))}
             </tbody>
