@@ -38,6 +38,17 @@ const VIEW_TABS: { type: MasterItemType | 'ALL'; label: string }[] = [
 const DATE_QUICK_FILTERS = ['Full Year', 'Today', 'This Week', 'This Month', 'Next Month', 'Custom Range'] as const;
 type DateQuickFilter = (typeof DATE_QUICK_FILTERS)[number];
 
+/** "2025-02" -> "FEB 2025", preferring the curated Lionistic-year label
+ *  when the key falls in the current 12-month window, computed for any
+ *  other month (past or future) so nothing is left unlabeled. */
+function monthLabel(key: string): string {
+  const known = LIONISTIC_YEAR_MONTHS.find((m) => m.value === key)?.label;
+  if (known) return known;
+  return new Date(`${key}-01T00:00:00Z`)
+    .toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+    .toUpperCase();
+}
+
 function toISODate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
@@ -124,11 +135,21 @@ export function MasterActivitiesBoard({ items, isAdmin }: { items: MasterItem[];
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
       .map(([key, monthItems]) => ({
         key,
-        label: LIONISTIC_YEAR_MONTHS.find((m) => m.value === key)?.label
-          ?? new Date(`${key}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).toUpperCase(),
+        label: monthLabel(key),
         items: monthItems.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
       }));
   }, [filtered]);
+
+  // The month filter must offer every month that actually has data — not
+  // just the current Lionistic year — otherwise activities logged before
+  // (or scheduled after) the current 12-month window have no way to be
+  // selected and effectively disappear once a specific month is chosen.
+  const availableMonths = useMemo(() => {
+    const keys = new Set(items.map((item) => monthKeyOf(item.date)));
+    return Array.from(keys)
+      .sort()
+      .map((key) => ({ value: key, label: monthLabel(key) }));
+  }, [items]);
 
   const selectClass = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-navy-800';
 
@@ -230,7 +251,7 @@ export function MasterActivitiesBoard({ items, isAdmin }: { items: MasterItem[];
         </div>
         <select value={month} onChange={(e) => setMonth(e.target.value)} className={selectClass}>
           <option value="ALL">All Months</option>
-          {LIONISTIC_YEAR_MONTHS.map((m) => (
+          {availableMonths.map((m) => (
             <option key={m.value} value={m.value}>{m.label}</option>
           ))}
         </select>
