@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
+import { LionsResourceLink } from '@/components/site/LionsResourceLink';
 import { StoriesBoard, type Story } from './StoriesBoard';
 
 export const metadata: Metadata = {
@@ -48,7 +49,12 @@ export default async function StoriesPage() {
 
       {all.length === 0 ? (
         <section className="container-page py-16 text-center text-gray-500">
-          Real stories from the people we have served will appear here soon. Check back shortly!
+          <p>Real stories from the people we have served will appear here soon. Check back shortly!</p>
+          <LionsResourceLink
+            href="https://www.lionsclubs.org/en/our-impact/our-stories/lion-stories"
+            label="Read Lions Clubs International Stories"
+            className="mt-4 justify-center"
+          />
         </section>
       ) : (
         <StoriesBoard featured={featured} rest={rest} />

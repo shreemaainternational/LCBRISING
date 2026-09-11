@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from '@/lib/env';
 import { BlogExplorer, type BlogStory } from '@/components/site/BlogExplorer';
 import { formatDate } from '@/lib/utils';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
+import { LionsResourceLink } from '@/components/site/LionsResourceLink';
 
 export const metadata: Metadata = {
   title: 'Newsroom & Stories',
@@ -83,7 +84,12 @@ export default async function BlogPage() {
 
       {posts.length === 0 ? (
         <section className="container-page py-16 text-center text-gray-500">
-          No newsroom posts published yet. Check back shortly!
+          <p>No newsroom posts published yet. Check back shortly!</p>
+          <LionsResourceLink
+            href="https://www.lionsclubs.org/en/blog"
+            label="Read the Lions Clubs International Blog"
+            className="mt-4 justify-center"
+          />
         </section>
       ) : (
         <BlogExplorer stories={stories} />

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { MapPin } from 'lucide-react';
 import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
+import { LionsResourceLink } from '@/components/site/LionsResourceLink';
 import { formatDate } from '@/lib/utils';
 
 export type Story = {
@@ -60,9 +61,15 @@ export function StoriesBoard({ featured, rest }: { featured: Story | null; rest:
 
       <section className="bg-white py-14">
         <div className="container-page">
-          <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-8">
-            More stories of impact
-          </h2>
+          <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-navy-900">
+              More stories of impact
+            </h2>
+            <LionsResourceLink
+              href="https://www.lionsclubs.org/en/our-impact/our-stories/lion-stories"
+              label="Lions International Stories"
+            />
+          </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
             {rest.map((s) => (
               <StoryCard key={s.id} story={s} onOpen={() => setOpen(toDetail(s))} />
