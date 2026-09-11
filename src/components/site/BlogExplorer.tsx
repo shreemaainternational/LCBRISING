@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { BookOpen, ExternalLink, Search } from 'lucide-react';
+import { ExternalLink, Search } from 'lucide-react';
 import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
 
 export type BlogStory = {
@@ -97,15 +97,6 @@ export function BlogExplorer({ stories }: { stories: BlogStory[] }) {
               </option>
             ))}
           </select>
-          <a
-            href="https://www.lionsclubs.org/en/blog"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-navy inline-flex items-center gap-2 h-11 px-5 rounded-md text-sm"
-          >
-            <ExternalLink size={15} aria-hidden />
-            Lions International Blog
-          </a>
         </div>
       </div>
 
@@ -132,10 +123,6 @@ export function BlogExplorer({ stories }: { stories: BlogStory[] }) {
                       alt={s.title}
                       className="h-48 w-full object-cover"
                     />
-                    <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 bg-navy-900 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                      <BookOpen size={12} aria-hidden />
-                      {s.source}
-                    </span>
                   </div>
                   <div className="p-6 flex flex-col flex-1">
                     <div className="flex items-center justify-between mb-3">
