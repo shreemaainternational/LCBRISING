@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { env } from '@/lib/env';
-import { slugify, estimateReadingTime } from '@/lib/ai/blog';
+import { slugify } from '@/lib/ai/blog';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,59 +11,48 @@ export const dynamic = 'force-dynamic';
 const baseSchema = z.object({
   title: z.string().min(3).max(200),
   slug: z.string().max(120).optional().or(z.literal('')),
-  excerpt: z.string().max(500).optional().or(z.literal('')),
-  body: z.string().optional().or(z.literal('')),
+  description: z.string().max(2000).optional().or(z.literal('')),
+  tagline: z.string().max(300).optional().or(z.literal('')),
+  goal_amount: z.number().positive(),
+  hero_image: z.string().url().optional().or(z.literal('')),
   category: z.string().max(60).optional().or(z.literal('')),
-  language: z.enum(['en', 'gu', 'hi']).default('en'),
-  story_type: z.enum(['news', 'story', 'report', 'campaign']).default('news'),
-  tags: z.array(z.string()).default([]),
-  cover_url: z.string().url().optional().or(z.literal('')),
-  hero_quote: z.string().max(500).optional().or(z.literal('')),
-  author_name: z.string().max(120).optional().or(z.literal('')),
-  is_published: z.boolean().default(false),
+  urgency: z.enum(['', 'normal', 'urgent', 'emergency']).optional(),
+  impact_metric: z.string().max(160).optional().or(z.literal('')),
+  starts_at: z.string().optional().or(z.literal('')),
+  ends_at: z.string().optional().or(z.literal('')),
+  is_active: z.boolean().default(true),
   is_featured: z.boolean().default(false),
-  seo_title: z.string().max(200).optional().or(z.literal('')),
-  seo_description: z.string().max(400).optional().or(z.literal('')),
-  story_id: z.string().uuid().optional().or(z.literal('')).nullable(),
-  campaign_id: z.string().uuid().optional().or(z.literal('')).nullable(),
+  match_campaign: z.boolean().default(false),
+  activity_ids: z.array(z.string().uuid()).default([]),
 });
 
 const createSchema = baseSchema;
 const updateSchema = baseSchema.extend({ id: z.string().uuid() });
 
-function normalisePayload(p: z.infer<typeof baseSchema> & { id?: string }) {
+function normalisePayload(p: z.infer<typeof baseSchema>) {
   const slug = (p.slug && p.slug.trim()) || slugify(p.title);
-  const body = p.body ?? '';
-  const reading_time = estimateReadingTime(body || p.excerpt || '');
   const out: Record<string, unknown> = {
     title: p.title.trim(),
     slug,
-    excerpt: p.excerpt || null,
-    body: body || null,
+    description: p.description || null,
+    tagline: p.tagline || null,
+    goal_amount: p.goal_amount,
+    hero_image: p.hero_image || null,
     category: p.category || null,
-    language: p.language,
-    story_type: p.story_type,
-    tags: p.tags,
-    cover_url: p.cover_url || null,
-    hero_quote: p.hero_quote || null,
-    author_name: p.author_name || null,
-    is_published: p.is_published,
+    urgency: p.urgency || null,
+    impact_metric: p.impact_metric || null,
+    starts_at: p.starts_at || null,
+    ends_at: p.ends_at || null,
+    is_active: p.is_active,
     is_featured: p.is_featured,
-    seo_title: p.seo_title || null,
-    seo_description: p.seo_description || null,
-    reading_time,
-    story_id: p.story_id || null,
-    campaign_id: p.campaign_id || null,
+    match_campaign: p.match_campaign,
   };
-  if (p.is_published) {
-    out.published_at = new Date().toISOString();
-  }
   return out;
 }
 
 function friendlyError(message: string): string {
   if (/duplicate key/i.test(message)) {
-    return 'Slug already used by another post — change the slug or leave it blank to regenerate.';
+    return 'Slug already used by another campaign — change the slug or leave it blank to regenerate.';
   }
   if (/row.level security/i.test(message)) {
     return 'Row-level security blocked the write. Make sure your account has admin/officer role.';
@@ -79,19 +68,28 @@ type OpResult<T> = { data: T | null; error: { message: string } | null };
 
 async function writeWithFallback<T>(
   op: (client: SupaClient) => PromiseLike<OpResult<T>>,
-): Promise<OpResult<T>> {
+): Promise<{ data: T | null; error: { message: string } | null; client: SupaClient }> {
   const supa = await createClient();
   const first = await op(supa);
-  if (!first.error) return { data: first.data, error: null };
+  if (!first.error) return { data: first.data, error: null, client: supa };
   const msg = first.error.message ?? '';
   const isAuthFail = /invalid api key|jwt/i.test(msg) || /row.level security/i.test(msg);
   if (isAuthFail && env.SUPABASE_SERVICE_ROLE_KEY) {
     const admin = createAdminClient();
     const second = await op(admin);
-    if (!second.error) return { data: second.data, error: null };
-    return { data: null, error: { message: second.error.message } };
+    if (!second.error) return { data: second.data, error: null, client: admin };
+    return { data: null, error: { message: second.error.message }, client: admin };
   }
-  return { data: null, error: { message: msg } };
+  return { data: null, error: { message: msg }, client: supa };
+}
+
+/** Replace this campaign's linked Service Activities with `activityIds`. */
+async function syncActivityLinks(client: SupaClient, campaignId: string, activityIds: string[]) {
+  await client.from('campaign_activities').delete().eq('campaign_id', campaignId);
+  if (activityIds.length === 0) return;
+  await client
+    .from('campaign_activities')
+    .insert(activityIds.map((activity_id) => ({ campaign_id: campaignId, activity_id })));
 }
 
 export async function POST(req: Request) {
@@ -107,12 +105,13 @@ export async function POST(req: Request) {
   }
   const payload = normalisePayload(parsed.data);
 
-  const { data, error } = await writeWithFallback<{ id: string; slug: string }>((c) =>
-    c.from('blog_posts').insert(payload).select('id, slug').single(),
+  const { data, error, client } = await writeWithFallback<{ id: string; slug: string }>((c) =>
+    c.from('campaigns').insert(payload).select('id, slug').single(),
   );
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
   }
+  await syncActivityLinks(client, data.id, parsed.data.activity_ids);
   return NextResponse.json({ id: data.id, slug: data.slug }, { status: 201 });
 }
 
@@ -127,15 +126,16 @@ export async function PUT(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
   }
-  const { id, ...rest } = parsed.data;
-  const payload = normalisePayload(rest);
+  const { id, activity_ids, ...rest } = parsed.data;
+  const payload = normalisePayload({ ...rest, activity_ids });
 
-  const { data, error } = await writeWithFallback<{ id: string; slug: string }>((c) =>
-    c.from('blog_posts').update(payload).eq('id', id).select('id, slug').single(),
+  const { data, error, client } = await writeWithFallback<{ id: string; slug: string }>((c) =>
+    c.from('campaigns').update(payload).eq('id', id).select('id, slug').single(),
   );
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
   }
+  await syncActivityLinks(client, id, activity_ids);
   return NextResponse.json({ id: data.id, slug: data.slug });
 }
 
@@ -150,7 +150,7 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
   const { error } = await writeWithFallback<{ id: string }>((c) =>
-    c.from('blog_posts').update({ deleted_at: new Date().toISOString() }).eq('id', id).select('id').single(),
+    c.from('campaigns').update({ is_active: false }).eq('id', id).select('id').single(),
   );
   if (error) {
     return NextResponse.json({ error: friendlyError(error.message) }, { status: 500 });

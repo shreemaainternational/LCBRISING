@@ -29,6 +29,9 @@ export async function GET(req: Request) {
     db.from('activities').select('id, title').ilike('title', like).limit(5),
     db.from('events').select('id, title').ilike('title', like).limit(5),
     db.from('beneficiaries').select('id, full_name, city').or(`full_name.ilike.${like},phone.ilike.${like}`).is('deleted_at', null).limit(5),
+    db.from('stories').select('id, title, beneficiary_name').ilike('title', like).is('deleted_at', null).limit(5),
+    db.from('campaigns').select('id, title, category').ilike('title', like).limit(5),
+    db.from('blog_posts').select('id, title, category').ilike('title', like).is('deleted_at', null).limit(5),
   ]);
 
   const rows = (i: number) =>
@@ -42,6 +45,9 @@ export async function GET(req: Request) {
     ...rows(2).map((a) => ({ type: 'Activity', label: String(a.title ?? '—'), sub: '', href: `/admin/activities/${a.id}` })),
     ...rows(3).map((e) => ({ type: 'Event', label: String(e.title ?? '—'), sub: '', href: '/admin/events' })),
     ...rows(4).map((b) => ({ type: 'Beneficiary', label: String(b.full_name ?? '—'), sub: String(b.city ?? ''), href: `/admin/beneficiaries/${b.id}` })),
+    ...rows(5).map((s) => ({ type: 'Story', label: String(s.title ?? '—'), sub: String(s.beneficiary_name ?? ''), href: `/admin/stories/${s.id}` })),
+    ...rows(6).map((c) => ({ type: 'Campaign', label: String(c.title ?? '—'), sub: String(c.category ?? ''), href: `/admin/campaigns/${c.id}` })),
+    ...rows(7).map((p) => ({ type: 'Blog post', label: String(p.title ?? '—'), sub: String(p.category ?? ''), href: `/admin/blog/${p.id}` })),
   ];
 
   return NextResponse.json({ results });

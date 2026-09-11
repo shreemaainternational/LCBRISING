@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, integrations } from '@/lib/env';
-import { BlogEditor, type BlogPostForm } from '@/components/admin/BlogEditor';
+import { BlogEditor, type BlogPostForm, type StoryOption, type CampaignOption } from '@/components/admin/BlogEditor';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +23,18 @@ type Row = {
   seo_title: string | null;
   seo_description: string | null;
   reading_time: number | null;
+  story_id: string | null;
+  campaign_id: string | null;
 };
+
+async function loadOptions(): Promise<{ stories: StoryOption[]; campaigns: CampaignOption[] }> {
+  const supabase = await createClient();
+  const [{ data: stories }, { data: campaigns }] = await Promise.all([
+    supabase.from('stories').select('id, title').is('deleted_at', null).order('title'),
+    supabase.from('campaigns').select('id, title').order('title'),
+  ]);
+  return { stories: (stories ?? []) as StoryOption[], campaigns: (campaigns ?? []) as CampaignOption[] };
+}
 
 export default async function EditBlogPostPage({
   params,
@@ -33,11 +44,11 @@ export default async function EditBlogPostPage({
   const { id } = await params;
   if (!isSupabaseConfigured()) notFound();
   const supabase = await createClient();
-  const [{ data }, usageRes] = await Promise.all([
+  const [{ data }, usageRes, { stories, campaigns }] = await Promise.all([
     supabase
       .from('blog_posts')
       .select(
-        'id, title, slug, excerpt, body, category, language, story_type, tags, cover_url, hero_quote, author_name, is_published, is_featured, seo_title, seo_description, reading_time',
+        'id, title, slug, excerpt, body, category, language, story_type, tags, cover_url, hero_quote, author_name, is_published, is_featured, seo_title, seo_description, reading_time, story_id, campaign_id',
       )
       .eq('id', id)
       .maybeSingle(),
@@ -45,6 +56,7 @@ export default async function EditBlogPostPage({
       .from('ai_generations')
       .select('cost_usd')
       .eq('blog_post_id', id),
+    loadOptions(),
   ]);
   if (!data) notFound();
   const row = data as Row;
@@ -72,13 +84,21 @@ export default async function EditBlogPostPage({
     seo_title: row.seo_title ?? '',
     seo_description: row.seo_description ?? '',
     reading_time: row.reading_time ?? undefined,
+    story_id: row.story_id,
+    campaign_id: row.campaign_id,
   };
 
   return (
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Edit post</h1>
       <p className="text-gray-600 mb-6">Editing “{row.title}”.</p>
-      <BlogEditor initial={initial} aiAvailable={integrations.openai} aiUsage={aiUsage} />
+      <BlogEditor
+        initial={initial}
+        aiAvailable={integrations.openai}
+        aiUsage={aiUsage}
+        stories={stories}
+        campaigns={campaigns}
+      />
     </div>
   );
 }

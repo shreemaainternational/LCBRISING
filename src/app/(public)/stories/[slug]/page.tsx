@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, MapPin, Quote } from 'lucide-react';
+import { ArrowLeft, MapPin, Quote, ExternalLink, Megaphone } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, env } from '@/lib/env';
 import { renderMarkdown } from '@/lib/markdown';
@@ -27,7 +27,12 @@ type Story = {
   impact_metric: string | null;
   tags: string[] | null;
   published_at: string | null;
+  activity_id: string | null;
+  campaign_id: string | null;
 };
+
+type RelatedActivity = { id: string; title: string };
+type RelatedCampaign = { slug: string; title: string };
 
 async function getStory(slug: string): Promise<Story | null> {
   if (!isSupabaseConfigured()) return null;
@@ -36,13 +41,40 @@ async function getStory(slug: string): Promise<Story | null> {
     const { data } = await supabase
       .from('stories')
       .select(
-        'id, slug, title, subtitle, beneficiary_name, beneficiary_age, location, hero_image, before_image, after_image, body, impact_quote, impact_metric, tags, published_at',
+        'id, slug, title, subtitle, beneficiary_name, beneficiary_age, location, hero_image, before_image, after_image, body, impact_quote, impact_metric, tags, published_at, activity_id, campaign_id',
       )
       .eq('slug', slug)
       .eq('is_published', true)
       .is('deleted_at', null)
       .maybeSingle();
     return (data ?? null) as Story | null;
+  } catch {
+    return null;
+  }
+}
+
+async function getRelatedActivity(id: string | null): Promise<RelatedActivity | null> {
+  if (!id || !isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.from('activities').select('id, title').eq('id', id).maybeSingle();
+    return (data ?? null) as RelatedActivity | null;
+  } catch {
+    return null;
+  }
+}
+
+async function getRelatedCampaign(id: string | null): Promise<RelatedCampaign | null> {
+  if (!id || !isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('campaigns')
+      .select('slug, title')
+      .eq('id', id)
+      .eq('is_active', true)
+      .maybeSingle();
+    return (data ?? null) as RelatedCampaign | null;
   } catch {
     return null;
   }
@@ -81,6 +113,10 @@ export default async function StoryDetailPage({
   if (!story) notFound();
   const canonical = `${env.NEXT_PUBLIC_SITE_URL}/stories/${story.slug}`;
   const body = story.body ? renderMarkdown(story.body) : '';
+  const [relatedActivity, relatedCampaign] = await Promise.all([
+    getRelatedActivity(story.activity_id),
+    getRelatedCampaign(story.campaign_id),
+  ]);
 
   return (
     <>
@@ -183,6 +219,39 @@ export default async function StoryDetailPage({
                 Programme Impact
               </p>
               <p className="mt-2 text-2xl font-bold text-navy-900">{story.impact_metric}</p>
+            </div>
+          )}
+
+          {(relatedActivity || relatedCampaign) && (
+            <div className="mt-10 grid sm:grid-cols-2 gap-4">
+              {relatedActivity && (
+                <Link
+                  href={`/activities/report/${relatedActivity.id}`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-5 hover:border-brand-400 hover:shadow-sm transition-all"
+                >
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                      Related Service Activity
+                    </p>
+                    <p className="mt-1 font-semibold text-navy-800">{relatedActivity.title}</p>
+                  </div>
+                  <ExternalLink size={16} className="text-brand-600 flex-shrink-0" aria-hidden />
+                </Link>
+              )}
+              {relatedCampaign && (
+                <Link
+                  href={`/campaigns/${relatedCampaign.slug}`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-5 hover:border-brand-400 hover:shadow-sm transition-all"
+                >
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                      Related Campaign
+                    </p>
+                    <p className="mt-1 font-semibold text-navy-800">{relatedCampaign.title}</p>
+                  </div>
+                  <Megaphone size={16} className="text-brand-600 flex-shrink-0" aria-hidden />
+                </Link>
+              )}
             </div>
           )}
 

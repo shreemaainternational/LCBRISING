@@ -22,7 +22,12 @@ export type BlogPostForm = {
   seo_title: string;
   seo_description: string;
   reading_time?: number;
+  story_id: string | null;
+  campaign_id: string | null;
 };
+
+export type StoryOption = { id: string; title: string };
+export type CampaignOption = { id: string; title: string };
 
 const CATEGORIES = [
   'Humanitarian',
@@ -41,10 +46,14 @@ export function BlogEditor({
   initial,
   aiAvailable,
   aiUsage,
+  stories = [],
+  campaigns = [],
 }: {
   initial: BlogPostForm;
   aiAvailable: boolean;
   aiUsage?: { cost_usd: number; calls: number };
+  stories?: StoryOption[];
+  campaigns?: CampaignOption[];
 }) {
   const router = useRouter();
   const [form, setForm] = useState<BlogPostForm>(initial);
@@ -365,6 +374,41 @@ export function BlogEditor({
               onChange={(e) => update('author_name', e.target.value)}
               className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
             />
+          </Field>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 p-5 bg-white space-y-3">
+          <h3 className="font-bold text-navy-800 mb-1">Related content</h3>
+          <p className="text-xs text-gray-500">
+            Optional — connects this post to the story/campaign it reports on.
+          </p>
+          <Field label="Related story">
+            <select
+              value={form.story_id ?? ''}
+              onChange={(e) => update('story_id', e.target.value || null)}
+              className="w-full h-10 px-2 rounded-md border border-gray-300 text-sm bg-white"
+            >
+              <option value="">— None —</option>
+              {stories.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.title}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Related campaign">
+            <select
+              value={form.campaign_id ?? ''}
+              onChange={(e) => update('campaign_id', e.target.value || null)}
+              className="w-full h-10 px-2 rounded-md border border-gray-300 text-sm bg-white"
+            >
+              <option value="">— None —</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
           </Field>
         </div>
 
