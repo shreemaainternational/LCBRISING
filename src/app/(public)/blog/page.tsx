@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/utils';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
-  title: 'Newsroom & Stories',
+  title: 'Blog & Stories',
   description:
     'Stories of service, impact, and community from Lions Clubs International and Baroda Rising Star — including activity reports, campaigns, and human spotlights.',
   alternates: { canonical: '/blog' },
@@ -141,7 +141,7 @@ export default async function BlogPage() {
   return (
     <>
       <PageHero
-        pillText="LIONS NEWSROOM"
+        pillText="LIONS BLOG"
         headline="Stories of Service & Impact"
         subtitle="The work of Lions, told in the voices of the people we serve. Read the latest from Baroda Rising Star and Lions Clubs International."
         backgroundImage={PAGE_HERO_BG.blog}
