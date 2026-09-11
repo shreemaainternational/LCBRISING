@@ -243,6 +243,14 @@ export interface Activity {
   location: string | null;
   photos: string[];
   reported_to_district: boolean;
+  lions_status: 'not_submitted' | 'validated' | 'ready' | 'submitted';
+  lions_description: string | null;
+  lions_validation: Record<string, unknown> | null;
+  lions_report_id: string | null;
+  lions_validated_at: string | null;
+  lions_ready_at: string | null;
+  lions_submitted_at: string | null;
+  lions_submitted_by: string | null;
 }
 
 export interface ServiceActivity {
