@@ -22,7 +22,7 @@ const NAV: NavItem[] = [
   { href: '/activities', label: 'Service Activities', dropdown: 'services' },
   { href: '/stories', label: 'Stories' },
   { href: '/campaigns', label: 'Campaigns' },
-  { href: '/blog', label: 'Newsroom' },
+  { href: '/blog', label: 'Blog' },
   { href: '/events', label: 'Events' },
   { href: '/media', label: 'Media' },
   { href: '/gallery', label: 'Gallery' },

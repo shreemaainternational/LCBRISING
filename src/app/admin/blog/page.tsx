@@ -38,6 +38,7 @@ export default async function AdminBlogIndex() {
           .select(
             'id, title, slug, category, language, is_published, is_featured, story_type, published_at, view_count, updated_at, author_name',
           )
+          .is('deleted_at', null)
           .order('updated_at', { ascending: false })
           .limit(100),
         supabase
@@ -65,7 +66,7 @@ export default async function AdminBlogIndex() {
     <div>
       <div className="flex items-start justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-navy-800 mb-1">Newsroom</h1>
+          <h1 className="text-3xl font-bold text-navy-800 mb-1">Blog</h1>
           <p className="text-gray-600">
             Manage blog posts, news, and stories. {published} published · {drafts} drafts.
           </p>

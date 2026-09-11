@@ -59,7 +59,7 @@ export function LionsBlogSyncButton() {
         onClick={run}
         disabled={busy}
         className="inline-flex h-11 px-4 rounded-md items-center gap-2 border border-gray-200 bg-white text-sm font-medium text-navy-800 hover:bg-gray-50 disabled:opacity-60"
-        title="Fetch every article from lionsclubs.org/en/blog into your newsroom"
+        title="Fetch every article from lionsclubs.org/en/blog into your blog"
       >
         {busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <DownloadCloud size={16} aria-hidden />}
         {busy ? 'Syncing…' : 'Sync Lions blog'}
