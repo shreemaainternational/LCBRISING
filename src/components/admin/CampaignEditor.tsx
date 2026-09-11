@@ -35,6 +35,7 @@ export function CampaignEditor({
   const router = useRouter();
   const [form, setForm] = useState<CampaignForm>(initial);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [activityQuery, setActivityQuery] = useState('');
   const [pending, startTransition] = useTransition();
 
@@ -59,6 +60,7 @@ export function CampaignEditor({
 
   async function save(publish: boolean) {
     setError(null);
+    setWarning(null);
     const payload = { ...form, is_active: publish || form.is_active };
     const res = await fetch('/api/admin/campaigns', {
       method: form.id ? 'PUT' : 'POST',
@@ -70,9 +72,18 @@ export function CampaignEditor({
       setError(json.error ?? 'Save failed');
       return;
     }
+    if (json.warning) {
+      // Don't navigate away on a fresh save with a warning (activity links
+      // didn't persist) — the admin needs to see it, not lose it to a
+      // route change. On an existing campaign the route stays the same,
+      // so router.refresh() below keeps this message on screen too.
+      setWarning(json.warning as string);
+    }
+    const wasNew = !form.id;
+    if (wasNew && json.id) update('id', json.id as string);
     startTransition(() => {
-      if (!form.id && json.id) {
-        router.replace(`/admin/campaigns/${json.id}`);
+      if (wasNew && json.id) {
+        if (!json.warning) router.replace(`/admin/campaigns/${json.id}`);
       } else {
         router.refresh();
       }
@@ -254,6 +265,11 @@ export function CampaignEditor({
           {error && (
             <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">
               {error}
+            </p>
+          )}
+          {warning && (
+            <p className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
+              {warning}
             </p>
           )}
         </div>

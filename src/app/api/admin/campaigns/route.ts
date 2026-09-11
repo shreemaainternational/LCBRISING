@@ -83,13 +83,34 @@ async function writeWithFallback<T>(
   return { data: null, error: { message: msg }, client: supa };
 }
 
-/** Replace this campaign's linked Service Activities with `activityIds`. */
-async function syncActivityLinks(client: SupaClient, campaignId: string, activityIds: string[]) {
-  await client.from('campaign_activities').delete().eq('campaign_id', campaignId);
-  if (activityIds.length === 0) return;
-  await client
+/**
+ * Replace this campaign's linked Service Activities with `activityIds`.
+ * Returns a warning string on failure instead of throwing — the campaign
+ * record itself has already been saved by the time this runs, so a link
+ * failure (e.g. migration 0080 not yet applied) must be surfaced to the
+ * admin rather than silently dropped, which would otherwise look like the
+ * public campaign page's statistics are "stuck" with nothing linked.
+ */
+async function syncActivityLinks(
+  client: SupaClient,
+  campaignId: string,
+  activityIds: string[],
+): Promise<string | null> {
+  const del = await client.from('campaign_activities').delete().eq('campaign_id', campaignId);
+  if (del.error) return friendlyLinkError(del.error.message);
+  if (activityIds.length === 0) return null;
+  const ins = await client
     .from('campaign_activities')
     .insert(activityIds.map((activity_id) => ({ campaign_id: campaignId, activity_id })));
+  if (ins.error) return friendlyLinkError(ins.error.message);
+  return null;
+}
+
+function friendlyLinkError(message: string): string {
+  if (/does not exist/i.test(message)) {
+    return 'Campaign saved, but activity links were NOT saved — the campaign_activities table is missing. Run migration 0080_content_relationships.sql on this Supabase project.';
+  }
+  return `Campaign saved, but activity links were not saved: ${message}`;
 }
 
 export async function POST(req: Request) {
@@ -111,8 +132,8 @@ export async function POST(req: Request) {
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
   }
-  await syncActivityLinks(client, data.id, parsed.data.activity_ids);
-  return NextResponse.json({ id: data.id, slug: data.slug }, { status: 201 });
+  const linkWarning = await syncActivityLinks(client, data.id, parsed.data.activity_ids);
+  return NextResponse.json({ id: data.id, slug: data.slug, warning: linkWarning }, { status: 201 });
 }
 
 export async function PUT(req: Request) {
@@ -135,8 +156,8 @@ export async function PUT(req: Request) {
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
   }
-  await syncActivityLinks(client, id, activity_ids);
-  return NextResponse.json({ id: data.id, slug: data.slug });
+  const linkWarning = await syncActivityLinks(client, id, activity_ids);
+  return NextResponse.json({ id: data.id, slug: data.slug, warning: linkWarning });
 }
 
 export async function DELETE(req: Request) {

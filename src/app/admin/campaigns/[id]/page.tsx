@@ -47,7 +47,7 @@ export default async function EditCampaignPage({
   const { id } = await params;
   if (!isSupabaseConfigured()) notFound();
   const supabase = await createClient();
-  const [{ data }, { data: links }, activities] = await Promise.all([
+  const [{ data }, linksRes, activities] = await Promise.all([
     supabase
       .from('campaigns')
       .select(
@@ -60,6 +60,8 @@ export default async function EditCampaignPage({
   ]);
   if (!data) notFound();
   const row = data as Row;
+  const linksTableMissing = !!linksRes.error?.message.includes('does not exist');
+  const links = linksRes.data;
 
   const initial: CampaignForm = {
     id: row.id,
@@ -84,6 +86,14 @@ export default async function EditCampaignPage({
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Edit campaign</h1>
       <p className="text-gray-600 mb-6">Editing “{row.title}”.</p>
+      {linksTableMissing && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>Activity linking is unavailable.</strong> The <code>campaign_activities</code> table
+          doesn&apos;t exist yet — run migration <code>0080_content_relationships.sql</code> on this
+          Supabase project. Until then, activities you select below won&apos;t be saved and the public
+          campaign statistics will stay empty.
+        </div>
+      )}
       <CampaignEditor initial={initial} activities={activities} />
     </div>
   );
