@@ -32,6 +32,11 @@ export type EventCategoryGroup = {
    *  Groups without a route (e.g. Celebrations) surface as category links. */
   route?: string;
   blurb?: string;
+  /** Longer description + highlight bullets for the /activities intro card —
+   *  same shape as `Cause.body`/`Cause.points` in causes.ts, so the "Meetings
+   *  & Leadership" cards render identically to the "Lions Global Causes" ones. */
+  body?: string;
+  points?: string[];
   items: EventCategory[];
 };
 
@@ -43,6 +48,12 @@ export const EVENT_CATEGORY_GROUPS: EventCategoryGroup[] = [
     route: '/meetings',
     blurb:
       'Conferences, board and general body meetings, official visits and zone advisory sessions of the club.',
+    body: "The club's governance backbone — board meetings, general body meetings, conferences and official visits that keep members aligned, informed and engaged throughout the Lionistic year.",
+    points: [
+      'Board Meetings (BM) & General Body Meetings (GB)',
+      'RC / ZC / DG official visits',
+      'Zone Advisory & Region Staff Meetings',
+    ],
     items: [
       { slug: 'conference', label: 'All Conferences' },
       { slug: 'meeting', label: 'Meetings' },
@@ -61,6 +72,12 @@ export const EVENT_CATEGORY_GROUPS: EventCategoryGroup[] = [
     route: '/leadership-programme',
     blurb:
       'Installations and the Global Action Team (GAT) and Global Extension Team (GET) leadership conclaves.',
+    body: "Installation ceremonies and the Global Action Team (GAT) and Global Extension Team (GET) conclaves that build the club's next generation of Lions leaders.",
+    points: [
+      'New club & officer installation ceremonies',
+      'GAT (Global Action Team) leadership conclaves',
+      'GET (Global Extension Team) conclaves',
+    ],
     items: [
       { slug: 'leadership_program', label: 'Leadership Programme' },
       { slug: 'installation', label: 'Installation' },
@@ -74,6 +91,12 @@ export const EVENT_CATEGORY_GROUPS: EventCategoryGroup[] = [
     icon: PartyPopper,
     route: '/celebrations',
     blurb: 'Nand Mahotsav, festivals and other club celebration days.',
+    body: "Nand Mahotsav, festivals and other celebration days the club marks together — moments of fellowship and culture alongside its service work.",
+    points: [
+      'Nand Mahotsav & festival celebrations',
+      'Club anniversaries and milestone events',
+      'Fellowship gatherings for members and families',
+    ],
     items: [
       { slug: 'nand_mahotsav', label: 'Nand Mahotsav' },
       { slug: 'festival', label: 'Festival' },
@@ -86,6 +109,12 @@ export const EVENT_CATEGORY_GROUPS: EventCategoryGroup[] = [
     icon: Globe,
     route: '/international-days',
     blurb: 'World Lions Day, United Nations Day and other international observance days.',
+    body: 'World Lions Day, United Nations Day and other international observance days the club marks in step with Lions Clubs International worldwide.',
+    points: [
+      'World Lions Day observance',
+      'United Nations Day programmes',
+      'Global Lions Day-of-Service alignment',
+    ],
     items: [
       { slug: 'international_day', label: 'International Day' },
       { slug: 'lions_day', label: 'World Lions Day' },
@@ -98,6 +127,12 @@ export const EVENT_CATEGORY_GROUPS: EventCategoryGroup[] = [
     icon: Handshake,
     route: '/international-committee',
     blurb: 'International relations, club twinning and international committee programmes.',
+    body: 'International relations, club twinning and committee programmes that connect Baroda Rising Star with the wider Lions family across borders.',
+    points: [
+      'International Committee programmes',
+      'International relations initiatives',
+      'Club twinning partnerships',
+    ],
     items: [
       { slug: 'international_committee', label: 'International Committee Programme' },
       { slug: 'international_relations', label: 'International Relations' },
