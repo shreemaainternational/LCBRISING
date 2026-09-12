@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { buildAuthorizationRequest, isOidcConfigured, isOidcSandboxActive } from '@/lib/oidc';
+import { buildAuthorizationRequest, isOidcConfigured, isOidcSandboxUsable } from '@/lib/oidc';
 import { OIDC_COOKIE, transientCookieOptions } from '@/lib/oidc/cookies';
 import { loadOidcSettings } from '@/lib/oidc/runtime-config';
 
@@ -11,8 +11,11 @@ export async function GET(req: NextRequest) {
 
   // Sandbox short-circuit — sign the user in as a synthetic Lion
   // without leaving the app. Useful before real LCI credentials are
-  // configured.
-  if (isOidcSandboxActive()) {
+  // configured. Gated on isOidcSandboxUsable (not just the DB toggle) so
+  // a sandbox_mode left on in live production falls through to the real
+  // OIDC flow (or a clear "not configured" error) instead of redirecting
+  // into /api/auth/oidc/sandbox, which blocks with a dead-end 404 there.
+  if (isOidcSandboxUsable()) {
     const url = new URL('/api/auth/oidc/sandbox', req.url);
     url.searchParams.set('return_to', returnTo);
     const as = req.nextUrl.searchParams.get('as');

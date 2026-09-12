@@ -1,4 +1,4 @@
-import { env } from '@/lib/env';
+import { env, isLionsSandboxAllowed } from '@/lib/env';
 import { peekOidcSettings, type OidcSettings } from './runtime-config';
 
 export type OidcConfig = {
@@ -52,10 +52,22 @@ export function getOidcConfig(): OidcConfig {
 
 export function isOidcConfigured(): boolean {
   const m = merge();
-  if (peekOidcSettings()?.sandbox_mode) return true;
+  if (isOidcSandboxUsable()) return true;
   return Boolean(m.issuer && m.clientId && m.redirectUri);
 }
 
 export function isOidcSandboxActive(): boolean {
   return Boolean(peekOidcSettings()?.sandbox_mode);
+}
+
+/**
+ * Whether the sandbox_mode DB toggle is both on and actually reachable —
+ * i.e. it won't hit the live-production block in /api/auth/oidc/sandbox.
+ * Callers deciding whether to route into the sandbox flow (rather than
+ * just reporting its on/off state) should use this, not
+ * isOidcSandboxActive, so a stray sandbox_mode=true left on in production
+ * doesn't get reported as "configured" when it's actually a dead end.
+ */
+export function isOidcSandboxUsable(): boolean {
+  return isOidcSandboxActive() && isLionsSandboxAllowed();
 }
