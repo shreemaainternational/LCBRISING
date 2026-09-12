@@ -7,33 +7,44 @@ import { ChevronDown, Menu, Phone, X, ArrowRight } from 'lucide-react';
 import { env } from '@/lib/env';
 import { CAUSES } from '@/lib/causes';
 import { PROGRAMME_GROUPS } from '@/lib/event-categories';
+import type { MenuItemKey } from '@/lib/site-menu-config';
 
 type DropdownKind = 'services';
 
 type NavItem = {
+  key: MenuItemKey;
   href: string;
   label: string;
   dropdown?: DropdownKind;
 };
 
 const NAV: NavItem[] = [
-  { href: '/', label: 'Home' },
-  { href: '/about', label: 'About' },
-  { href: '/activities', label: 'Service Activities', dropdown: 'services' },
-  { href: '/campaigns', label: 'Campaigns' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/events', label: 'Events' },
-  { href: '/media', label: 'Media' },
-  { href: '/gallery', label: 'Gallery' },
-  { href: '/contact', label: 'Contact' },
+  { key: 'home', href: '/', label: 'Home' },
+  { key: 'about', href: '/about', label: 'About' },
+  { key: 'activities', href: '/activities', label: 'Service Activities', dropdown: 'services' },
+  { key: 'stories', href: '/stories', label: 'Stories' },
+  { key: 'campaigns', href: '/campaigns', label: 'Campaigns' },
+  { key: 'blog', href: '/blog', label: 'Blog' },
+  { key: 'events', href: '/events', label: 'Events' },
+  { key: 'media', href: '/media', label: 'Media' },
+  { key: 'gallery', href: '/gallery', label: 'Gallery' },
+  { key: 'contact', href: '/contact', label: 'Contact' },
 ];
 
 const DISTRICT_LINE = 'District 3232 F1  |  Region V  |  Zone I';
 const CONTACT_PHONE = '+91-9712299333';
 
-export function PublicNav() {
+export function PublicNav({
+  visibility,
+}: {
+  /** Per-key visibility from the admin "Website Menu" command center. A
+   *  missing key defaults to visible, so the nav still renders in full
+   *  before the DB-backed settings load. */
+  visibility?: Partial<Record<MenuItemKey, boolean>>;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const visibleNav = NAV.filter((item) => visibility?.[item.key] !== false);
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -84,7 +95,7 @@ export function PublicNav() {
 
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
-            {NAV.map((item) =>
+            {visibleNav.map((item) =>
               item.dropdown === 'services' ? (
                 <ServiceActivitiesDropdown
                   key={item.href}
@@ -133,7 +144,7 @@ export function PublicNav() {
       {open && (
         <div className="lg:hidden bg-navy-800 text-white border-t border-white/10">
           <div className="container-page py-4 flex flex-col gap-1">
-            {NAV.map((item) => (
+            {visibleNav.map((item) => (
               <div key={item.href}>
                 <Link
                   href={item.href}
