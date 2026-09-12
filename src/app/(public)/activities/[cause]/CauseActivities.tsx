@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
 import { Calendar, MapPin, Users, Clock, HeartHandshake, Images, ImageOff } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
-import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
-import { causeForCategory } from '@/lib/causes';
 
 export type CauseActivity = {
   id: string;
@@ -21,52 +19,23 @@ export type CauseActivity = {
   category?: string | null;
 };
 
-/** Beneficiaries / Lion members / Service hours as highlight figures. */
-function activityStats(a: CauseActivity): { label: string; value: string }[] {
-  return [
-    ...(a.beneficiaries && a.beneficiaries > 0
-      ? [{ label: 'Beneficiaries', value: a.beneficiaries.toLocaleString('en-IN') }] : []),
-    ...(a.lionMembers && a.lionMembers > 0
-      ? [{ label: 'Lion Members', value: a.lionMembers.toLocaleString('en-IN') }] : []),
-    ...(a.serviceHours && a.serviceHours > 0
-      ? [{ label: 'Service Hours', value: a.serviceHours.toLocaleString('en-IN') }] : []),
-  ];
-}
-
-function toDetail(a: CauseActivity, causeSlug?: string): DetailItem {
-  const slug = causeSlug ?? causeForCategory(a.category).slug;
-  return {
-    id: a.id,
-    title: a.title,
-    dateLabel: formatDate(a.date),
-    meta: a.location ? [{ icon: MapPin, text: a.location }] : [],
-    stats: activityStats(a),
-    photos: a.photos,
-    body: a.description ?? undefined,
-    ctas: [{ href: '/donate', label: 'Support this cause', variant: 'gold' }],
-    sharePath: `/activities/${slug}`,
-  };
-}
-
 export function CauseActivities({
   activities,
-  causeSlug,
 }: {
   activities: CauseActivity[];
+  /** @deprecated no longer used — cards link to the canonical activity URL. */
   causeSlug?: string;
 }) {
-  const [open, setOpen] = useState<DetailItem | null>(null);
-
   return (
     <>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {activities.map((a) => {
           const cover = a.photos[0];
           return (
-            <button
+            <Link
               key={a.id}
-              type="button"
-              onClick={() => setOpen(toDetail(a, causeSlug))}
+              href={`/activities/report/${a.id}`}
+              aria-label={`View details for ${a.title}`}
               className="group text-left flex flex-col bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="relative block aspect-[16/10] bg-gray-100 overflow-hidden">
@@ -124,12 +93,10 @@ export function CauseActivities({
                   )}
                 </div>
               </div>
-            </button>
+            </Link>
           );
         })}
       </div>
-
-      <DetailModal item={open} onClose={() => setOpen(null)} />
     </>
   );
 }
