@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { ChevronDown, Menu, Phone, X, ArrowRight } from 'lucide-react';
+import { ChevronDown, Menu, Phone, X, ArrowRight, CalendarDays } from 'lucide-react';
 import { env } from '@/lib/env';
 import { CAUSES } from '@/lib/causes';
 import { PROGRAMME_GROUPS } from '@/lib/event-categories';
+import { archiveMonthLabel, type ActivityArchiveMonth } from '@/lib/activities';
 
 type DropdownKind = 'services';
 
@@ -32,7 +33,12 @@ const NAV: NavItem[] = [
 const DISTRICT_LINE = 'District 3232 F1  |  Region V  |  Zone I';
 const CONTACT_PHONE = '+91-9712299333';
 
-export function PublicNav() {
+export function PublicNav({
+  archiveMonths = [],
+}: {
+  /** Recent (year, month) buckets with approved activities, most recent first. */
+  archiveMonths?: ActivityArchiveMonth[];
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -91,6 +97,7 @@ export function PublicNav() {
                   key={item.href}
                   item={item}
                   active={isActive(item.href)}
+                  archiveMonths={archiveMonths}
                 />
               ) : (
                 <Link
@@ -174,6 +181,21 @@ export function PublicNav() {
                         </Link>
                       ))}
                     </div>
+                    {archiveMonths.length > 0 && (
+                      <div className="mt-2 grid grid-cols-2 gap-1">
+                        {archiveMonths.slice(0, 8).map((m) => (
+                          <Link
+                            key={`${m.year}-${m.month}`}
+                            href={`/activities/archive/${m.year}/${m.month}`}
+                            className="flex items-center gap-2 py-1.5 text-xs text-white/70 hover:text-brand-300"
+                            onClick={() => setOpen(false)}
+                          >
+                            <CalendarDays size={14} className="text-brand-400 flex-shrink-0" aria-hidden />
+                            {archiveMonthLabel(m.year, m.month)}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -230,9 +252,11 @@ function DropdownShell({
 function ServiceActivitiesDropdown({
   item,
   active,
+  archiveMonths,
 }: {
   item: NavItem;
   active: boolean;
+  archiveMonths: ActivityArchiveMonth[];
 }) {
   return (
     <DropdownShell item={item} active={active}>
@@ -268,6 +292,32 @@ function ServiceActivitiesDropdown({
           ))}
         </div>
       </div>
+      {archiveMonths.length > 0 && (
+        <div className="border-t border-white/10">
+          <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-brand-300">
+            BY MONTH &amp; YEAR
+          </div>
+          <div className="pb-2">
+            {archiveMonths.slice(0, 8).map((m) => (
+              <Link
+                key={`${m.year}-${m.month}`}
+                href={`/activities/archive/${m.year}/${m.month}`}
+                className="flex items-center gap-3 px-4 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-brand-300 transition-colors"
+              >
+                <CalendarDays size={16} className="text-brand-400 flex-shrink-0" aria-hidden />
+                {archiveMonthLabel(m.year, m.month)}
+              </Link>
+            ))}
+          </div>
+          <Link
+            href="/activities/archive"
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-brand-300 hover:bg-white/5"
+          >
+            View Full Archive
+            <ArrowRight size={12} aria-hidden />
+          </Link>
+        </div>
+      )}
       <Link
         href="/activities"
         className="flex items-center justify-center gap-1.5 border-t border-white/10 px-4 py-3 text-sm font-semibold text-brand-300 hover:bg-white/5"

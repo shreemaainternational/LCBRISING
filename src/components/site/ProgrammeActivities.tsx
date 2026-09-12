@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import {
   CauseActivities,
   type CauseActivity,
-} from '@/app/(public)/activities/[cause]/CauseActivities';
+} from '@/components/site/CauseActivities';
 import { CategoryTabs, type CategoryTab } from '@/components/site/CategoryTabs';
 
 /**

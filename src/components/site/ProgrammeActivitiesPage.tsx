@@ -4,7 +4,7 @@ import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { ProgrammeActivities } from '@/components/site/ProgrammeActivities';
 import { collectActivityPhotos } from '@/lib/activity-media';
-import type { CauseActivity } from '@/app/(public)/activities/[cause]/CauseActivities';
+import type { CauseActivity } from '@/components/site/CauseActivities';
 import {
   getEventCategoryGroup,
   groupCategorySlugs,

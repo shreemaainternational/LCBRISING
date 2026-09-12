@@ -7,7 +7,7 @@ import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import {
   CauseActivities,
   type CauseActivity,
-} from '@/app/(public)/activities/[cause]/CauseActivities';
+} from '@/components/site/CauseActivities';
 import { activityCategoryLabel } from '@/lib/activity-categories';
 
 export const dynamic = 'force-dynamic';
