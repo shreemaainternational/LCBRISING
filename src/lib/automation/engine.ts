@@ -635,7 +635,11 @@ export async function processJobs(limit = 25) {
       results.push({ id: job.id, ok: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      const failed = job.attempts + 1 >= 5;
+      // A missing integration (e.g. "RESEND_API_KEY not configured") won't
+      // resolve itself on retry — fail fast instead of burning 5 attempts
+      // and ~30 minutes of backoff on something only an env var fix can solve.
+      const unconfigured = /not configured/i.test(msg);
+      const failed = unconfigured || job.attempts + 1 >= 5;
       await supabase.from('automation_jobs').update({
         status: failed ? 'failed' : 'pending',
         last_error: msg,
