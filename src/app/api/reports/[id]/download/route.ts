@@ -22,7 +22,17 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const { data: row, error } = await db.from('reports').select('*').eq('id', id).single();
   if (error || !row) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-  if (row.download_url) return NextResponse.redirect(row.download_url);
+  if (row.download_url) {
+    // Supabase Storage serves PDFs/PPTX inline by default; the `download`
+    // query param forces Content-Disposition: attachment with this name
+    // so clicking "Download" actually saves the file instead of opening
+    // a new tab.
+    const filename = `${row.title}.${row.format === 'pptx' ? 'pptx' : 'pdf'}`
+      .replace(/[^a-z0-9.]+/gi, '_');
+    const url = new URL(row.download_url);
+    url.searchParams.set('download', filename);
+    return NextResponse.redirect(url.toString());
+  }
 
   // Regenerate on-the-fly from stored period + filters.
   const start = new Date(row.period_start);
