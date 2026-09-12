@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requireAdminPage } from '@/lib/auth';
@@ -5,7 +6,8 @@ import { formatDate } from '@/lib/utils';
 import { QuickAddCard } from '@/components/admin/QuickAddCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { eventsPreset } from '@/components/admin/quick-add-presets';
-import { Calendar } from 'lucide-react';
+import { DeleteEventButton } from '@/components/admin/DeleteEventButton';
+import { Calendar, Pencil } from 'lucide-react';
 import { getEventCategory, getEventCategoryGroup, groupCategorySlugs } from '@/lib/event-categories';
 
 export const dynamic = 'force-dynamic';
@@ -57,6 +59,7 @@ export default async function AdminEventsPage({
                   <th className="text-left p-3">Location</th>
                   <th className="text-right p-3">Capacity</th>
                   <th className="text-left p-3">Public</th>
+                  <th className="text-right p-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -72,6 +75,17 @@ export default async function AdminEventsPage({
                     <td className="p-3">{e.location ?? '—'}</td>
                     <td className="p-3 text-right">{e.capacity ?? '—'}</td>
                     <td className="p-3">{e.is_public ? 'Yes' : 'No'}</td>
+                    <td className="p-3">
+                      <div className="flex items-center justify-end gap-3">
+                        <Link
+                          href={`/admin/events/${e.id}/edit`}
+                          className="inline-flex items-center gap-1 text-navy-700 hover:text-navy-900"
+                        >
+                          <Pencil size={14} /> Edit
+                        </Link>
+                        <DeleteEventButton id={e.id} title={e.title} />
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -7,7 +7,7 @@ import { isSupabaseConfigured, env } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { CAUSES, CAUSE_SLUGS, getCause, type Cause } from '@/lib/causes';
 import { collectActivityPhotos } from '@/lib/activity-media';
-import { CauseActivities, type CauseActivity } from './CauseActivities';
+import { CauseActivities, type CauseActivity } from '@/components/site/CauseActivities';
 
 export const revalidate = 300;
 

@@ -49,3 +49,16 @@ export function colorAt(i: number): string {
 export function hex(c: string): string {
   return c.replace('#', '').toUpperCase();
 }
+
+/**
+ * This CRM runs a single club, so — same as ReportDoc.metadata.districtCode
+ * ('3232 F1', hardcoded in builders/common.ts) — region/zone/charter number
+ * are stable facts, not per-report data pulled from a query. Per migration
+ * 0072_fix_baroda_club_number.sql, the club's real charter number is
+ * 179323 (District 3232 F1, Region 6, Zone 1).
+ */
+export const ORG = {
+  region: 'Region 6',
+  zone: 'Zone 1',
+  clubNumber: '179323',
+} as const;

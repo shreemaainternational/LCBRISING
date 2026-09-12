@@ -20,12 +20,12 @@ const NAV: NavItem[] = [
   { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
   { href: '/activities', label: 'Service Activities', dropdown: 'services' },
-  { href: '/stories', label: 'Stories' },
   { href: '/campaigns', label: 'Campaigns' },
   { href: '/blog', label: 'Newsroom' },
   { href: '/events', label: 'Events' },
   { href: '/media', label: 'Media' },
   { href: '/gallery', label: 'Gallery' },
+  { href: '/directory', label: 'Directory' },
   { href: '/contact', label: 'Contact' },
 ];
 

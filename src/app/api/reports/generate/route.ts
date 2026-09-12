@@ -84,6 +84,7 @@ export async function POST(req: Request) {
 
   const db = createAdminClient();
   const ids: string[] = [];
+  const artifacts: { id: string; format: string; filename: string }[] = [];
   for (const r of rendered) {
     const path = `reports/${doc.type}/${period.lionsYear}/${r.filename}`;
     let downloadUrl: string | null = null;
@@ -117,12 +118,16 @@ export async function POST(req: Request) {
       generated_by: actor?.id ?? null,
     }).select('id').single();
 
-    if (!error && data?.id) ids.push(data.id as string);
+    if (!error && data?.id) {
+      ids.push(data.id as string);
+      artifacts.push({ id: data.id as string, format: r.format, filename: r.filename });
+    }
   }
 
   return NextResponse.json({
     ok: true,
     ids,
+    artifacts,
     count: ids.length,
     period: { start: period.start, end: period.end, label: period.label, lionsYear: period.lionsYear },
   });
