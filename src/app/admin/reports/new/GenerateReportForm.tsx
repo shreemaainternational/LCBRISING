@@ -2,7 +2,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ReportCatalogEntry } from '@/lib/reports';
-import { FileText, Presentation, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { FileText, Presentation, Loader2, CheckCircle2, AlertCircle, Download } from 'lucide-react';
 
 type Scope = 'month' | 'quarter' | 'half' | 'year';
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -24,7 +24,11 @@ export function GenerateReportForm({ catalog, initialType }: Props) {
   const [language, setLanguage] = useState<'en'|'gu'|'bilingual'>('en');
   const [tone, setTone] = useState('lions_district');
   const [pending, start] = useTransition();
-  const [result, setResult] = useState<{ ok: boolean; message: string; ids?: string[] } | null>(null);
+  const [result, setResult] = useState<{
+    ok: boolean;
+    message: string;
+    artifacts?: { id: string; format: string; filename: string }[];
+  } | null>(null);
 
   const groups = useMemo(() => {
     const m = new Map<string, ReportCatalogEntry[]>();
@@ -59,7 +63,7 @@ export function GenerateReportForm({ catalog, initialType }: Props) {
         setResult({ ok: false, message: j.error ?? 'Generation failed.' });
         return;
       }
-      setResult({ ok: true, message: `Generated ${j.count} artifact(s).`, ids: j.ids });
+      setResult({ ok: true, message: `Generated ${j.count} artifact(s).`, artifacts: j.artifacts });
       router.refresh();
     });
   }
@@ -228,7 +232,7 @@ export function GenerateReportForm({ catalog, initialType }: Props) {
         )}
       </div>
 
-      <div className="flex items-center gap-3 pt-4 border-t">
+      <div className="flex flex-wrap items-center gap-3 pt-4 border-t">
         <button
           type="button"
           onClick={submit}
@@ -244,6 +248,18 @@ export function GenerateReportForm({ catalog, initialType }: Props) {
             {result.message}
           </span>
         )}
+        {result?.ok && result.artifacts?.map((a) => (
+          <a
+            key={a.id}
+            href={`/api/reports/${a.id}/download`}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-white font-medium text-sm ${
+              a.format === 'pptx' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-red-600 hover:bg-red-700'
+            }`}
+          >
+            <Download size={15} />
+            Download {a.format === 'pptx' ? 'PowerPoint' : 'PDF'}
+          </a>
+        ))}
       </div>
     </div>
   );
