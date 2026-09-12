@@ -9,6 +9,7 @@ import {
   Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell, Plug, Building2, ShieldCheck,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon, Images,
   KeyRound, Command, Stethoscope, BookOpen, ChevronDown, Network, Map as MapIcon, Layers, Landmark,
+  Menu as MenuIcon,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -25,6 +26,7 @@ function isGroup(i: Item): i is Group {
 const NAV: Item[] = [
   { href: '/admin',             label: 'Dashboard',      icon: LayoutDashboard },
   { href: '/admin/operations',  label: 'Command Center', icon: Command },
+  { href: '/admin/settings/menu', label: 'Website Menu', icon: MenuIcon },
   { href: '/admin/diagnostics', label: 'Diagnostics',    icon: Stethoscope },
   { href: '/admin/reports',     label: 'Reports',        icon: BarChart3 },
   { href: '/admin/beneficiaries', label: 'Beneficiaries', icon: HeartHandshake },
