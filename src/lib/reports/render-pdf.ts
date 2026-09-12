@@ -2,6 +2,11 @@ import PDFDocument from 'pdfkit';
 import type { ReportDoc, RenderedReport } from './types';
 import { BRAND, colorAt } from './brand';
 import { drawChart } from './chart-pdf';
+import { LIONS_LOGO_PNG, DISTRICT_LOGO_PNG } from './assets/logos';
+
+const LIONS_LOGO_BUF = Buffer.from(LIONS_LOGO_PNG, 'base64');
+const DISTRICT_LOGO_BUF = Buffer.from(DISTRICT_LOGO_PNG, 'base64');
+const LOGO_SIZE = 42;
 
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;
@@ -55,6 +60,10 @@ function drawCover(pdf: PDFKit.PDFDocument, d: ReportDoc) {
   pdf.rect(0, 0, PAGE_W, 220).fill(BRAND.navy);
   // Gold accent
   pdf.rect(0, 218, PAGE_W, 6).fill(BRAND.gold);
+
+  // Brand marks: Lions International top-left, District badge top-right.
+  pdf.image(LIONS_LOGO_BUF, MARGIN, 14, { width: LOGO_SIZE, height: LOGO_SIZE });
+  pdf.image(DISTRICT_LOGO_BUF, PAGE_W - MARGIN - LOGO_SIZE, 14, { width: LOGO_SIZE, height: LOGO_SIZE });
 
   pdf.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(28)
      .text(d.metadata.clubName, MARGIN, 56, { width: CONTENT_W });

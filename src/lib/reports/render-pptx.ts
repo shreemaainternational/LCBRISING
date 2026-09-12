@@ -1,9 +1,13 @@
 import PptxGenJS from 'pptxgenjs';
 import type { ReportDoc, RenderedReport, ChartSpec } from './types';
 import { BRAND, hex, colorAt } from './brand';
+import { LIONS_LOGO_PNG, DISTRICT_LOGO_PNG } from './assets/logos';
 
 const W = 13.333;
 const H = 7.5;
+const LIONS_LOGO_DATA = `image/png;base64,${LIONS_LOGO_PNG}`;
+const DISTRICT_LOGO_DATA = `image/png;base64,${DISTRICT_LOGO_PNG}`;
+const LOGO_W = 0.38;
 
 export async function renderPptx(doc: ReportDoc): Promise<RenderedReport> {
   const p = new PptxGenJS();
@@ -19,13 +23,16 @@ export async function renderPptx(doc: ReportDoc): Promise<RenderedReport> {
       { rect: { x: 0,    y: 0,    w: W, h: 0.45, fill: { color: hex(BRAND.navy) } } },
       { rect: { x: 0,    y: 0.45, w: W, h: 0.05, fill: { color: hex(BRAND.gold) } } },
       { rect: { x: 0,    y: H - 0.4, w: W, h: 0.4, fill: { color: hex(BRAND.paperAlt) } } },
+      // Brand marks: Lions International top-left, District badge top-right.
+      { image: { data: LIONS_LOGO_DATA, x: 0.1, y: 0.04, w: LOGO_W, h: LOGO_W } },
+      { image: { data: DISTRICT_LOGO_DATA, x: W - 0.1 - LOGO_W, y: 0.04, w: LOGO_W, h: LOGO_W } },
       { text: {
           text: doc.metadata.clubName,
-          options: { x: 0.3, y: 0.07, w: 9, h: 0.3, fontSize: 12, bold: true, color: 'FFFFFF', fontFace: 'Calibri' },
+          options: { x: 0.6, y: 0.07, w: 8, h: 0.3, fontSize: 12, bold: true, color: 'FFFFFF', fontFace: 'Calibri' },
       } },
       { text: {
           text: `District ${doc.metadata.districtCode} · ${doc.period.lionsYear}`,
-          options: { x: W - 4.3, y: 0.07, w: 4, h: 0.3, fontSize: 10, color: 'FFE7B0', align: 'right', fontFace: 'Calibri' },
+          options: { x: W - 4.1, y: 0.07, w: 3.5, h: 0.3, fontSize: 10, color: 'FFE7B0', align: 'right', fontFace: 'Calibri' },
       } },
       { text: {
           text: doc.title,
