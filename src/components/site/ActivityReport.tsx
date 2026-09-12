@@ -1,14 +1,23 @@
-import { Calendar, MapPin, Users, Clock, IndianRupee } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, IndianRupee, HeartHandshake, HandHeart } from 'lucide-react';
 import { activityCategoryLabel } from '@/lib/activity-categories';
 import { LocationMap } from '@/components/site/LocationMap';
-import { ShareButtons } from '@/components/site/ShareButtons';
+import { ShareBar } from '@/components/site/ShareBar';
+import { GalleryGrid } from '@/components/site/GalleryGrid';
 import { formatDate } from '@/lib/utils';
+import { env } from '@/lib/env';
 import type { ActivityReport as ActivityReportData } from '@/lib/activities';
 
 /** Full activity report body — shared by the report page and the modal. */
 export function ActivityReport({ activity: a }: { activity: ActivityReportData }) {
   const cover = a.photos[0];
-  const rest = a.photos.slice(1);
+  const canonicalUrl = `${env.NEXT_PUBLIC_SITE_URL}/activities/report/${a.id}`;
+  const galleryPhotos = a.photos.map((url, i) => ({
+    id: `${a.id}-${i}`,
+    url,
+    title: a.captions[url] || a.title,
+    caption: a.captions[url] || null,
+    date: a.date,
+  }));
 
   return (
     <article>
@@ -53,9 +62,33 @@ export function ActivityReport({ activity: a }: { activity: ActivityReportData }
               {a.amount_raised.toLocaleString('en-IN')} raised
             </span>
           )}
+          {!!a.lion_members_count && a.lion_members_count > 0 && (
+            <span className="inline-flex items-center gap-2">
+              <HeartHandshake size={15} className="text-brand-500" aria-hidden />{' '}
+              {a.lion_members_count.toLocaleString('en-IN')} Lion members
+            </span>
+          )}
+          {!!a.leo_members_count && a.leo_members_count > 0 && (
+            <span className="inline-flex items-center gap-2">
+              <HandHeart size={15} className="text-brand-500" aria-hidden />{' '}
+              {a.leo_members_count.toLocaleString('en-IN')} Leo members
+            </span>
+          )}
+          {!!a.guest_count && a.guest_count > 0 && (
+            <span className="inline-flex items-center gap-2">
+              <Users size={15} className="text-brand-500" aria-hidden />{' '}
+              {a.guest_count.toLocaleString('en-IN')} non-Lion guests
+            </span>
+          )}
         </div>
 
-        <ShareButtons title={a.title} className="mb-8" />
+        {a.partner_organization && (
+          <p className="text-sm text-gray-600 mb-6">
+            In partnership with <span className="font-semibold text-navy-800">{a.partner_organization}</span>
+          </p>
+        )}
+
+        <ShareBar url={canonicalUrl} title={a.title} className="mb-8" />
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
@@ -82,29 +115,12 @@ export function ActivityReport({ activity: a }: { activity: ActivityReportData }
           )}
         </div>
 
-        {rest.length > 0 && (
+        {galleryPhotos.length > 0 && (
           <section className="mt-10">
             <h2 className="text-sm font-semibold uppercase tracking-[0.15em] text-gray-500 mb-5">
               Photos
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {rest.map((url) => (
-                <figure key={url} className="overflow-hidden rounded-xl border border-gray-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
-                    alt={a.captions[url] || a.title}
-                    loading="lazy"
-                    className="w-full h-52 object-cover"
-                  />
-                  {a.captions[url] && (
-                    <figcaption className="px-3 py-2 text-xs text-gray-600">
-                      {a.captions[url]}
-                    </figcaption>
-                  )}
-                </figure>
-              ))}
-            </div>
+            <GalleryGrid photos={galleryPhotos} />
           </section>
         )}
       </div>
