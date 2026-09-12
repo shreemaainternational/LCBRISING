@@ -207,12 +207,6 @@ function FeaturedCampaign({ campaign, raised }: { campaign: Campaign; raised: nu
             >
               <Heart size={16} className="mr-1" aria-hidden /> Donate
             </Link>
-            <Link
-              href="/stories"
-              className="btn-navy inline-flex h-12 px-6 rounded-md items-center"
-            >
-              Read beneficiary stories
-            </Link>
           </div>
         </div>
       </div>
