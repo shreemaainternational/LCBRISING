@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, integrations } from '@/lib/env';
 import type { CauseActivity } from '@/components/site/CauseActivities';
+import type { ActivityArchiveMonth } from '@/lib/activity-archive';
 
 export type ActivityReport = {
   id: string;
@@ -96,12 +97,8 @@ export async function getActivityReport(id: string): Promise<ActivityReport | nu
   }
 }
 
-export type ActivityArchiveMonth = { year: number; month: number; count: number };
-
-/** "September 2026" for a 1-12 month number. */
-export function archiveMonthLabel(year: number, month: number): string {
-  return new Date(year, month - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-}
+export type { ActivityArchiveMonth };
+export { archiveMonthLabel } from '@/lib/activity-archive';
 
 /**
  * Distinct (year, month) buckets that have at least one approved activity,

@@ -7,7 +7,7 @@ import { ChevronDown, Menu, Phone, X, ArrowRight, CalendarDays } from 'lucide-re
 import { env } from '@/lib/env';
 import { CAUSES } from '@/lib/causes';
 import { PROGRAMME_GROUPS } from '@/lib/event-categories';
-import { archiveMonthLabel, type ActivityArchiveMonth } from '@/lib/activities';
+import { archiveMonthLabel, type ActivityArchiveMonth } from '@/lib/activity-archive';
 
 type DropdownKind = 'services';
 
