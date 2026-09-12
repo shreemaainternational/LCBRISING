@@ -1,13 +1,15 @@
 import PptxGenJS from 'pptxgenjs';
 import type { ReportDoc, RenderedReport, ChartSpec } from './types';
-import { BRAND, hex, colorAt } from './brand';
-import { LIONS_LOGO_PNG, DISTRICT_LOGO_PNG } from './assets/logos';
+import { BRAND, ORG, hex, colorAt } from './brand';
+import { LIONS_LOGO_PNG, DISTRICT_LOGO_PNG, CLUB_LOGO_PNG } from './assets/logos';
 
 const W = 13.333;
 const H = 7.5;
 const LIONS_LOGO_DATA = `image/png;base64,${LIONS_LOGO_PNG}`;
 const DISTRICT_LOGO_DATA = `image/png;base64,${DISTRICT_LOGO_PNG}`;
+const CLUB_LOGO_DATA = `image/png;base64,${CLUB_LOGO_PNG}`;
 const LOGO_W = 0.38;
+const CLUB_LOGO_W = 1.5;
 
 export async function renderPptx(doc: ReportDoc): Promise<RenderedReport> {
   const p = new PptxGenJS();
@@ -67,34 +69,54 @@ function filenameFor(d: ReportDoc): string {
 
 function coverSlide(p: PptxGenJS, d: ReportDoc) {
   const s = p.addSlide({ masterName: 'LCBRS_MASTER' });
-  s.background = { color: hex(BRAND.navy) };
-  s.addShape('rect', { x: 0, y: 4.0, w: W, h: 0.08, fill: { color: hex(BRAND.gold) } });
+  s.background = { color: hex(BRAND.paperAlt) };
 
-  s.addText(d.metadata.clubName, {
-    x: 0.6, y: 1.1, w: W - 1.2, h: 0.7, fontSize: 32, bold: true,
-    color: 'FFFFFF', fontFace: 'Calibri',
-  });
-  s.addText(`District ${d.metadata.districtCode} · Lions Year ${d.period.lionsYear}`, {
-    x: 0.6, y: 1.85, w: W - 1.2, h: 0.4, fontSize: 14, color: 'E2E8F0', fontFace: 'Calibri',
-  });
+  // Navy hero band (below the master's thin header strip) for the report
+  // title, then the gold accent line.
+  s.addShape('rect', { x: 0, y: 0.5, w: W, h: 1.7, fill: { color: hex(BRAND.navy) } });
+  s.addShape('rect', { x: 0, y: 2.2, w: W, h: 0.05, fill: { color: hex(BRAND.gold) } });
+
   s.addText(d.title, {
-    x: 0.6, y: 2.6, w: W - 1.2, h: 1.0, fontSize: 44, bold: true,
-    color: hex(BRAND.gold), fontFace: 'Calibri',
+    x: 0.6, y: 0.85, w: W - 1.2, h: 0.75, fontSize: 36, bold: true,
+    color: hex(BRAND.gold), align: 'center', fontFace: 'Calibri',
   });
   if (d.subtitle) {
     s.addText(d.subtitle, {
-      x: 0.6, y: 3.7, w: W - 1.2, h: 0.5, fontSize: 16, color: '#E2E8F0', fontFace: 'Calibri',
+      x: 0.6, y: 1.58, w: W - 1.2, h: 0.4, fontSize: 14, color: 'E2E8F0', align: 'center', fontFace: 'Calibri',
     });
   }
+
+  // Club identity block — logo, bigger, centered, below the gold line.
+  s.addImage({ data: CLUB_LOGO_DATA, x: (W - CLUB_LOGO_W) / 2, y: 2.45, w: CLUB_LOGO_W, h: CLUB_LOGO_W });
+
+  const [lionsYearStart] = d.period.lionsYear.split('-');
+  const yearLabel = `Year ${lionsYearStart}-${Number(lionsYearStart) + 1}`;
+
+  s.addText(d.metadata.clubName, {
+    x: 0.6, y: 4.1, w: W - 1.2, h: 0.45, fontSize: 22, bold: true,
+    color: hex(BRAND.navy), align: 'center', fontFace: 'Calibri',
+  });
+  s.addText(`District ${d.metadata.districtCode}`, {
+    x: 0.6, y: 4.58, w: W - 1.2, h: 0.32, fontSize: 13, color: hex(BRAND.body), align: 'center', fontFace: 'Calibri',
+  });
+  s.addText(`${ORG.region}   ·   ${ORG.zone}   ·   Club No:- ${ORG.clubNumber}`, {
+    x: 0.6, y: 4.88, w: W - 1.2, h: 0.3, fontSize: 12, color: hex(BRAND.muted), align: 'center', fontFace: 'Calibri',
+  });
+  s.addText(yearLabel, {
+    x: 0.6, y: 5.16, w: W - 1.2, h: 0.32, fontSize: 14, bold: true,
+    color: hex(BRAND.goldDark), align: 'center', fontFace: 'Calibri',
+  });
+
   s.addText(d.period.label, {
-    x: 0.6, y: 4.5, w: 4.5, h: 0.5, fontSize: 18, bold: true, color: 'FFFFFF', fontFace: 'Calibri',
+    x: 0.6, y: 5.6, w: W - 1.2, h: 0.4, fontSize: 16, bold: true,
+    color: hex(BRAND.navy), align: 'center', fontFace: 'Calibri',
   });
   s.addText(
     `${formatDate(d.period.start)} — ${formatDate(d.period.end)}`,
-    { x: 0.6, y: 5.0, w: 6, h: 0.4, fontSize: 12, color: 'CBD5E1', fontFace: 'Calibri' },
+    { x: 0.6, y: 6.0, w: W - 1.2, h: 0.32, fontSize: 11, color: hex(BRAND.muted), align: 'center', fontFace: 'Calibri' },
   );
   s.addText(`Generated ${new Date(d.metadata.generatedAt).toLocaleString('en-IN')}`, {
-    x: W - 5, y: H - 0.7, w: 4.5, h: 0.3, fontSize: 10, color: 'CBD5E1', align: 'right', fontFace: 'Calibri',
+    x: W - 5, y: H - 0.7, w: 4.5, h: 0.3, fontSize: 10, color: hex(BRAND.muted), align: 'right', fontFace: 'Calibri',
   });
 }
 

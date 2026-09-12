@@ -1,12 +1,14 @@
 import PDFDocument from 'pdfkit';
 import type { ReportDoc, RenderedReport } from './types';
-import { BRAND, colorAt } from './brand';
+import { BRAND, ORG, colorAt } from './brand';
 import { drawChart } from './chart-pdf';
-import { LIONS_LOGO_PNG, DISTRICT_LOGO_PNG } from './assets/logos';
+import { LIONS_LOGO_PNG, DISTRICT_LOGO_PNG, CLUB_LOGO_PNG } from './assets/logos';
 
 const LIONS_LOGO_BUF = Buffer.from(LIONS_LOGO_PNG, 'base64');
 const DISTRICT_LOGO_BUF = Buffer.from(DISTRICT_LOGO_PNG, 'base64');
+const CLUB_LOGO_BUF = Buffer.from(CLUB_LOGO_PNG, 'base64');
 const LOGO_SIZE = 42;
+const CLUB_LOGO_SIZE = 110;
 
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;
@@ -56,46 +58,60 @@ function filenameFor(d: ReportDoc, ext: string): string {
 }
 
 function drawCover(pdf: PDFKit.PDFDocument, d: ReportDoc) {
-  // Navy band
-  pdf.rect(0, 0, PAGE_W, 220).fill(BRAND.navy);
+  // Navy header band: corner brand marks + centered report title/subtitle.
+  pdf.rect(0, 0, PAGE_W, 130).fill(BRAND.navy);
   // Gold accent
-  pdf.rect(0, 218, PAGE_W, 6).fill(BRAND.gold);
+  pdf.rect(0, 130, PAGE_W, 6).fill(BRAND.gold);
 
   // Brand marks: Lions International top-left, District badge top-right.
   pdf.image(LIONS_LOGO_BUF, MARGIN, 14, { width: LOGO_SIZE, height: LOGO_SIZE });
   pdf.image(DISTRICT_LOGO_BUF, PAGE_W - MARGIN - LOGO_SIZE, 14, { width: LOGO_SIZE, height: LOGO_SIZE });
 
-  pdf.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(28)
-     .text(d.metadata.clubName, MARGIN, 56, { width: CONTENT_W });
-  pdf.font('Helvetica').fontSize(11)
-     .text(`District ${d.metadata.districtCode} · Lions Year ${d.period.lionsYear}`, MARGIN, 92);
-
-  pdf.font('Helvetica-Bold').fontSize(34).fillColor(BRAND.gold)
-     .text(d.title, MARGIN, 130, { width: CONTENT_W });
+  // Centered title text, inset enough to always clear the corner logos.
+  const titleInset = MARGIN + LOGO_SIZE + 12;
+  const titleW = PAGE_W - titleInset * 2;
+  pdf.font('Helvetica-Bold').fontSize(26).fillColor(BRAND.gold)
+     .text(d.title, titleInset, 46, { width: titleW, align: 'center' });
   if (d.subtitle) {
-    pdf.font('Helvetica').fontSize(13).fillColor('#E2E8F0')
-       .text(d.subtitle, MARGIN, 178, { width: CONTENT_W });
+    pdf.font('Helvetica').fontSize(12).fillColor('#E2E8F0')
+       .text(d.subtitle, titleInset, 80, { width: titleW, align: 'center' });
   }
 
+  // Club identity block — logo, bigger, centered, below the gold line.
+  pdf.image(CLUB_LOGO_BUF, (PAGE_W - CLUB_LOGO_SIZE) / 2, 150, { width: CLUB_LOGO_SIZE, height: CLUB_LOGO_SIZE });
+
+  const [lionsYearStart] = d.period.lionsYear.split('-');
+  const yearLabel = `Year ${lionsYearStart}-${Number(lionsYearStart) + 1}`;
+
+  pdf.fillColor(BRAND.navy).font('Helvetica-Bold').fontSize(20)
+     .text(d.metadata.clubName, MARGIN, 270, { width: CONTENT_W, align: 'center' });
+  pdf.fillColor(BRAND.body).font('Helvetica').fontSize(12)
+     .text(`District ${d.metadata.districtCode}`, MARGIN, 296, { width: CONTENT_W, align: 'center' });
+  pdf.fillColor(BRAND.muted).font('Helvetica').fontSize(11)
+     .text(`${ORG.region}   ·   ${ORG.zone}   ·   Club No:- ${ORG.clubNumber}`,
+           MARGIN, 320, { width: CONTENT_W, align: 'center' });
+  pdf.fillColor(BRAND.goldDark).font('Helvetica-Bold').fontSize(13)
+     .text(yearLabel, MARGIN, 342, { width: CONTENT_W, align: 'center' });
+
   // Period card
-  pdf.rect(MARGIN, 250, CONTENT_W, 60).fill(BRAND.paperAlt).stroke(BRAND.line);
+  pdf.rect(MARGIN, 378, CONTENT_W, 60).fill(BRAND.paperAlt).stroke(BRAND.line);
   pdf.fillColor(BRAND.muted).font('Helvetica').fontSize(9)
-     .text('REPORTING PERIOD', MARGIN + 16, 260);
+     .text('REPORTING PERIOD', MARGIN + 16, 388);
   pdf.fillColor(BRAND.navy).font('Helvetica-Bold').fontSize(16)
-     .text(d.period.label, MARGIN + 16, 274);
+     .text(d.period.label, MARGIN + 16, 402);
   pdf.fillColor(BRAND.body).font('Helvetica').fontSize(10)
      .text(
        `${formatDate(d.period.start)}  —  ${formatDate(d.period.end)}`,
-       MARGIN + 16, 294,
+       MARGIN + 16, 422,
      );
   pdf.fontSize(9).fillColor(BRAND.muted)
      .text(`Generated ${new Date(d.metadata.generatedAt).toLocaleString('en-IN')}`,
-           MARGIN + 16, 294, { align: 'right', width: CONTENT_W - 32 });
+           MARGIN + 16, 422, { align: 'right', width: CONTENT_W - 32 });
 }
 
 function drawKpis(pdf: PDFKit.PDFDocument, d: ReportDoc) {
   if (!d.kpis.length) return;
-  const startY = 340;
+  const startY = 468;
   pdf.font('Helvetica-Bold').fontSize(14).fillColor(BRAND.navy)
      .text('Key Performance Indicators', MARGIN, startY);
 
