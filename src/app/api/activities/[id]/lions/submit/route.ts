@@ -25,7 +25,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { data: activity, error } = await db.from('activities').select('*').eq('id', id).maybeSingle();
   if (error || !activity) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-  const actor = await requirePermission('activity.lions.submit', { club_id: activity.club_id ?? null });
+  // Only scope the check to a club when the activity actually has one —
+  // canActOnScope() requires actor.club_id === target.club_id, which can
+  // never be satisfied when target.club_id is null (e.g. the activity's
+  // club was since deleted, nulling club_id via ON DELETE SET NULL). That
+  // would permanently lock every club officer out with a bare "forbidden".
+  // Falling back to a rank-only check when there's no club to scope
+  // against still requires club_secretary+ — it just can't be denied for
+  // a resource nothing can be scoped to.
+  const actor = await requirePermission(
+    'activity.lions.submit',
+    activity.club_id ? { club_id: activity.club_id } : {},
+  );
   if (isGuardFailure(actor)) return actor;
 
   if (activity.lions_status === 'submitted') {
@@ -69,7 +80,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     .eq('id', id)
     .select('id, lions_status, lions_report_id, lions_submitted_at, lions_submitted_by')
     .single();
-  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+  if (updateError) {
+    // The pre-check above races with a concurrent submit using the same
+    // report ID; the unique index (migration 0080) is the real guard.
+    // Surface that as the same friendly 409 instead of a raw DB error.
+    if (updateError.code === '23505') {
+      return NextResponse.json({ error: 'report_id_already_used' }, { status: 409 });
+    }
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
 
   await writeAudit({
     action: 'activity.lions.submit',
