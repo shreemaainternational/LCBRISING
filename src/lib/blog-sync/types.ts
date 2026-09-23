@@ -47,6 +47,11 @@ export interface CrawlConfig {
   maxListingPages: number;
   /** Prefer sitemap.xml discovery before falling back to pagination. */
   useSitemap: boolean;
+  /**
+   * Paths under `articlePathPrefix` that are index/hub pages, not
+   * articles (compared without trailing slash). Optional.
+   */
+  excludePaths?: string[];
 }
 
 export interface DiscoveryResult {

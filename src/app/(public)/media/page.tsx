@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_rethrow } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { MediaExplorer, type MediaItem } from '@/components/site/MediaExplorer';
@@ -46,6 +47,7 @@ async function loadCoverage(): Promise<MediaItem[]> {
         url: p.source_url ?? undefined,
       }));
   } catch (err) {
+    unstable_rethrow(err);
     console.error('[media] load failed:', err);
     return [];
   }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_rethrow } from 'next/navigation';
 import { CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
@@ -51,7 +52,8 @@ async function loadTargetCampaign(slug: string | undefined): Promise<DonateCampa
       .maybeSingle();
     if (error) console.error('[donate] campaign lookup failed:', error.message);
     return (data as DonateCampaign | null) ?? null;
-  } catch {
+  } catch (err) {
+    unstable_rethrow(err);
     return null;
   }
 }

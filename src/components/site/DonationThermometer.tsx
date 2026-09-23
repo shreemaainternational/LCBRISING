@@ -1,4 +1,5 @@
 import { Heart, Target } from 'lucide-react';
+import { unstable_rethrow } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { formatINR, formatINRShort } from '@/lib/utils';
@@ -38,6 +39,7 @@ async function loadCampaign(slug?: string): Promise<{
 
     return { campaign, raised: t.raised, donors: t.donors };
   } catch (err) {
+    unstable_rethrow(err);
     console.error('[DonationThermometer] load failed:', err);
     return null;
   }

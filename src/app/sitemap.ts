@@ -18,12 +18,25 @@ async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
         .is('deleted_at', null)
         .order('published_at', { ascending: false })
         .limit(500),
+      // Imported Lion Stories redirect to lionsclubs.org, so only list the
+      // club's own. Falls back to all stories before migration 0082.
       supabase
         .from('stories')
         .select('slug, updated_at')
         .eq('is_published', true)
         .is('deleted_at', null)
-        .limit(500),
+        .is('external_source', null)
+        .limit(500)
+        .then(async (res) =>
+          res.error
+            ? supabase
+                .from('stories')
+                .select('slug, updated_at')
+                .eq('is_published', true)
+                .is('deleted_at', null)
+                .limit(500)
+            : res,
+        ),
       supabase.from('campaigns').select('slug, updated_at').eq('is_active', true).limit(200),
     ]);
 

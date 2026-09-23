@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_rethrow } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Calendar, Clock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
@@ -118,6 +119,7 @@ export default async function BlogPage() {
       if (error) console.error('[blog] query failed:', error.message);
       posts = (data ?? []) as BlogPost[];
     } catch (err) {
+      unstable_rethrow(err);
       // table may not exist yet — curated stories still render
       console.error('[blog] load failed:', err);
     }

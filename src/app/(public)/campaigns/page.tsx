@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_rethrow } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle, ArrowRight, Heart, Target } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
@@ -63,6 +64,7 @@ async function loadCampaigns(): Promise<{
     for (const c of list) raised.set(c.id, totals.get(c.slug)?.raised ?? 0);
     return { campaigns: list, raised };
   } catch (err) {
+    unstable_rethrow(err);
     console.error('[campaigns] load failed:', err);
     return { campaigns: [], raised: new Map() };
   }
