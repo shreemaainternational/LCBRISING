@@ -16,7 +16,7 @@ async function loadStories(): Promise<Story[]> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = await createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('stories')
       .select(
         'id, slug, title, subtitle, beneficiary_name, beneficiary_age, location, hero_image, impact_quote, impact_metric, tags, is_featured, published_at',
@@ -26,8 +26,10 @@ async function loadStories(): Promise<Story[]> {
       .order('is_featured', { ascending: false })
       .order('published_at', { ascending: false })
       .limit(24);
+    if (error) console.error('[stories] query failed:', error.message);
     return (data ?? []) as Story[];
-  } catch {
+  } catch (err) {
+    console.error('[stories] load failed:', err);
     return [];
   }
 }

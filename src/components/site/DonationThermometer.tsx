@@ -2,6 +2,7 @@ import { Heart, Target } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { formatINR, formatINRShort } from '@/lib/utils';
+import { loadCampaignTotals } from '@/lib/campaign-totals';
 
 type Campaign = {
   id: string;
@@ -9,7 +10,6 @@ type Campaign = {
   title: string;
   description: string | null;
   goal_amount: number;
-  match_campaign: string | null;
 };
 
 async function loadCampaign(slug?: string): Promise<{
@@ -22,25 +22,23 @@ async function loadCampaign(slug?: string): Promise<{
     const supa = await createClient();
     const q = supa
       .from('campaigns')
-      .select('id, slug, title, description, goal_amount, match_campaign')
+      .select('id, slug, title, description, goal_amount')
       .eq('is_active', true);
-    const { data: c } = slug
+    const { data: c, error } = slug
       ? await q.eq('slug', slug).maybeSingle()
       : await q.eq('is_featured', true).limit(1).maybeSingle();
+    if (error) console.error('[DonationThermometer] campaign query failed:', error.message);
     if (!c) return null;
     const campaign = c as Campaign;
 
-    let donationsQuery = supa.from('donations').select('amount');
-    if (campaign.match_campaign) {
-      donationsQuery = donationsQuery.eq('campaign', campaign.match_campaign);
-    }
-    const { data: rows } = await donationsQuery;
-    const list = (rows ?? []) as { amount: number | string }[];
-    const raised = list.reduce((s, d) => s + Number(d.amount), 0);
-    const donors = list.length;
+    // Donations are tagged with the campaign slug; totals come from the
+    // public aggregate RPC because donations rows are admin-only (PII).
+    const totals = await loadCampaignTotals(supa);
+    const t = totals.get(campaign.slug) ?? { raised: 0, donors: 0 };
 
-    return { campaign, raised, donors };
-  } catch {
+    return { campaign, raised: t.raised, donors: t.donors };
+  } catch (err) {
+    console.error('[DonationThermometer] load failed:', err);
     return null;
   }
 }
@@ -63,8 +61,8 @@ export async function DonationThermometer({
   if (!data) return null;
 
   const { campaign, raised, donors } = data;
-  // Show at least a sliver of progress so the bar isn't an empty line.
-  const pct = Math.min(100, Math.max(2, (raised / Number(campaign.goal_amount)) * 100));
+  const goal = Number(campaign.goal_amount);
+  const pct = goal > 0 ? Math.min(100, (raised / goal) * 100) : 0;
   const remaining = Math.max(0, Number(campaign.goal_amount) - raised);
 
   if (compact) {

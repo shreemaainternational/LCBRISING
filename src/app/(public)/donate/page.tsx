@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { CheckCircle2 } from 'lucide-react';
-import { DonateForm } from './DonateForm';
+import { createClient } from '@/lib/supabase/server';
+import { isSupabaseConfigured } from '@/lib/env';
+import { DonateForm, type DonateCampaign } from './DonateForm';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
@@ -34,7 +36,34 @@ const OTHER_WAYS = [
   },
 ];
 
-export default function DonatePage() {
+// /donate?campaign=<slug> (linked from /campaigns) tags the donation with
+// that campaign so it counts toward its progress bar. Unknown or inactive
+// slugs fall back to a general donation.
+async function loadTargetCampaign(slug: string | undefined): Promise<DonateCampaign | null> {
+  if (!slug || !isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('slug, title')
+      .eq('slug', slug)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (error) console.error('[donate] campaign lookup failed:', error.message);
+    return (data as DonateCampaign | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function DonatePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const raw = (await searchParams).campaign;
+  const campaign = await loadTargetCampaign(Array.isArray(raw) ? raw[0] : raw);
+
   return (
     <>
       <PageHero
@@ -46,7 +75,7 @@ export default function DonatePage() {
       {/* Form + Impact */}
       <section className="container-page py-16 md:py-20">
         <div className="grid lg:grid-cols-[1.3fr_1fr] gap-8">
-          <DonateForm />
+          <DonateForm campaign={campaign} />
 
           <div>
             <h2 className="text-2xl font-bold text-navy-800 mb-6">Your Impact</h2>
