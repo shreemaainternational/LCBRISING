@@ -8,7 +8,7 @@ import {
   Activity as ActivityIcon, Calendar, Mail, Settings,
   Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell, Plug, Building2, ShieldCheck,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon, Images,
-  KeyRound, Command, Stethoscope, BookOpen, ChevronDown, Network, Map as MapIcon, Layers, Landmark,
+  KeyRound, Command, Stethoscope, BookOpen, Target, ChevronDown, Network, Map as MapIcon, Layers, Landmark,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -50,6 +50,7 @@ const NAV: Item[] = [
   { href: '/admin/events',      label: 'Events',        icon: Calendar },
   { href: '/admin/blog',        label: 'Newsroom',      icon: BookOpen },
   { href: '/admin/stories',     label: 'Human Stories', icon: HeartHandshake },
+  { href: '/admin/campaigns',   label: 'Campaigns',     icon: Target },
   { href: '/admin/gallery',     label: 'Gallery',       icon: Images },
   { href: '/admin/media',       label: 'Media library', icon: ImageIcon },
   { href: '/admin/creative',    label: 'Creative',      icon: Sparkles },

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_rethrow } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { MediaExplorer, type MediaItem } from '@/components/site/MediaExplorer';
@@ -23,7 +24,7 @@ async function loadCoverage(): Promise<MediaItem[]> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supa = await createClient();
-    const { data } = await supa
+    const { data, error } = await supa
       .from('photos')
       .select('id, url, title, source_name, source_url, media_type, taken_on, created_at')
       .eq('category', 'press')
@@ -33,6 +34,7 @@ async function loadCoverage(): Promise<MediaItem[]> {
       .order('created_at', { ascending: false })
       .limit(200);
 
+    if (error) console.error('[media] query failed:', error.message);
     return (data ?? [])
       .filter((p) => p.source_name)
       .map((p) => ({
@@ -44,7 +46,9 @@ async function loadCoverage(): Promise<MediaItem[]> {
         image: p.url,
         url: p.source_url ?? undefined,
       }));
-  } catch {
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error('[media] load failed:', err);
     return [];
   }
 }

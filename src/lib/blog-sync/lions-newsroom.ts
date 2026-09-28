@@ -429,6 +429,7 @@ export function isArticleUrl(raw: string, cfg: CrawlConfig): boolean {
   if (!path.startsWith(prefix)) return false;
   // Exclude the index itself and taxonomy/pagination pages.
   if (path === prefix) return false;
+  if (cfg.excludePaths?.some((p) => p.replace(/\/+$/, '') === path)) return false;
   const tail = path.slice(prefix.length + 1);
   if (!tail || /^(page|category|tag|author|topics?)(\/|$)/i.test(tail)) return false;
   return true;

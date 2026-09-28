@@ -3,6 +3,7 @@ import { Plus, HeartHandshake } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { formatDate } from '@/lib/utils';
+import { LionsStoriesSyncButton } from '@/components/admin/LionsStoriesSyncButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,8 @@ type Row = {
   is_featured: boolean | null;
   published_at: string | null;
   updated_at: string | null;
+  external_source?: string | null;
+  source_url?: string | null;
 };
 
 export default async function AdminStoriesIndex() {
@@ -23,14 +26,21 @@ export default async function AdminStoriesIndex() {
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
-      const { data, error } = await supabase
-        .from('stories')
-        .select('id, title, slug, beneficiary_name, is_published, is_featured, published_at, updated_at')
-        .is('deleted_at', null)
-        .order('updated_at', { ascending: false })
-        .limit(100);
+      const query = (columns: string) =>
+        supabase
+          .from('stories')
+          .select(columns)
+          .is('deleted_at', null)
+          .order('updated_at', { ascending: false })
+          .limit(200);
+      const base = 'id, title, slug, beneficiary_name, is_published, is_featured, published_at, updated_at';
+      let { data, error } = await query(`${base}, external_source, source_url`);
+      if (error && !/relation .* does not exist/i.test(error.message)) {
+        // Pre-0082 schema — no sync columns yet.
+        ({ data, error } = await query(base));
+      }
       if (error) tableMissing = error.message.includes('does not exist');
-      stories = (data ?? []) as Row[];
+      stories = (data ?? []) as unknown as Row[];
     } catch {
       tableMissing = true;
     }
@@ -48,12 +58,15 @@ export default async function AdminStoriesIndex() {
             Manage the real beneficiary spotlights shown on /stories. {published} published · {drafts} drafts.
           </p>
         </div>
-        <Link
-          href="/admin/stories/new"
-          className="btn-gold inline-flex h-11 px-5 rounded-md items-center gap-2"
-        >
-          <Plus size={16} aria-hidden /> New story
-        </Link>
+        <div className="flex items-start gap-3">
+          <LionsStoriesSyncButton />
+          <Link
+            href="/admin/stories/new"
+            className="btn-gold inline-flex h-11 px-5 rounded-md items-center gap-2"
+          >
+            <Plus size={16} aria-hidden /> New story
+          </Link>
+        </div>
       </div>
 
       {tableMissing ? (
@@ -97,6 +110,11 @@ export default async function AdminStoriesIndex() {
                     >
                       {s.title}
                     </Link>
+                    {s.external_source && (
+                      <span className="ml-2 text-[10px] uppercase tracking-wider bg-blue-100 text-navy-800 px-1.5 py-0.5 rounded">
+                        Lions International
+                      </span>
+                    )}
                     {s.is_featured && (
                       <span className="ml-2 text-[10px] uppercase tracking-wider bg-brand-100 text-brand-800 px-1.5 py-0.5 rounded">
                         Spotlight

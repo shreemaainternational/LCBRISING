@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { MapPin } from 'lucide-react';
+import { ExternalLink, MapPin } from 'lucide-react';
 import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
 import { formatDate } from '@/lib/utils';
 
@@ -20,6 +20,9 @@ export type Story = {
   tags: string[] | null;
   is_featured: boolean | null;
   published_at: string | null;
+  /** Set on stories imported from lionsclubs.org (migration 0082). */
+  external_source?: string | null;
+  source_url?: string | null;
 };
 
 const FALLBACK_HERO =
@@ -51,25 +54,37 @@ function toDetail(s: Story): DetailItem {
   };
 }
 
-export function StoriesBoard({ featured, rest }: { featured: Story | null; rest: Story[] }) {
+export function StoriesBoard({
+  featured,
+  rest,
+  lions = [],
+}: {
+  featured: Story | null;
+  rest: Story[];
+  lions?: Story[];
+}) {
   const [open, setOpen] = useState<DetailItem | null>(null);
 
   return (
     <>
       {featured && <SpotlightStory story={featured} onOpen={() => setOpen(toDetail(featured))} />}
 
-      <section className="bg-white py-14">
-        <div className="container-page">
-          <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-8">
-            More stories of impact
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
-            {rest.map((s) => (
-              <StoryCard key={s.id} story={s} onOpen={() => setOpen(toDetail(s))} />
-            ))}
+      {rest.length > 0 && (
+        <section className="bg-white py-14">
+          <div className="container-page">
+            <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-8">
+              More stories of impact
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
+              {rest.map((s) => (
+                <StoryCard key={s.id} story={s} onOpen={() => setOpen(toDetail(s))} />
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {lions.length > 0 && <LionsStories stories={lions} />}
 
       <section className="bg-gradient-to-br from-navy-900 to-navy-800 text-white py-16">
         <div className="container-page text-center max-w-2xl mx-auto">
@@ -195,5 +210,80 @@ function StoryCard({ story, onOpen }: { story: Story; onOpen: () => void }) {
         )}
       </div>
     </button>
+  );
+}
+
+const LIONS_STORIES_URL = 'https://www.lionsclubs.org/en/our-impact/our-stories/lion-stories';
+
+/**
+ * Stories imported from Lions Clubs International. Shown as link-outs to
+ * the original on lionsclubs.org — they are not this club's beneficiaries,
+ * so they never appear in the spotlight or open the local story modal.
+ */
+function LionsStories({ stories }: { stories: Story[] }) {
+  return (
+    <section className="bg-gray-50 py-14">
+      <div className="container-page">
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-brand-600 font-semibold">
+              Lions Clubs International
+            </p>
+            <h2 className="mt-1 text-2xl md:text-3xl font-bold text-navy-900">
+              From Lions around the world
+            </h2>
+            <p className="text-gray-600 mt-1">
+              Lion Stories from the global network — read each one on lionsclubs.org.
+            </p>
+          </div>
+          <a
+            href={LIONS_STORIES_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-navy-800 hover:text-brand-600"
+          >
+            All Lion Stories <ExternalLink size={14} aria-hidden />
+          </a>
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
+          {stories.map((s) => (
+            <a
+              key={s.id}
+              href={s.source_url || LIONS_STORIES_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={s.hero_image || FALLBACK_HERO}
+                  alt={s.title}
+                  loading="lazy"
+                  className="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500"
+                />
+                <span className="absolute top-3 left-3 bg-navy-900/90 text-white text-[11px] font-semibold px-3 py-1 rounded-full">
+                  Lions International
+                </span>
+              </div>
+              <div className="p-5">
+                {s.published_at && (
+                  <p className="text-xs text-gray-500">{formatDate(s.published_at)}</p>
+                )}
+                <h3 className="mt-1 font-bold text-lg text-navy-800 group-hover:text-brand-600 line-clamp-2">
+                  {s.title}
+                </h3>
+                {s.subtitle && (
+                  <p className="mt-2 text-sm text-gray-600 line-clamp-3">{s.subtitle}</p>
+                )}
+                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-navy-800 group-hover:text-brand-600">
+                  Read on lionsclubs.org <ExternalLink size={13} aria-hidden />
+                </span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }

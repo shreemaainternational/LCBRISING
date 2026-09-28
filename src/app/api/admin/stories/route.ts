@@ -48,9 +48,6 @@ function normalisePayload(p: z.infer<typeof baseSchema>) {
     is_published: p.is_published,
     is_featured: p.is_featured,
   };
-  if (p.is_published) {
-    out.published_at = new Date().toISOString();
-  }
   return out;
 }
 
@@ -92,6 +89,7 @@ export async function POST(req: Request) {
     await requireAdmin();
   } catch (err) {
     if (err instanceof Response) return err;
+    return NextResponse.json({ error: 'auth check failed' }, { status: 500 });
   }
   const body = await req.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
@@ -99,6 +97,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
   }
   const payload = normalisePayload(parsed.data);
+  if (parsed.data.is_published) payload.published_at = new Date().toISOString();
 
   const { data, error } = await writeWithFallback<{ id: string; slug: string }>((c) =>
     c.from('stories').insert(payload).select('id, slug').single(),
@@ -114,6 +113,7 @@ export async function PUT(req: Request) {
     await requireAdmin();
   } catch (err) {
     if (err instanceof Response) return err;
+    return NextResponse.json({ error: 'auth check failed' }, { status: 500 });
   }
   const body = await req.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
@@ -129,6 +129,18 @@ export async function PUT(req: Request) {
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
   }
+  // Stamp the first publish only — re-saving a published item must not
+  // bump it to the top of the feed with today's date.
+  if (rest.is_published) {
+    await writeWithFallback<{ id: string }[]>((c) =>
+      c
+        .from('stories')
+        .update({ published_at: new Date().toISOString() })
+        .eq('id', id)
+        .is('published_at', null)
+        .select('id'),
+    );
+  }
   return NextResponse.json({ id: data.id, slug: data.slug });
 }
 
@@ -137,6 +149,7 @@ export async function DELETE(req: Request) {
     await requireAdmin();
   } catch (err) {
     if (err instanceof Response) return err;
+    return NextResponse.json({ error: 'auth check failed' }, { status: 500 });
   }
   const url = new URL(req.url);
   const id = url.searchParams.get('id');

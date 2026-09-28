@@ -43,6 +43,10 @@
       "schedule": "0 2 * * *"
     },
     {
+      "path": "/api/cron/stories-sync",
+      "schedule": "30 2 * * *"
+    },
+    {
       "path": "/api/cron/enterprise?deep=1",
       "schedule": "0 0 * * *"
     },
