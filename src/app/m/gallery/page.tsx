@@ -2,31 +2,38 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentMember, isAdminRole } from '@/lib/auth';
-import { GalleryGrid, type GalleryPhoto } from '@/components/site/GalleryGrid';
+import { AlbumGallery } from '@/components/site/AlbumGallery';
 import { GalleryBulkUpload } from '@/components/admin/GalleryBulkUpload';
+import type { AlbumSourcePhoto, ActivityForAlbum } from '@/lib/gallery-albums';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MobileGallery() {
   const member = await getCurrentMember();
   const canUpload = member ? isAdminRole(member.role) : false;
+  const admin = createAdminClient();
 
-  const { data } = await createAdminClient()
-    .from('photos')
-    .select('id, url, title, caption, category, display_order, created_at')
-    .is('deleted_at', null)
-    .neq('category', 'hero')
-    .order('display_order', { ascending: true })
-    .order('created_at', { ascending: false })
-    .limit(500);
+  const [{ data }, { data: activityRows }] = await Promise.all([
+    admin
+      .from('photos')
+      .select('id, url, title, caption, category, activity_id, taken_on, display_order, created_at')
+      .is('deleted_at', null)
+      .neq('category', 'hero')
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: false })
+      .limit(500),
+    admin.from('activities').select('id, title, date').eq('approval_status', 'approved').order('date', { ascending: false }).limit(500),
+  ]);
 
-  const photos = ((data ?? []) as (GalleryPhoto & { created_at?: string })[]).map((p) => ({
+  const photos: AlbumSourcePhoto[] = (data ?? []).map((p) => ({
     id: p.id,
     url: p.url,
     title: p.title,
     caption: p.caption,
-    date: p.created_at ?? null,
+    date: p.taken_on ?? p.created_at ?? null,
+    activityId: p.activity_id ?? null,
   }));
+  const activities = (activityRows ?? []) as ActivityForAlbum[];
 
   return (
     <div className="space-y-4">
@@ -57,7 +64,7 @@ export default async function MobileGallery() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl p-3 shadow-sm">
-          <GalleryGrid photos={photos} compact />
+          <AlbumGallery photos={photos} activities={activities} compact />
         </div>
       )}
     </div>
