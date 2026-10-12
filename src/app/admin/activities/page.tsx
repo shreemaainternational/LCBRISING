@@ -9,16 +9,18 @@ import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import { activitiesPreset } from '@/components/admin/quick-add-presets';
 import { activityCategoryLabel } from '@/lib/activity-categories';
 import { Activity as ActivityIcon, Pencil } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminActivitiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; status?: string }>;
 }) {
-  const { category } = await searchParams;
+  const { category, status } = await searchParams;
   const selected = category ?? '';
+  const selectedStatus = STATUS_META.some((m) => m.key === status) ? (status as string) : '';
 
   const supabase = await createClient();
   const [{ data: activities }, { data: clubs }] = await Promise.all([
@@ -39,7 +41,28 @@ export default async function AdminActivitiesPage({
     .map(([slug, count]) => ({ slug, label: activityCategoryLabel(slug), count }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  const visible = selected ? all.filter((a) => ((a.category as string | null) ?? 'other') === selected) : all;
+  const statusCounts = new Map<string, number>();
+  for (const a of all) {
+    const st = (a.approval_status as string | null) ?? 'approved';
+    statusCounts.set(st, (statusCounts.get(st) ?? 0) + 1);
+  }
+
+  const visible = all.filter(
+    (a) =>
+      (!selected || ((a.category as string | null) ?? 'other') === selected) &&
+      (!selectedStatus || ((a.approval_status as string | null) ?? 'approved') === selectedStatus),
+  );
+
+  // Preserve the other filter when switching one of them.
+  const href = (next: { category?: string; status?: string }) => {
+    const qs = new URLSearchParams();
+    const c = next.category ?? selected;
+    const st = next.status ?? selectedStatus;
+    if (c) qs.set('category', c);
+    if (st) qs.set('status', st);
+    const q = qs.toString();
+    return q ? `/admin/activities?${q}` : '/admin/activities';
+  };
 
   return (
     <div>
@@ -71,14 +94,32 @@ export default async function AdminActivitiesPage({
         </div>
       </div>
 
+      {/* Workflow-stage filter */}
+      {all.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="crm-eyebrow mr-1">Stage</span>
+          <FilterChip href={href({ status: '' })} label="Any" count={all.length} active={!selectedStatus} />
+          {STATUS_META.map((m) => (
+            <FilterChip
+              key={m.key}
+              href={href({ status: m.key })}
+              label={m.label}
+              count={statusCounts.get(m.key) ?? 0}
+              active={selectedStatus === m.key}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Category filter */}
       {categoryChips.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-5">
-          <FilterChip href="/admin/activities" label="All" count={all.length} active={!selected} />
+        <div className="flex flex-wrap items-center gap-2 mb-5">
+          <span className="crm-eyebrow mr-1">Cause</span>
+          <FilterChip href={href({ category: '' })} label="All" count={all.length} active={!selected} />
           {categoryChips.map((c) => (
             <FilterChip
               key={c.slug}
-              href={`/admin/activities?category=${c.slug}`}
+              href={href({ category: c.slug })}
               label={c.label}
               count={c.count}
               active={selected === c.slug}
@@ -100,12 +141,13 @@ export default async function AdminActivitiesPage({
             <CardTitle>
               {visible.length} {visible.length === 1 ? 'activity' : 'activities'}
               {selected && <span className="text-gray-500 font-normal"> · {activityCategoryLabel(selected)}</span>}
+              {selectedStatus && <span className="text-gray-500 font-normal"> · {statusLabel(selectedStatus)}</span>}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {visible.length === 0 ? (
               <p className="p-8 text-center text-sm text-gray-500">
-                No {activityCategoryLabel(selected).toLowerCase()} activities.
+                No activities match these filters.
               </p>
             ) : (
               <table className="w-full text-sm">
@@ -114,6 +156,7 @@ export default async function AdminActivitiesPage({
                     <th className="text-left p-3">Title</th>
                     <th className="text-left p-3">Category</th>
                     <th className="text-left p-3">Date</th>
+                    <th className="text-left p-3">Stage</th>
                     <th className="text-right p-3">Beneficiaries</th>
                     <th className="text-right p-3">Lions</th>
                     <th className="text-right p-3">Hours</th>
@@ -131,6 +174,7 @@ export default async function AdminActivitiesPage({
                       </td>
                       <td className="p-3">{a.category ? activityCategoryLabel(a.category) : '—'}</td>
                       <td className="p-3">{formatDate(a.date)}</td>
+                      <td className="p-3"><StatusBadge status={(a.approval_status as string | null) ?? 'approved'} /></td>
                       <td className="p-3 text-right">{a.beneficiaries}</td>
                       <td className="p-3 text-right">{a.lion_members_count ?? 0}</td>
                       <td className="p-3 text-right">{Number(a.service_hours)}</td>
@@ -180,4 +224,21 @@ function FilterChip({
       <span className={active ? 'text-white/70' : 'text-gray-400'}>{count}</span>
     </Link>
   );
+}
+
+/** Mirrors the `activity_approval_status` enum. Order = workflow order. */
+const STATUS_META = [
+  { key: 'pending',           label: 'Submitted',         variant: 'warning' as const },
+  { key: 'changes_requested', label: 'Changes requested', variant: 'warning' as const },
+  { key: 'approved',          label: 'Approved',          variant: 'success' as const },
+  { key: 'rejected',          label: 'Rejected',          variant: 'danger' as const },
+];
+
+function statusLabel(key: string) {
+  return STATUS_META.find((m) => m.key === key)?.label ?? key;
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const m = STATUS_META.find((x) => x.key === status);
+  return <Badge variant={m?.variant ?? 'secondary'}>{m?.label ?? status}</Badge>;
 }

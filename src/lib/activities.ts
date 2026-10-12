@@ -13,6 +13,10 @@ export type ActivityReport = {
   location: string | null;
   photos: string[];
   captions: Record<string, string>;
+  lion_members_count: number | null;
+  leo_members_count: number | null;
+  guest_count: number | null;
+  partner_organization: string | null;
 };
 
 /**
@@ -38,7 +42,7 @@ export async function getActivityReport(id: string): Promise<ActivityReport | nu
     const { data, error } = await supabase
       .from('activities')
       .select(
-        'id, title, description, category, beneficiaries, service_hours, amount_raised, date, location, photos, before_photos, after_photos, photo_captions, approval_status',
+        'id, title, description, category, beneficiaries, service_hours, amount_raised, date, location, photos, before_photos, after_photos, photo_captions, approval_status, lion_members_count, leo_members_count, guest_count, csr_partners(name)',
       )
       .eq('id', id)
       .maybeSingle();
@@ -63,6 +67,10 @@ export async function getActivityReport(id: string): Promise<ActivityReport | nu
       after_photos: string[] | null;
       photo_captions: Record<string, string> | null;
       approval_status: string | null;
+      lion_members_count: number | null;
+      leo_members_count: number | null;
+      guest_count: number | null;
+      csr_partners: { name: string | null } | { name: string | null }[] | null;
     };
 
     // Only surface approved activities publicly (matches the cause / programme
@@ -88,6 +96,11 @@ export async function getActivityReport(id: string): Promise<ActivityReport | nu
         ]),
       ).filter(Boolean),
       captions: row.photo_captions ?? {},
+      lion_members_count: row.lion_members_count,
+      leo_members_count: row.leo_members_count,
+      guest_count: row.guest_count,
+      partner_organization:
+        (Array.isArray(row.csr_partners) ? row.csr_partners[0]?.name : row.csr_partners?.name) ?? null,
     };
   } catch (err) {
     console.error('[activities] report read threw:', err);
