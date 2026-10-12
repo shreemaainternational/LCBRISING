@@ -18,7 +18,13 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const { data: activity, error } = await db.from('activities').select('*').eq('id', id).maybeSingle();
   if (error || !activity) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-  const actor = await requirePermission('activity.create', { club_id: activity.club_id ?? null });
+  // See the matching comment in submit/route.ts: only scope to a club
+  // when the activity has one, or a null club_id (e.g. after the club
+  // was deleted) permanently blocks every club officer with "forbidden".
+  const actor = await requirePermission(
+    'activity.create',
+    activity.club_id ? { club_id: activity.club_id } : {},
+  );
   if (isGuardFailure(actor)) return actor;
 
   if (activity.lions_status === 'submitted') {
