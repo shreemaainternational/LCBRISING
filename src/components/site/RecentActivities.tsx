@@ -1,12 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { MapPin, Images } from 'lucide-react';
+import { Images } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
-import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
 
 export type RecentActivity = {
   id: string;
@@ -21,30 +19,7 @@ export type RecentActivity = {
   photos: string[];
 };
 
-function toDetail(a: RecentActivity): DetailItem {
-  return {
-    id: a.id,
-    title: a.title,
-    dateLabel: formatDate(a.date),
-    meta: a.location ? [{ icon: MapPin, text: a.location }] : [],
-    stats: [
-      ...(a.beneficiaries && a.beneficiaries > 0
-        ? [{ label: 'Beneficiaries', value: a.beneficiaries.toLocaleString('en-IN') }] : []),
-      ...(a.lionMembers && a.lionMembers > 0
-        ? [{ label: 'Lion Members', value: a.lionMembers.toLocaleString('en-IN') }] : []),
-      ...(a.serviceHours && a.serviceHours > 0
-        ? [{ label: 'Service Hours', value: a.serviceHours.toLocaleString('en-IN') }] : []),
-    ],
-    photos: a.photos,
-    body: a.description ?? undefined,
-    ctas: [{ href: '/donate', label: 'Support this cause', variant: 'gold' }],
-    sharePath: '/activities',
-  };
-}
-
 export function RecentActivities({ activities }: { activities: RecentActivity[] }) {
-  const [open, setOpen] = useState<DetailItem | null>(null);
-
   return (
     <section className="container-page py-12">
       <div className="flex items-end justify-between mb-8">
@@ -64,12 +39,11 @@ export function RecentActivities({ activities }: { activities: RecentActivity[] 
           {activities.map((a) => {
             const cover = a.photos[0];
             return (
-              <button
+              <Link
                 key={a.id}
-                type="button"
-                onClick={() => setOpen(toDetail(a))}
+                href={`/activities/report/${a.id}`}
                 aria-label={`View details for ${a.title}`}
-                className="group text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 rounded-xl"
+                className="group text-left w-full block focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 rounded-xl"
               >
                 <Card className="overflow-hidden h-full transition-shadow group-hover:shadow-md">
                   {cover && (
@@ -108,13 +82,11 @@ export function RecentActivities({ activities }: { activities: RecentActivity[] 
                     </div>
                   </CardContent>
                 </Card>
-              </button>
+              </Link>
             );
           })}
         </div>
       )}
-
-      <DetailModal item={open} onClose={() => setOpen(null)} />
     </section>
   );
 }

@@ -83,3 +83,73 @@ html, body {
     transform: translateY(0);
   }
 }
+
+/* ===================================================================
+   Rising Star CRM — admin design layer
+   CRM-dashboard shell (dark rail, dense data surfaces, KPI tiles) +
+   NGO-workflow pieces (stage pipeline, action queue). Built on the
+   existing navy/gold brand tokens above; nothing public-site facing
+   uses these classes.
+   =================================================================== */
+:root {
+  --crm-canvas: #f4f6fb;
+  --crm-surface: #ffffff;
+  --crm-border: #e4e8f1;
+  --crm-muted: #64748b;
+  --crm-ink: #0f1d3d;
+  --crm-rail: #0f1b3d;
+  --crm-rail-hover: rgba(255, 255, 255, 0.07);
+  --crm-accent: #fbbf24;
+}
+
+.crm-canvas { background: var(--crm-canvas); color: var(--crm-ink); }
+
+.crm-sidebar { background: var(--crm-rail); color: #fff; }
+
+@utility crm-nav-heading {
+  padding: 0 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+@utility crm-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.78);
+  border-left: 3px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+  &:hover { background: var(--crm-rail-hover); color: #fff; }
+}
+
+@utility crm-nav-link-active {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fff;
+  font-weight: 600;
+  border-left-color: var(--crm-accent);
+}
+
+@utility crm-panel {
+  background: var(--crm-surface);
+  border: 1px solid var(--crm-border);
+  border-radius: 0.875rem;
+  box-shadow: 0 1px 2px rgba(15, 29, 61, 0.04);
+}
+
+@utility crm-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--crm-muted);
+}
+
+@utility crm-num {
+  font-variant-numeric: tabular-nums;
+}

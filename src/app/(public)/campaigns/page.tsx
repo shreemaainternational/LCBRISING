@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
+import { unstable_rethrow } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle, ArrowRight, Heart, Target } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { formatINR, formatINRShort } from '@/lib/utils';
+import { loadCampaignTotals } from '@/lib/campaign-totals';
 import { CampaignsGrid } from './CampaignsGrid';
 
 export const metadata: Metadata = {
@@ -34,8 +36,6 @@ type Campaign = {
   match_campaign: boolean;
 };
 
-type Donation = { campaign_id: string | null; amount: number };
-
 const FALLBACK_HERO =
   'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=70';
 
@@ -46,7 +46,7 @@ async function loadCampaigns(): Promise<{
   if (!isSupabaseConfigured()) return { campaigns: [], raised: new Map() };
   try {
     const supabase = await createClient();
-    const [{ data: campaigns }, { data: donations }] = await Promise.all([
+    const [{ data: campaigns, error }, totals] = await Promise.all([
       supabase
         .from('campaigns')
         .select(
@@ -55,15 +55,17 @@ async function loadCampaigns(): Promise<{
         .eq('is_active', true)
         .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false }),
-      supabase.from('donations').select('campaign_id, amount').not('campaign_id', 'is', null),
+      loadCampaignTotals(supabase),
     ]);
+    if (error) console.error('[campaigns] query failed:', error.message);
+    const list = (campaigns ?? []) as Campaign[];
+    // Keyed by campaign id for the render code; donations are tagged by slug.
     const raised = new Map<string, number>();
-    for (const d of ((donations ?? []) as Donation[])) {
-      if (!d.campaign_id) continue;
-      raised.set(d.campaign_id, (raised.get(d.campaign_id) ?? 0) + Number(d.amount ?? 0));
-    }
-    return { campaigns: (campaigns ?? []) as Campaign[], raised };
-  } catch {
+    for (const c of list) raised.set(c.id, totals.get(c.slug)?.raised ?? 0);
+    return { campaigns: list, raised };
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error('[campaigns] load failed:', err);
     return { campaigns: [], raised: new Map() };
   }
 }
@@ -221,65 +223,18 @@ function FeaturedCampaign({ campaign, raised }: { campaign: Campaign; raised: nu
 }
 
 function EmptyCampaigns() {
-  const seed = [
-    {
-      title: 'Eyes for All',
-      description: 'Fund free eye screening, glasses, and cataract surgeries across Vadodara.',
-      goal: 500000,
-      raised: 312000,
-      cat: 'Vision',
-      img: 'https://images.unsplash.com/photo-1577401239170-897942555fb3?auto=format&fit=crop&w=1200&q=70',
-    },
-    {
-      title: 'School in a Box',
-      description: 'Provide a year of books, uniforms, and supplies for one underprivileged child.',
-      goal: 250000,
-      raised: 87000,
-      cat: 'Education',
-      img: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1200&q=70',
-    },
-    {
-      title: 'Million Meals Drive',
-      description: 'Nutritious meals for families affected by hunger and displacement.',
-      goal: 1000000,
-      raised: 642000,
-      cat: 'Hunger Relief',
-      img: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=70',
-    },
-  ];
   return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
-      {seed.map((c) => {
-        const pct = Math.min(100, (c.raised / c.goal) * 100);
-        return (
-          <div key={c.title} className="block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="aspect-[16/10] overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={c.img} alt={c.title} className="w-full h-full object-cover" />
-            </div>
-            <div className="p-5">
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-brand-600">{c.cat}</p>
-              <h3 className="mt-1 font-bold text-lg text-navy-800">{c.title}</h3>
-              <p className="mt-2 text-sm text-gray-600 line-clamp-2">{c.description}</p>
-              <div className="mt-4">
-                <div className="flex justify-between text-xs font-semibold text-gray-700">
-                  <span>{formatINRShort(c.raised)} raised</span>
-                  <span className="text-gray-500">of {formatINRShort(c.goal)}</span>
-                </div>
-                <div className="mt-1.5 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-brand-500 to-brand-600" style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-              <Link
-                href="/donate"
-                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-navy-800 hover:text-brand-600"
-              >
-                Donate <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
-        );
-      })}
+    <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
+      <p className="text-gray-600">
+        No campaigns are running right now. New causes will be announced here — in the meantime,
+        a general donation goes where it&apos;s needed most.
+      </p>
+      <Link
+        href="/donate"
+        className="mt-5 btn-gold inline-flex h-11 px-6 rounded-md items-center gap-2"
+      >
+        <Heart size={16} aria-hidden /> Make a general donation
+      </Link>
     </div>
   );
 }
