@@ -17,7 +17,7 @@ import {
   ScrollText, Smartphone, BarChart3, Globe, MapPin, QrCode, KeyRound,
   Send, Vote, Bot, Map as MapIcon, Phone, FileText,
   Award, GraduationCap, CheckSquare, Layers, Download,
-  Upload, Server, Workflow, Cloud, Stamp, Briefcase,
+  Upload, Server, Workflow, Cloud, Stamp, Briefcase, Menu as MenuIcon,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 
@@ -147,6 +147,7 @@ export const CRM_ACTIONS: CrmAction[] = [
 
   // ---------------- PLATFORM ----------------
   { key: 'plat.automation', label: 'Automation Engine', description: 'Daily rule-based actions (dues, alerts, reminders)', href: '/admin/automation', category: 'platform', icon: Workflow, modes: ['cron', 'trigger'], integrations: ['supabase_auth'] },
+  { key: 'plat.menu', label: 'Website Menu', description: 'Hide/unhide any public nav link — no code change or redeploy', href: '/admin/settings/menu', category: 'platform', icon: MenuIcon, modes: ['manual'], integrations: ['supabase_auth'], search: ['nav', 'navigation', 'stories', 'blog', 'newsroom', 'hide', 'unhide', 'menu'] },
   { key: 'plat.awards', label: 'Awards Catalog', description: 'PMJF / MJF / Excellence / Leadership tracking', href: '/admin/governance', category: 'platform', icon: Award, modes: ['manual', 'cron'], integrations: ['supabase_auth'] },
   { key: 'plat.learning', label: 'Learning Center', description: 'Member training & certification progress', href: '/admin/members', category: 'platform', icon: GraduationCap, modes: ['manual', 'cron'], integrations: ['supabase_auth'] },
   { key: 'plat.mobile', label: 'Mobile App (PWA)', description: 'Installable PWA at /m for members', href: '/m', category: 'platform', icon: Smartphone, modes: ['manual', 'trigger'], integrations: ['web_push'] },
