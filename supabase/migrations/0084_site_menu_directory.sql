@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Adds the "Directory" link (public club + officer directory at
--- /directory) to the Website Menu command center. Migration 0081 already
+-- /directory) to the Website Menu command center. Migration 0083 already
 -- seeded the original nav items and ran on existing installs, so this
 -- adds the new row rather than editing that migration in place.
 -- =====================================================================

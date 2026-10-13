@@ -10,7 +10,7 @@ async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [];
   try {
     const supabase = await createClient();
-    const [{ data: posts }, { data: campaigns }] = await Promise.all([
+    const [{ data: posts }, { data: stories }, { data: campaigns }] = await Promise.all([
       supabase
         .from('blog_posts')
         .select('slug, updated_at')
@@ -18,6 +18,25 @@ async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
         .is('deleted_at', null)
         .order('published_at', { ascending: false })
         .limit(500),
+      // Imported Lion Stories redirect to lionsclubs.org, so only list the
+      // club's own. Falls back to all stories before migration 0082.
+      supabase
+        .from('stories')
+        .select('slug, updated_at')
+        .eq('is_published', true)
+        .is('deleted_at', null)
+        .is('external_source', null)
+        .limit(500)
+        .then(async (res) =>
+          res.error
+            ? supabase
+                .from('stories')
+                .select('slug, updated_at')
+                .eq('is_published', true)
+                .is('deleted_at', null)
+                .limit(500)
+            : res,
+        ),
       supabase.from('campaigns').select('slug, updated_at').eq('is_active', true).limit(200),
     ]);
 
@@ -28,6 +47,15 @@ async function dynamicEntries(): Promise<MetadataRoute.Sitemap> {
         lastModified: p.updated_at ? new Date(p.updated_at) : undefined,
         changeFrequency: 'weekly',
         priority: 0.7,
+      });
+    }
+    for (const s of (stories ?? []) as { slug: string; updated_at: string | null }[]) {
+      if (!s.slug) continue;
+      entries.push({
+        url: `${base}/stories/${s.slug}`,
+        lastModified: s.updated_at ? new Date(s.updated_at) : undefined,
+        changeFrequency: 'monthly',
+        priority: 0.6,
       });
     }
     for (const c of (campaigns ?? []) as { slug: string; updated_at: string | null }[]) {
@@ -54,6 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/about`,      lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/activities`, lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${base}/directory`,  lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/stories`,    lastModified: now, changeFrequency: 'weekly',  priority: 0.85 },
     { url: `${base}/campaigns`,  lastModified: now, changeFrequency: 'weekly',  priority: 0.85 },
     { url: `${base}/blog`,       lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
     { url: `${base}/events`,     lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },

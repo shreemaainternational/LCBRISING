@@ -46,7 +46,7 @@ export function MenuVisibilityToggles({
       {unavailable && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           The <code className="bg-amber-100 px-1 rounded">site_menu_items</code> table isn&apos;t applied
-          yet. Run migration <code className="bg-amber-100 px-1 rounded">0081_site_menu_items.sql</code>{' '}
+          yet. Run migration <code className="bg-amber-100 px-1 rounded">0083_site_menu_items.sql</code>{' '}
           to persist these toggles. Until then the nav uses its built-in defaults.
         </div>
       )}
