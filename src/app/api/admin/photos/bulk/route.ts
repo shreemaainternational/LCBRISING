@@ -21,6 +21,8 @@ const Item = z.object({
 const Body = z.object({
   category: z.enum(['gallery', 'about', 'hero', 'press', 'event']).default('gallery'),
   is_featured: z.boolean().default(false),
+  /** Links this batch to an event's album (public.activities.id). Null files into the general gallery. */
+  activity_id: z.string().uuid().nullable().optional(),
   photos: z.array(Item).min(1).max(MAX),
 });
 
@@ -42,6 +44,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { category, is_featured, photos } = parsed.data;
+  const activityId = parsed.data.activity_id ?? null;
   const supa = createAdminClient();
 
   // De-dupe within the request and against existing rows (by URL).
@@ -76,6 +79,7 @@ export async function POST(req: NextRequest) {
       alt: p.alt ?? p.title ?? null,
       taken_on: p.taken_on ?? null,
       category,
+      activity_id: activityId,
       is_featured,
       display_order: ++order,
       uploaded_by: actor.id ?? null,
@@ -94,7 +98,7 @@ export async function POST(req: NextRequest) {
     entity: 'photo',
     actor_member_id: actor.id ?? null,
     actor_label: 'admin',
-    payload: { category, inserted, skipped },
+    payload: { category, activity_id: activityId, inserted, skipped },
   });
 
   return NextResponse.json({ inserted, skipped, total: photos.length }, { status: 201 });

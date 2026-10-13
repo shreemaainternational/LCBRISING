@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, LayoutGrid, CalendarDays } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, LayoutGrid, CalendarDays, Images } from 'lucide-react';
 
 export type GalleryPhoto = {
   id: string;
@@ -10,9 +10,11 @@ export type GalleryPhoto = {
   caption: string | null;
   /** ISO timestamp used for the date/year collage view. */
   date?: string | null;
+  /** The event (activity) this photo is filed under, when linked to one. */
+  album?: { id: string; title: string; date?: string | null } | null;
 };
 
-type View = 'grid' | 'collage';
+type View = 'grid' | 'collage' | 'album';
 type Indexed = GalleryPhoto & { i: number };
 
 function yearOf(iso?: string | null): string {
@@ -43,7 +45,9 @@ export function GalleryGrid({
   compact?: boolean;
 }) {
   const [index, setIndex] = useState<number | null>(null);
-  const [view, setView] = useState<View>('grid');
+  const hasAlbums = useMemo(() => photos.some((p) => p.album), [photos]);
+  const [view, setView] = useState<View>(() => (photos.some((p) => p.album) ? 'album' : 'grid'));
+  const effectiveView = compact ? 'grid' : view;
 
   const hasDates = useMemo(
     () => photos.some((p) => p.date && !Number.isNaN(new Date(p.date).getTime())),
@@ -61,6 +65,24 @@ export function GalleryGrid({
       if (a[0] === 'Undated') return 1;
       if (b[0] === 'Undated') return -1;
       return Number(b[0]) - Number(a[0]);
+    });
+  }, [photos]);
+
+  const albumGroups = useMemo(() => {
+    const map = new Map<string, { title: string; date?: string | null; items: Indexed[] }>();
+    photos.forEach((p, i) => {
+      const key = p.album?.id ?? '__general__';
+      if (!map.has(key)) {
+        map.set(key, { title: p.album?.title ?? 'General Gallery', date: p.album?.date ?? null, items: [] });
+      }
+      map.get(key)!.items.push({ ...p, i });
+    });
+    return Array.from(map.entries()).sort((a, b) => {
+      if (a[0] === '__general__') return 1;
+      if (b[0] === '__general__') return -1;
+      const ad = a[1].date ? new Date(a[1].date).getTime() : 0;
+      const bd = b[1].date ? new Date(b[1].date).getTime() : 0;
+      return bd - ad;
     });
   }, [photos]);
 
@@ -93,34 +115,52 @@ export function GalleryGrid({
             <strong className="text-navy-800">{photos.length}</strong>{' '}
             {photos.length === 1 ? 'photo' : 'photos'}
           </p>
-          {hasDates && (
+          {(hasAlbums || hasDates) && (
             <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+              {hasAlbums && (
+                <ToggleButton active={view === 'album'} onClick={() => setView('album')} icon={Images}>
+                  By event
+                </ToggleButton>
+              )}
               <ToggleButton active={view === 'grid'} onClick={() => setView('grid')} icon={LayoutGrid}>
                 Full grid
               </ToggleButton>
-              <ToggleButton
-                active={view === 'collage'}
-                onClick={() => setView('collage')}
-                icon={CalendarDays}
-              >
-                By date &amp; year
-              </ToggleButton>
+              {hasDates && (
+                <ToggleButton
+                  active={view === 'collage'}
+                  onClick={() => setView('collage')}
+                  icon={CalendarDays}
+                >
+                  By date &amp; year
+                </ToggleButton>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {view === 'grid' || compact || !hasDates ? (
-        <div
-          className={`grid gap-2.5 ${
-            compact ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
-          }`}
-        >
-          {photos.map((p, i) => (
-            <PhotoTile key={p.id} photo={p} compact={compact} onClick={() => setIndex(i)} />
+      {effectiveView === 'album' && hasAlbums ? (
+        <div className="space-y-12">
+          {albumGroups.map(([key, group]) => (
+            <section key={key}>
+              <div className="mb-5 flex items-center gap-3">
+                <Images size={18} className="text-brand-500" aria-hidden />
+                <h2 className="text-2xl font-bold text-navy-800">{group.title}</h2>
+                {group.date && <span className="text-sm text-gray-500">{dateLabel(group.date)}</span>}
+                <span className="text-sm text-gray-500">
+                  {group.items.length} {group.items.length === 1 ? 'photo' : 'photos'}
+                </span>
+                <span className="h-px flex-1 bg-gray-200" />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+                {group.items.map((p) => (
+                  <PhotoTile key={p.id} photo={p} compact={false} onClick={() => setIndex(p.i)} />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
-      ) : (
+      ) : effectiveView === 'collage' && hasDates ? (
         <div className="space-y-12">
           {groups.map(([year, items]) => (
             <section key={year}>
@@ -138,6 +178,16 @@ export function GalleryGrid({
                 ))}
               </div>
             </section>
+          ))}
+        </div>
+      ) : (
+        <div
+          className={`grid gap-2.5 ${
+            compact ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+          }`}
+        >
+          {photos.map((p, i) => (
+            <PhotoTile key={p.id} photo={p} compact={compact} onClick={() => setIndex(i)} />
           ))}
         </div>
       )}
