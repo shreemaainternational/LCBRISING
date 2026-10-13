@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
-import { GalleryGrid, type GalleryPhoto } from '@/components/site/GalleryGrid';
+import { AlbumGallery } from '@/components/site/AlbumGallery';
+import type { AlbumSourcePhoto, ActivityForAlbum } from '@/lib/gallery-albums';
 
 export const metadata: Metadata = {
   title: 'Photo Gallery',
@@ -13,32 +14,50 @@ export const metadata: Metadata = {
 
 export const revalidate = 120;
 
-async function loadPhotos(): Promise<GalleryPhoto[]> {
+async function loadPhotos(): Promise<AlbumSourcePhoto[]> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = await createClient();
     const { data } = await supabase
       .from('photos')
-      .select('id, url, title, caption, category, display_order, created_at')
+      .select('id, url, title, caption, category, activity_id, taken_on, display_order, created_at')
       .is('deleted_at', null)
       .neq('category', 'hero')
       .order('display_order', { ascending: true })
       .order('created_at', { ascending: false })
       .limit(500);
-    return ((data ?? []) as (GalleryPhoto & { created_at?: string })[]).map((p) => ({
+    return (data ?? []).map((p) => ({
       id: p.id,
       url: p.url,
       title: p.title,
       caption: p.caption,
-      date: p.created_at ?? null,
+      date: p.taken_on ?? p.created_at ?? null,
+      activityId: p.activity_id ?? null,
     }));
   } catch {
     return [];
   }
 }
 
+/** Approved activities/events, used to match unlinked photos into albums by date. */
+async function loadActivities(): Promise<ActivityForAlbum[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('activities')
+      .select('id, title, date')
+      .eq('approval_status', 'approved')
+      .order('date', { ascending: false })
+      .limit(500);
+    return (data ?? []) as ActivityForAlbum[];
+  } catch {
+    return [];
+  }
+}
+
 export default async function GalleryPage() {
-  const photos = await loadPhotos();
+  const [photos, activities] = await Promise.all([loadPhotos(), loadActivities()]);
 
   return (
     <>
@@ -55,7 +74,7 @@ export default async function GalleryPage() {
             Photos will appear here soon. Check back shortly!
           </p>
         ) : (
-          <GalleryGrid photos={photos} />
+          <AlbumGallery photos={photos} activities={activities} />
         )}
       </section>
     </>
