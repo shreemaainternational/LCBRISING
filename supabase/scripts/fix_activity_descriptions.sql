@@ -6,7 +6,7 @@
 --   -> sql_path = supabase/scripts/fix_activity_descriptions.sql
 --
 -- Production's activities were loaded by more than one script, so this is
--- deliberately more forgiving than migration 0079:
+-- deliberately more forgiving than migration 0085:
 --   * Rows are matched on title (case/space-insensitive) + date, and on
 --     category too. If no row matches with the category, it falls back to
 --     title + date only when exactly one row has that title + date.
