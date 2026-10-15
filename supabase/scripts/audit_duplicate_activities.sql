@@ -5,6 +5,8 @@
 -- that would need to move before the empty copy could be removed:
 -- category, photos, Lions report link and rows in other tables that
 -- reference it (found from the live foreign keys, not a fixed list).
+-- Optional columns are read through to_jsonb() because production's
+-- schema does not match every migration file.
 -- Run via:
 --   Actions -> "Apply database migration (one-shot)"
 --   -> sql_path = supabase/scripts/audit_duplicate_activities.sql
@@ -35,9 +37,12 @@ select
   e.id                                         as empty_id,
   e.category                                   as empty_category,
   e.approval_status::text                      as empty_status,
-  e.lions_report_id                            as empty_lions_report_id,
-  cardinality(e.photos) + cardinality(e.before_photos)
-    + cardinality(e.after_photos) + cardinality(e.videos) as empty_media,
+  to_jsonb(e) ->> 'lions_report_id'            as empty_lions_report_id,
+  (select string_agg(k || '=' || jsonb_array_length(to_jsonb(e) -> k), ' ')
+     from unnest(array['photos','before_photos','after_photos','videos']) k
+    where jsonb_typeof(to_jsonb(e) -> k) = 'array'
+      and jsonb_array_length(to_jsonb(e) -> k) > 0) as empty_media,
+  nullif(to_jsonb(e) -> 'photo_captions', '{}'::jsonb)::text as empty_captions,
   (e.beneficiaries = 0 and e.lion_members_count = 0
     and coalesce(e.service_hours, 0) = 0
     and coalesce(e.amount_raised, 0) = 0)      as empty_figures_zero,
@@ -55,8 +60,11 @@ select
   f.id                                         as filled_id,
   f.category                                   as filled_category,
   f.approval_status::text                      as filled_status,
-  f.lions_report_id                            as filled_lions_report_id,
-  cardinality(f.photos)                        as filled_photos
+  to_jsonb(f) ->> 'lions_report_id'            as filled_lions_report_id,
+  (select string_agg(k || '=' || jsonb_array_length(to_jsonb(f) -> k), ' ')
+     from unnest(array['photos','before_photos','after_photos','videos']) k
+    where jsonb_typeof(to_jsonb(f) -> k) = 'array'
+      and jsonb_array_length(to_jsonb(f) -> k) > 0) as filled_media
 from empties e
 left join lateral (
   select s.* from public.activities s
