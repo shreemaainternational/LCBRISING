@@ -40,7 +40,7 @@ export default async function PortalHomePage() {
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-[0.18]"
         style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=1920&q=80&auto=format&fit=crop')",
+          backgroundImage: "url('https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=2400&q=85&auto=format&fit=crop')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}

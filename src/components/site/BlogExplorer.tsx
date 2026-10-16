@@ -42,6 +42,9 @@ const CATEGORY_STYLES: Record<string, string> = {
   Youth: 'bg-purple-100 text-purple-700',
   'Childhood Cancer': 'bg-pink-100 text-pink-700',
   Diabetes: 'bg-cyan-100 text-cyan-700',
+  Education: 'bg-indigo-100 text-indigo-700',
+  Women: 'bg-rose-100 text-rose-700',
+  'Travel News': 'bg-sky-100 text-sky-700',
 };
 
 export function BlogExplorer({ stories }: { stories: BlogStory[] }) {

@@ -19,8 +19,7 @@ export type CampaignCardData = {
   raised: number;
 };
 
-const FALLBACK_HERO =
-  'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=70';
+const FALLBACK_HERO = '/uploads/activity-report-2024-25/image22.jpeg';
 
 function pctOf(raised: number, goal: number) {
   return goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;

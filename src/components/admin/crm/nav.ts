@@ -78,7 +78,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/admin/communications', label: 'Comms',         icon: Mail },
       { href: '/admin/notifications',  label: 'Push',          icon: Bell },
       { href: '/admin/social',         label: 'Social',        icon: Megaphone },
-      { href: '/admin/blog',           label: 'Newsroom',      icon: BookOpen },
+      { href: '/admin/blog',           label: 'Blog',          icon: BookOpen },
       { href: '/admin/stories',        label: 'Human Stories', icon: HeartHandshake },
       { href: '/admin/gallery',        label: 'Gallery',       icon: Images },
       { href: '/admin/media',          label: 'Media library', icon: ImageIcon },
