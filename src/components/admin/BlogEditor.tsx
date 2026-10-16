@@ -35,6 +35,7 @@ const CATEGORIES = [
   'Diabetes',
   'Education',
   'Women',
+  'Travel News',
 ];
 
 export function BlogEditor({

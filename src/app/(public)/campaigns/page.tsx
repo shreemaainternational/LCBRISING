@@ -36,8 +36,7 @@ type Campaign = {
   match_campaign: boolean;
 };
 
-const FALLBACK_HERO =
-  'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=70';
+const FALLBACK_HERO = '/uploads/activity-report-2024-25/image22.jpeg';
 
 async function loadCampaigns(): Promise<{
   campaigns: Campaign[];

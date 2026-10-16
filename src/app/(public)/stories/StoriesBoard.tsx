@@ -25,8 +25,7 @@ export type Story = {
   source_url?: string | null;
 };
 
-const FALLBACK_HERO =
-  'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=70';
+const FALLBACK_HERO = '/uploads/activity-report-2024-25/image13.jpeg';
 
 function toDetail(s: Story): DetailItem {
   const hasSlug = !!s.slug && s.slug !== '#';
