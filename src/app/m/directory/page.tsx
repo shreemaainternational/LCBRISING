@@ -18,7 +18,10 @@ export default async function MobileDirectory({ searchParams }: Props) {
   const [{ data: district }, { data: clubs }, { data: officers }] = await Promise.all([
     db.from('districts').select('id, code, name, governor_name, cabinet_secretary_name, cabinet_treasurer_name').is('deleted_at', null).order('code').limit(1).maybeSingle(),
     db.from('clubs').select('id, name, club_number, city, latitude, longitude').is('deleted_at', null).order('name'),
-    db.from('club_officers').select('id, role, club_id, status, members(name, email, phone)').eq('status', 'active').order('role'),
+    // District cabinet officers. (This used to read a `club_officers` table that
+    // no migration creates, so the list was always empty.)
+    db.from('officers').select('id, role, scope_id, status, members:members!officers_member_id_fkey(name, email, phone)')
+      .eq('scope_kind', 'district').eq('status', 'active').order('role'),
   ]);
 
   const clubList = (clubs ?? []).filter((c) => !q || c.name.toLowerCase().includes(q.toLowerCase()));
@@ -85,7 +88,7 @@ export default async function MobileDirectory({ searchParams }: Props) {
           {clubList.length === 0 ? (
             <EmptyHint>No clubs match.</EmptyHint>
           ) : clubList.map((c) => (
-            <Link key={c.id} href={`/admin/clubs/${c.id}`}
+            <Link key={c.id} href={`/directory/club/${c.id}`}
               className="flex items-center gap-3 bg-white rounded-2xl p-3 shadow-sm active:scale-[0.99] transition border border-gray-100">
               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 text-blue-700 flex items-center justify-center">
                 <Building2 size={18} />
@@ -134,7 +137,7 @@ export default async function MobileDirectory({ searchParams }: Props) {
 }
 
 interface OfficerRow {
-  id: string; role: string; club_id: string | null; status: string;
+  id: string; role: string; scope_id: string | null; status: string;
   members: { name?: string; email?: string; phone?: string } | null;
 }
 

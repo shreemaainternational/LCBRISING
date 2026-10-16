@@ -167,7 +167,7 @@ export async function loadClubOfficers(clubId: string): Promise<DirectoryOfficer
     const db = await directoryDb();
     const { data } = await db
       .from('officers')
-      .select('id, role, term_start, member:members(name, avatar_url)')
+      .select('id, role, term_start, member:members!officers_member_id_fkey(name, avatar_url)')
       .eq('scope_kind', 'club').eq('scope_id', clubId).eq('status', 'active');
     type Row = { id: string; role: string; term_start: string | null; member: { name: string; avatar_url: string | null } | null };
     return ((data ?? []) as unknown as Row[])

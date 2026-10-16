@@ -33,7 +33,7 @@ export default async function MobileHome() {
     db.from('members').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     db.from('activities').select('*', { count: 'exact', head: true }),
     db.from('officers')
-      .select('role, notes, source_id, member:members(name, avatar_url)')
+      .select('role, notes, source_id, member:members!officers_member_id_fkey(name, avatar_url)')
       .eq('scope_kind', 'district')
       .eq('status', 'active'),
     db.from('districts').select('governor_name, cabinet_secretary_name, cabinet_treasurer_name, updated_at').limit(1).maybeSingle(),

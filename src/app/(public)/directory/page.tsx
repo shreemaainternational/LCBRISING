@@ -57,7 +57,7 @@ async function loadDirectory(): Promise<{
       db.from('clubs').select('id, name').is('deleted_at', null).order('name'),
       db
         .from('officers')
-        .select('id, role, scope_kind, scope_id, member:members(name, email, phone, whatsapp, avatar_url)')
+        .select('id, role, scope_kind, scope_id, member:members!officers_member_id_fkey(name, email, phone, whatsapp, avatar_url)')
         .in('scope_kind', ['district', 'club'])
         .eq('status', 'active'),
     ]);
