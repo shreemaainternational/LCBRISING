@@ -21,6 +21,7 @@ const Item = z.object({
 const Body = z.object({
   category: z.enum(['gallery', 'about', 'hero', 'press', 'event']).default('gallery'),
   is_featured: z.boolean().default(false),
+  activity_id: z.string().uuid().optional(),
   photos: z.array(Item).min(1).max(MAX),
 });
 
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_input', detail: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { category, is_featured, photos } = parsed.data;
+  const { category, is_featured, activity_id, photos } = parsed.data;
   const supa = createAdminClient();
 
   // De-dupe within the request and against existing rows (by URL).
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
       alt: p.alt ?? p.title ?? null,
       taken_on: p.taken_on ?? null,
       category,
+      activity_id: activity_id ?? null,
       is_featured,
       display_order: ++order,
       uploaded_by: actor.id ?? null,

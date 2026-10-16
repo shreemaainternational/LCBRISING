@@ -4,7 +4,7 @@ import {
   Sparkles, Megaphone, QrCode, BarChart3, Smartphone, Bell, Plug, Building2, ShieldCheck,
   Globe, MapPin, RefreshCw, ScrollText, Image as ImageIcon, Images,
   KeyRound, Command, Stethoscope, BookOpen, Target, Network, Map as MapIcon, Layers, Landmark,
-  ClipboardCheck,
+  ClipboardCheck, Menu as MenuIcon,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -95,6 +95,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/admin/automation',   label: 'Automation',   icon: Settings },
       { href: '/admin/sync',         label: 'Sync',         icon: RefreshCw },
       { href: '/admin/integrations', label: 'Integrations', icon: Plug },
+      { href: '/admin/settings/menu', label: 'Website Menu', icon: MenuIcon },
       { href: '/admin/diagnostics',  label: 'Diagnostics',  icon: Stethoscope },
       { href: '/admin/audit',        label: 'Audit log',    icon: ScrollText },
       { href: '/admin/profile',      label: 'My Profile',   icon: KeyRound },

@@ -18,7 +18,7 @@ const FALLBACK = {
   club: 'Lions Club of Baroda Rising Star',
 };
 
-const ROLE_LABEL: Record<string, string> = {
+export const ROLE_LABEL: Record<string, string> = {
   district_governor: 'District Governor',
   vice_district_governor: 'Vice District Governor',
   cabinet_officer: 'Cabinet Officer',
@@ -27,9 +27,13 @@ const ROLE_LABEL: Record<string, string> = {
   region_chairperson: 'Region Chairperson',
   zone_chairperson: 'Zone Chairperson',
   council_chairperson: 'Council Chairperson',
+  club_president: 'Club President',
+  club_secretary: 'Club Secretary',
+  club_treasurer: 'Club Treasurer',
+  club_officer: 'Club Officer',
 };
 
-function humanizeRole(role: string) {
+export function humanizeRole(role: string) {
   return ROLE_LABEL[role] ?? role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
