@@ -1,27 +1,23 @@
 import type { Metadata } from 'next';
-import { Phone, Mail, MessageCircle, MapPin, Building2, Users, BookUser } from 'lucide-react';
+import Link from 'next/link';
+import { Phone, Mail, MessageCircle, Building2, Users, BookUser, Search } from 'lucide-react';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { humanizeRole } from '@/components/site/OrgHierarchy';
+import { ClubDirectory } from '@/components/site/ClubDirectory';
+import { loadDirectoryClubs } from '@/lib/member-directory';
 
 export const metadata: Metadata = {
-  title: 'Directory',
+  title: 'Member Directory',
   description:
-    'Club and officer directory for Lions Club of Baroda Rising Star and District 3232 F1 — chartered clubs, cabinet and club officers, and how to reach them.',
+    'Club-wise member directory for Lions Club of Baroda Rising Star and District 3232 F1 — every chartered club with its zone, region and district, plus cabinet and club officers.',
   alternates: { canonical: '/directory' },
 };
 
 export const revalidate = 300;
 
-type ClubRow = {
-  id: string;
-  name: string;
-  club_number: string | null;
-  city: string | null;
-  latitude: number | null;
-  longitude: number | null;
-};
+type ClubRow = { id: string; name: string };
 
 type OfficerRow = {
   id: string;
@@ -58,7 +54,7 @@ async function loadDirectory(): Promise<{
 
     const [{ data: district }, { data: clubs }, { data: officers }] = await Promise.all([
       db.from('districts').select('code, name').is('deleted_at', null).order('code').limit(1).maybeSingle(),
-      db.from('clubs').select('id, name, club_number, city, latitude, longitude').is('deleted_at', null).order('name'),
+      db.from('clubs').select('id, name').is('deleted_at', null).order('name'),
       db
         .from('officers')
         .select('id, role, scope_kind, scope_id, member:members(name, email, phone, whatsapp, avatar_url)')
@@ -104,51 +100,36 @@ async function loadDirectory(): Promise<{
 }
 
 export default async function DirectoryPage() {
-  const { districtLabel, clubs, districtOfficers, clubOfficers } = await loadDirectory();
+  const [{ districtLabel, clubs, districtOfficers, clubOfficers }, directoryClubs] = await Promise.all([
+    loadDirectory(),
+    loadDirectoryClubs(),
+  ]);
 
   return (
     <>
       <PageHero
         pillText="OUR PEOPLE"
-        headline="Club & Officer Directory"
-        subtitle={`Chartered clubs and the officers of ${districtLabel} — how to find and reach them.`}
+        headline="Member Directory"
+        subtitle={`Every club of ${districtLabel}, club-wise — with its zone, region, members and officers.`}
         backgroundImage={PAGE_HERO_BG.about}
       />
 
       <section className="py-16 md:py-20 bg-white">
         <div className="container-page">
-          <SectionHeading icon={Building2} title="Chartered Clubs" />
-          {clubs.length === 0 ? (
-            <EmptyState>Club listings will appear here once they&apos;re added to the CRM.</EmptyState>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {clubs.map((c) => (
-                <div key={c.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 flex items-start gap-3">
-                  <span className="w-11 h-11 rounded-xl bg-blue-50 text-navy-700 flex items-center justify-center flex-shrink-0">
-                    <Building2 size={18} />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="font-bold text-navy-800 leading-tight">{c.name}</div>
-                    <div className="text-sm text-gray-500 mt-0.5">
-                      {c.club_number && <>#{c.club_number}</>}
-                      {c.club_number && c.city && ' · '}
-                      {c.city}
-                    </div>
-                    {c.latitude != null && c.longitude != null && (
-                      <a
-                        href={`https://www.google.com/maps?q=${c.latitude},${c.longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 mt-2"
-                      >
-                        <MapPin size={12} /> View on map
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+            <SectionHeading icon={Building2} title="Clubs" flush />
+            <Link
+              href="/directory/members"
+              className="inline-flex items-center gap-2 self-start rounded-lg border border-navy-800 px-4 py-2 text-sm font-semibold text-navy-800 hover:bg-navy-800 hover:text-white transition"
+            >
+              <Search size={15} aria-hidden /> Search all members
+            </Link>
+          </div>
+          <p className="text-gray-600 max-w-3xl mb-6">
+            Select a club to see its members. Member lists are visible to signed-in Lions; club
+            details, member counts and officers are public.
+          </p>
+          <ClubDirectory clubs={directoryClubs} />
         </div>
       </section>
 
@@ -178,9 +159,9 @@ export default async function DirectoryPage() {
   );
 }
 
-function SectionHeading({ icon: Icon, title }: { icon: React.ComponentType<{ size?: number; className?: string }>; title: string }) {
+function SectionHeading({ icon: Icon, title, flush }: { icon: React.ComponentType<{ size?: number; className?: string }>; title: string; flush?: boolean }) {
   return (
-    <div className="flex items-center gap-2 mb-8">
+    <div className={`flex items-center gap-2 ${flush ? '' : 'mb-8'}`}>
       <span className="w-9 h-9 rounded-full bg-navy-800 text-brand-400 flex items-center justify-center">
         <Icon size={16} />
       </span>
