@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { revalidatePath } from 'next/cache';
 import { lionsYearFor } from '@/lib/lions-calendar-meta';
 import { pushToMember } from '@/lib/push';
 
@@ -302,4 +303,16 @@ export function placementLabel(p: ClubPlacement | null): string {
   if (!p) return 'No club';
   return [p.club_name, p.zone_name, p.region_name, p.district_code ? `District ${p.district_code}` : null]
     .filter(Boolean).join(' · ');
+}
+
+/** Refresh cached pages that show club membership or placement. The
+ *  club and member directory pages are dynamic; only the ISR club index
+ *  needs an explicit refresh. */
+export function refreshDirectoryCaches(): void {
+  try {
+    revalidatePath('/directory');
+    revalidatePath('/about');
+  } catch {
+    // Outside a request scope (e.g. scripts) there is nothing to refresh.
+  }
 }

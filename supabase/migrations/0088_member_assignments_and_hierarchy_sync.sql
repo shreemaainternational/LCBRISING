@@ -34,6 +34,8 @@
 --                                       one transaction (service role only).
 --   6. org_hierarchy_drift() / org_hierarchy_repair() — preview and apply
 --      the same derivation to data written before this migration.
+--   7. move_zone_to_region() / move_region_to_district() — reorganise with
+--      the reason and actor recorded on the cascaded history rows.
 --
 -- Additive and idempotent: no column is dropped, no member or club row is
 -- created or deleted. Existing ids, foreign keys and activity links are
@@ -588,17 +590,70 @@ begin
     'assignments_backfilled', n_history);
 end $$;
 
+-- Move a zone to another region (or a region to another district) with the
+-- reason and actor recorded on the cascaded club_assignment_history rows.
+create or replace function public.move_zone_to_region(
+  p_zone_id uuid, p_region_id uuid, p_reason text default null, p_actor_member_id uuid default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_clubs int;
+begin
+  if not exists (select 1 from public.zones where id = p_zone_id and deleted_at is null) then
+    raise exception 'zone_not_found' using errcode = 'P0002';
+  end if;
+  if p_region_id is not null and not exists (
+       select 1 from public.regions where id = p_region_id and deleted_at is null) then
+    raise exception 'region_not_found' using errcode = 'P0002';
+  end if;
+  perform set_config('lcb.assignment_reason', coalesce(p_reason, ''), true);
+  perform set_config('lcb.actor_member_id', coalesce(p_actor_member_id::text, ''), true);
+  select count(*) into v_clubs from public.clubs where zone_id = p_zone_id and deleted_at is null;
+  update public.zones set region_id = p_region_id
+   where id = p_zone_id and region_id is distinct from p_region_id;
+  return jsonb_build_object('status', case when found then 'moved' else 'unchanged' end, 'clubs', v_clubs);
+end $$;
+
+create or replace function public.move_region_to_district(
+  p_region_id uuid, p_district_id uuid, p_reason text default null, p_actor_member_id uuid default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_zones int;
+begin
+  if not exists (select 1 from public.regions where id = p_region_id and deleted_at is null) then
+    raise exception 'region_not_found' using errcode = 'P0002';
+  end if;
+  if not exists (select 1 from public.districts where id = p_district_id) then
+    raise exception 'district_not_found' using errcode = 'P0002';
+  end if;
+  perform set_config('lcb.assignment_reason', coalesce(p_reason, ''), true);
+  perform set_config('lcb.actor_member_id', coalesce(p_actor_member_id::text, ''), true);
+  select count(*) into v_zones from public.zones where region_id = p_region_id and deleted_at is null;
+  update public.regions set district_id = p_district_id
+   where id = p_region_id and district_id is distinct from p_district_id;
+  return jsonb_build_object('status', case when found then 'moved' else 'unchanged' end, 'zones', v_zones);
+end $$;
+
 -- Server-side only: the API routes call these with the service role
 -- after their own permission checks.
 revoke all on function public.transfer_member(uuid, uuid, date, text, uuid, text, text) from public;
 revoke all on function public.org_hierarchy_drift() from public;
 revoke all on function public.org_hierarchy_repair(uuid, text) from public;
 revoke all on function public.backfill_member_assignments() from public;
+revoke all on function public.move_zone_to_region(uuid, uuid, text, uuid) from public;
+revoke all on function public.move_region_to_district(uuid, uuid, text, uuid) from public;
 do $$ begin
   grant execute on function public.transfer_member(uuid, uuid, date, text, uuid, text, text) to service_role;
   grant execute on function public.org_hierarchy_drift() to service_role;
   grant execute on function public.org_hierarchy_repair(uuid, text) to service_role;
   grant execute on function public.backfill_member_assignments() to service_role;
+  grant execute on function public.move_zone_to_region(uuid, uuid, text, uuid) to service_role;
+  grant execute on function public.move_region_to_district(uuid, uuid, text, uuid) to service_role;
 exception when undefined_object then null; end $$;
 
 -- ---------------------------------------------------------------------

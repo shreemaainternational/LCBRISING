@@ -63,6 +63,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/admin/members',   label: 'Members',   icon: Users },
       { href: '/admin/clubs',     label: 'Clubs',     icon: Building2 },
       { href: '/admin/hierarchy', label: 'Hierarchy', icon: Network },
+      { href: '/admin/hierarchy/sync', label: 'Hierarchy Sync', icon: RefreshCw },
       { href: '/admin/zones',     label: 'Zones',     icon: MapPin },
       { href: '/admin/regions',   label: 'Regions',   icon: MapIcon },
       { href: '/admin/districts', label: 'Districts', icon: Globe },

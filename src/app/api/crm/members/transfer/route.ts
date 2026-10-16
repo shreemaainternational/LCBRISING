@@ -8,6 +8,7 @@ import {
   executeTransfer,
   notifyAdmins,
   placementLabel,
+  refreshDirectoryCaches,
   TransferError,
   type TransferMember,
 } from '@/lib/org-hierarchy';
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
   }, {});
 
   if (!input.preview) {
+    if (summary.transferred) refreshDirectoryCaches();
     await writeAudit({
       action: 'member.transfer.bulk',
       entity: 'club',

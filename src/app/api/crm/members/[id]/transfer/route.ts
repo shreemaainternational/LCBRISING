@@ -8,6 +8,7 @@ import {
   executeTransfer,
   notifyAdmins,
   placementLabel,
+  refreshDirectoryCaches,
   TransferError,
   type TransferMember,
 } from '@/lib/org-hierarchy';
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   if (outcome.status === 'transferred') {
+    refreshDirectoryCaches();
     await writeAudit({
       action: 'member.transfer',
       entity: 'member',

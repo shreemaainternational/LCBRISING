@@ -2,9 +2,10 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, Trash2, X, Loader2, Save, AlertCircle } from 'lucide-react';
+import { Pencil, Trash2, X, Loader2, Save, AlertCircle, ArrowRightLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/client';
+import { TransferDialog } from '@/components/admin/TransferDialog';
 
 export type MemberRow = {
   id: string;
@@ -47,12 +48,16 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
   const [editing, setEditing] = useState<MemberRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
+  const [transfer, setTransfer] = useState<{ members: MemberRow[]; clubId: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  /** Inline reassign a member to another club (or Unassigned). */
+  /** Moving to a club opens the transfer flow (preview, reason, history);
+   *  only "Unassigned" is applied directly, after a confirmation. */
   function moveMember(m: MemberRow, clubId: string) {
     if ((m.club_id ?? '') === clubId) return;
+    if (clubId) { setTransfer({ members: [m], clubId }); return; }
+    if (!window.confirm(`Remove "${m.name ?? m.email ?? 'this member'}" from their club? They will have no current club.`)) return;
     setError(null);
     setMovingId(m.id);
     start(async () => {
@@ -182,6 +187,14 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
           </span>
           <button
             type="button"
+            onClick={() => setTransfer({ members: members.filter((m) => selectedLive.has(m.id)), clubId: '' })}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-navy-200 bg-white text-navy-800 text-xs font-semibold hover:bg-navy-50 disabled:opacity-60"
+          >
+            <ArrowRightLeft size={13} /> Transfer selected
+          </button>
+          <button
+            type="button"
             onClick={removeSelected}
             disabled={pending}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-red-200 bg-white text-red-700 text-xs font-semibold hover:bg-red-50 disabled:opacity-60"
@@ -307,6 +320,16 @@ export function MembersTable({ members, clubs }: { members: MemberRow[]; clubs: 
         </table>
       </div>
 
+      {transfer && (
+        <TransferDialog
+          members={transfer.members.map((m) => ({ id: m.id, name: m.name ?? m.email }))}
+          clubs={clubs}
+          initialClubId={transfer.clubId}
+          onClose={() => setTransfer(null)}
+          onDone={() => { setSelected(new Set()); router.refresh(); }}
+        />
+      )}
+
       {editing && (
         <EditMemberModal
           member={editing}
@@ -357,7 +380,6 @@ function EditMemberModal({
       status: form.status,
       phone: form.phone.trim() || null,
       whatsapp: form.whatsapp.trim() || null,
-      club_id: form.club_id || null,
       birthday: form.birthday || null,
       lions_member_id: form.lions_member_id.trim() || null,
     };
@@ -431,7 +453,9 @@ function EditMemberModal({
           </label>
           <label className="block">
             <span className={labelCls}>Club</span>
-            <select className={inputCls} value={form.club_id} onChange={(e) => set('club_id', e.target.value)}>
+            {/* Club changes go through the Transfer flow (preview, reason,
+                assignment history) — use the club selector on the row. */}
+            <select className={inputCls} value={form.club_id} disabled title="Use the club selector on the member's row to transfer">
               <option value="">—</option>
               {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
