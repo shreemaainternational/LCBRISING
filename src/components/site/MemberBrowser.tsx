@@ -81,6 +81,8 @@ export function MemberBrowser({
         .some((v) => v?.toLowerCase().includes(needle))));
   }, [members, q, club, zone, region, district, designation, status]);
 
+  // Contact columns only exist for admins (the server strips them otherwise).
+  const hasContacts = useMemo(() => members.some((m) => m.lions_member_id || m.email || m.phone), [members]);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pages);
   const shown = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
@@ -177,7 +179,7 @@ export function MemberBrowser({
                 <th className="px-4 py-3">Name</th><th className="px-4 py-3">Designation</th>
                 {showClub && <><th className="px-4 py-3">Club</th><th className="px-4 py-3">Zone</th><th className="px-4 py-3">Region</th></>}
                 <th className="px-4 py-3">Status</th>
-                {members.some((m) => m.lions_member_id || m.email || m.phone) && <th className="px-4 py-3">Contact</th>}
+                {hasContacts && <th className="px-4 py-3">Contact</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -195,7 +197,7 @@ export function MemberBrowser({
                     </>
                   )}
                   <td className="px-4 py-3 text-gray-600 capitalize">{m.status}</td>
-                  {members.some((x) => x.lions_member_id || x.email || x.phone) && (
+                  {hasContacts && (
                     <td className="px-4 py-3 text-gray-600 text-xs">
                       {[m.lions_member_id && `#${m.lions_member_id}`, m.phone, m.email].filter(Boolean).join(' · ') || '—'}
                     </td>
