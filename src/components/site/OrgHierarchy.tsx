@@ -125,7 +125,7 @@ async function loadStructure(): Promise<Structure> {
       db.from('members').select('*', { count: 'exact', head: true }).is('deleted_at', null),
       db
         .from('officers')
-        .select('role, notes, member:members(name, avatar_url)')
+        .select('role, notes, member:members!officers_member_id_fkey(name, avatar_url)')
         .eq('scope_kind', 'district')
         .eq('status', 'active'),
     ]);

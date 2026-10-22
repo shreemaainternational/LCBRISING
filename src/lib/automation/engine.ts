@@ -436,7 +436,7 @@ const handlers: Record<string, JobHandler> = {
     const supabase = createAdminClient();
     const { data: officer } = await supabase
       .from('officers')
-      .select('id, role, term_start, term_end, scope_kind, members(name, email, whatsapp, phone)')
+      .select('id, role, term_start, term_end, scope_kind, members:members!officers_member_id_fkey(name, email, whatsapp, phone)')
       .eq('id', officerId)
       .maybeSingle();
     if (!officer) return;

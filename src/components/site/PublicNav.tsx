@@ -23,12 +23,12 @@ const NAV: NavItem[] = [
   { key: 'about', href: '/about', label: 'About' },
   { key: 'activities', href: '/activities', label: 'Service Activities', dropdown: 'services' },
   { key: 'stories', href: '/stories', label: 'Stories' },
-  { key: 'directory', href: '/directory', label: 'Directory' },
   { key: 'campaigns', href: '/campaigns', label: 'Campaigns' },
   { key: 'blog', href: '/blog', label: 'Blog' },
   { key: 'events', href: '/events', label: 'Events' },
   { key: 'media', href: '/media', label: 'Media' },
   { key: 'gallery', href: '/gallery', label: 'Gallery' },
+  { key: 'directory', href: '/directory', label: 'Member Directory' },
   { key: 'contact', href: '/contact', label: 'Contact' },
 ];
 
