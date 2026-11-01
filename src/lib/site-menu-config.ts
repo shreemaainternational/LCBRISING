@@ -28,12 +28,12 @@ export const PUBLIC_MENU_ITEMS: MenuItemDef[] = [
   { key: 'about', label: 'About', href: '/about' },
   { key: 'activities', label: 'Service Activities', href: '/activities' },
   { key: 'stories', label: 'Stories', href: '/stories' },
-  { key: 'directory', label: 'Directory', href: '/directory' },
   { key: 'campaigns', label: 'Campaigns', href: '/campaigns' },
   { key: 'blog', label: 'Blog', href: '/blog' },
   { key: 'events', label: 'Events', href: '/events' },
   { key: 'media', label: 'Media', href: '/media' },
   { key: 'gallery', label: 'Gallery', href: '/gallery' },
+  { key: 'directory', label: 'Member Directory', href: '/directory' },
   { key: 'contact', label: 'Contact', href: '/contact' },
 ];
 
