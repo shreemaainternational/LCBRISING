@@ -22,8 +22,7 @@ export const DEFAULT_SLIDES: HeroSlide[] = [
     headlineLines: ['Fighting Hunger,', 'Saving Lives'],
     subtitle:
       'No one should go hungry. Our food programs serve thousands of meals through community kitchens and food drives.',
-    bgImage:
-      'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=1920&q=80&auto=format&fit=crop',
+    bgImage: '/uploads/activity-report-2024-25/image33.jpeg',
     primaryCta: { href: '/donate', label: 'Donate Now' },
     secondaryCta: { href: '/activities', label: 'Our Service Activities' },
   },
@@ -32,8 +31,7 @@ export const DEFAULT_SLIDES: HeroSlide[] = [
     headlineLines: ['We Are Serving a', 'World in Need'],
     subtitle:
       'One act of kindness at a time. Empowering communities through service, compassion, and collective action.',
-    bgImage:
-      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1920&q=80&auto=format&fit=crop',
+    bgImage: '/uploads/activity-report-2024-25/image9.jpeg',
     primaryCta: { href: '/donate', label: 'Donate Now' },
     secondaryCta: { href: '/activities', label: 'Our Service Activities' },
   },
@@ -42,8 +40,7 @@ export const DEFAULT_SLIDES: HeroSlide[] = [
     headlineLines: ['Together We', 'Make a Difference'],
     subtitle:
       'Lions Club of Baroda Rising Star is dedicated to serving our community through humanitarian projects, healthcare initiatives, and educational programs.',
-    bgImage:
-      'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1920&q=80&auto=format&fit=crop',
+    bgImage: '/uploads/activity-report-2024-25/image2.jpeg',
     primaryCta: { href: '/donate', label: 'Donate Now' },
     secondaryCta: { href: '/activities', label: 'Our Service Activities' },
   },
@@ -53,7 +50,7 @@ export const DEFAULT_SLIDES: HeroSlide[] = [
     subtitle:
       'Free eye-camps, diabetes screening, paediatric cancer support, and disaster relief — wherever the need calls.',
     bgImage:
-      'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1920&q=80&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=2400&q=85&auto=format&fit=crop',
     primaryCta: { href: '/donate', label: 'Donate Now' },
     secondaryCta: { href: '/activities', label: 'Our Service Activities' },
   },
