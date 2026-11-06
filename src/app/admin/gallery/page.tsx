@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/server';
-import { GalleryBulkUpload } from '@/components/admin/GalleryBulkUpload';
+import { GalleryBulkUpload, type ActivityOption } from '@/components/admin/GalleryBulkUpload';
 import DeletePhotoButton from '@/app/admin/media/DeletePhotoButton';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +12,7 @@ type Photo = {
   title: string | null;
   caption: string | null;
   category: string | null;
+  activity_id: string | null;
   is_featured: boolean;
   display_order: number;
   created_at: string;
@@ -19,15 +20,20 @@ type Photo = {
 
 export default async function AdminGalleryPage() {
   const supa = await createClient();
-  const { data } = await supa
-    .from('photos')
-    .select('id, url, title, caption, category, is_featured, display_order, created_at')
-    .is('deleted_at', null)
-    .order('display_order')
-    .order('created_at', { ascending: false })
-    .limit(500);
+  const [{ data }, { data: activityRows }] = await Promise.all([
+    supa
+      .from('photos')
+      .select('id, url, title, caption, category, activity_id, is_featured, display_order, created_at')
+      .is('deleted_at', null)
+      .order('display_order')
+      .order('created_at', { ascending: false })
+      .limit(500),
+    supa.from('activities').select('id, title, date').order('date', { ascending: false }).limit(300),
+  ]);
 
   const photos = (data ?? []) as Photo[];
+  const activities = (activityRows ?? []) as ActivityOption[];
+  const activityTitleById = new Map(activities.map((a) => [a.id, a.title]));
 
   return (
     <div>
@@ -42,7 +48,7 @@ export default async function AdminGalleryPage() {
           <CardTitle>Bulk upload photos</CardTitle>
         </CardHeader>
         <CardContent>
-          <GalleryBulkUpload />
+          <GalleryBulkUpload activities={activities} />
         </CardContent>
       </Card>
 
@@ -69,10 +75,15 @@ export default async function AdminGalleryPage() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         <div className="text-xs font-medium truncate">{p.title ?? p.caption ?? '(untitled)'}</div>
-                        <div className="text-[10px] text-gray-200 flex items-center gap-1.5 mt-0.5">
+                        <div className="text-[10px] text-gray-200 flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <Badge variant={p.is_featured ? 'success' : 'outline'} className="text-[10px]">
                             {p.category ?? 'gallery'}
                           </Badge>
+                          {p.activity_id && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {activityTitleById.get(p.activity_id) ?? 'linked activity'}
+                            </Badge>
+                          )}
                           {p.is_featured && <span className="text-brand-300 font-semibold">★ featured</span>}
                         </div>
                       </div>

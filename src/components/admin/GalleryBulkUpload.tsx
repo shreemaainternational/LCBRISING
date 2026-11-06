@@ -10,17 +10,24 @@ type Category = typeof CATEGORIES[number];
 
 type Result = { inserted: number; skipped: number; total: number } | { error: string } | null;
 
+export type ActivityOption = { id: string; title: string; date: string | null };
+
 /**
  * Bulk gallery uploader. Drop or pick many photos at once — each uploads
  * straight to Supabase Storage (via PhotoMultiUpload), then "Save to gallery"
  * writes them all to the `photos` table in a single request. Those rows are
  * read by the public website /gallery page and the mobile app /m/gallery.
+ *
+ * Linking the batch to an activity (optional) makes the public gallery group
+ * these photos into that activity's own album instead of relying on date
+ * matching, which is the only way to tell apart two events held the same day.
  */
-export function GalleryBulkUpload() {
+export function GalleryBulkUpload({ activities = [] }: { activities?: ActivityOption[] }) {
   const router = useRouter();
   const [urls, setUrls] = useState<string[]>([]);
   const [captions, setCaptions] = useState<Record<string, string>>({});
   const [category, setCategory] = useState<Category>('gallery');
+  const [activityId, setActivityId] = useState<string>('');
   const [featured, setFeatured] = useState(false);
   const [result, setResult] = useState<Result>(null);
   const [pending, start] = useTransition();
@@ -35,6 +42,7 @@ export function GalleryBulkUpload() {
         body: JSON.stringify({
           category,
           is_featured: featured,
+          activity_id: activityId || undefined,
           photos: urls.map((url) => ({ url, caption: captions[url] || undefined })),
         }),
       });
@@ -69,6 +77,24 @@ export function GalleryBulkUpload() {
           <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} />
           Featured (homepage / about collage)
         </label>
+        {activities.length > 0 && (
+          <label className="text-sm">
+            <span className="block mb-1 text-gray-600">Link to activity (optional)</span>
+            <select
+              value={activityId}
+              onChange={(e) => setActivityId(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-2 bg-white text-sm max-w-xs"
+            >
+              <option value="">— none —</option>
+              {activities.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.title}
+                  {a.date ? ` (${a.date})` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       <PhotoMultiUpload

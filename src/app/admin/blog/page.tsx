@@ -39,6 +39,7 @@ export default async function AdminBlogIndex() {
           .select(
             'id, title, slug, category, language, is_published, is_featured, story_type, published_at, view_count, updated_at, author_name',
           )
+          .is('deleted_at', null)
           .order('updated_at', { ascending: false })
           .limit(100),
         supabase

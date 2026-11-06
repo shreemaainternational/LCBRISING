@@ -8,6 +8,8 @@ import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { CAUSES, CAUSE_SLUGS, getCause, type Cause } from '@/lib/causes';
 import { collectActivityPhotos } from '@/lib/activity-media';
 import { CauseActivities, type CauseActivity } from './CauseActivities';
+import { getServiceActivityById } from '@/lib/master-calendar';
+import { MasterItemDetail } from '@/components/site/MasterItemDetail';
 
 export const revalidate = 300;
 
@@ -23,7 +25,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { cause: slug } = await params;
   const cause = getCause(slug);
-  if (!cause) return { title: 'Cause not found' };
+  if (!cause) {
+    const activity = await getServiceActivityById(slug);
+    if (!activity) return { title: 'Not found' };
+    return {
+      title: activity.title,
+      description: activity.description ?? `${activity.title} — a Lions Club of Baroda Rising Star service activity.`,
+      alternates: { canonical: `/activities/${activity.source_id}` },
+    };
+  }
   const title = `${cause.title} Activities`;
   const description = `${cause.title} service activities by Lions Club of Baroda Rising Star — ${cause.tagline}.`;
   return {
@@ -94,7 +104,16 @@ export default async function CauseActivitiesPage({
 }) {
   const { cause: slug } = await params;
   const cause = getCause(slug);
-  if (!cause) notFound();
+
+  // `slug` is either a known cause (environment, vision, …) or the id of a
+  // single Service Activity — the master calendar's SERVICE_ACTIVITY click
+  // target (/activities/[id]). Both share this route since Next.js can't
+  // have two differently-named dynamic segments at the same path level.
+  if (!cause) {
+    const activity = await getServiceActivityById(slug);
+    if (!activity) notFound();
+    return <MasterItemDetail item={activity} />;
+  }
 
   const activities = await loadActivities(cause);
   const totalPhotos = activities.reduce((n, a) => n + a.photos.length, 0);

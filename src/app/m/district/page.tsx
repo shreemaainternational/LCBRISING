@@ -28,7 +28,7 @@ export default async function MyDistrict() {
     db.from('clubs').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     db.from('members').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     db.from('activities').select('*', { count: 'exact', head: true }),
-    db.from('officers').select('role, notes, source_id, member:members(name, avatar_url)').eq('scope_kind', 'district').eq('status', 'active'),
+    db.from('officers').select('role, notes, source_id, member:members!officers_member_id_fkey(name, avatar_url)').eq('scope_kind', 'district').eq('status', 'active'),
     db.from('clubs').select('id, name, city').is('deleted_at', null).order('name').limit(12),
   ]);
 

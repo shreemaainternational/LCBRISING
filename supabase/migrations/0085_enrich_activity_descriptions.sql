@@ -1,5 +1,5 @@
 -- =====================================================================
--- 0079_enrich_activity_descriptions.sql
+-- 0085_enrich_activity_descriptions.sql
 -- Description-enrichment pass over Lions Club of Baroda Rising Star's
 -- seeded service activities (see 0061_seed_baroda_rising_star_activities.sql).
 --

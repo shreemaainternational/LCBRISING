@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { notFound } from 'next/navigation';
+import { notFound, redirect, unstable_rethrow } from 'next/navigation';
 import { ArrowLeft, MapPin, Quote } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, env } from '@/lib/env';
@@ -27,23 +27,35 @@ type Story = {
   impact_metric: string | null;
   tags: string[] | null;
   published_at: string | null;
+  external_source?: string | null;
+  source_url?: string | null;
 };
+
+const BASE_COLUMNS =
+  'id, slug, title, subtitle, beneficiary_name, beneficiary_age, location, hero_image, before_image, after_image, body, impact_quote, impact_metric, tags, published_at';
 
 async function getStory(slug: string): Promise<Story | null> {
   if (!isSupabaseConfigured()) return null;
   try {
     const supabase = await createClient();
-    const { data } = await supabase
-      .from('stories')
-      .select(
-        'id, slug, title, subtitle, beneficiary_name, beneficiary_age, location, hero_image, before_image, after_image, body, impact_quote, impact_metric, tags, published_at',
-      )
-      .eq('slug', slug)
-      .eq('is_published', true)
-      .is('deleted_at', null)
-      .maybeSingle();
-    return (data ?? null) as Story | null;
-  } catch {
+    const query = (columns: string) =>
+      supabase
+        .from('stories')
+        .select(columns)
+        .eq('slug', slug)
+        .eq('is_published', true)
+        .is('deleted_at', null)
+        .maybeSingle();
+    let { data, error } = await query(`${BASE_COLUMNS}, external_source, source_url`);
+    if (error) {
+      // Pre-0082 schema: no provenance columns yet.
+      ({ data, error } = await query(BASE_COLUMNS));
+      if (error) console.error('[stories/slug] query failed:', error.message);
+    }
+    return (data ?? null) as unknown as Story | null;
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error('[stories/slug] load failed:', err);
     return null;
   }
 }
@@ -79,6 +91,8 @@ export default async function StoryDetailPage({
   const { slug } = await params;
   const story = await getStory(slug);
   if (!story) notFound();
+  // Imported Lion Stories are link-outs — send readers to the original.
+  if (story.external_source && story.source_url) redirect(story.source_url);
   const canonical = `${env.NEXT_PUBLIC_SITE_URL}/stories/${story.slug}`;
   const body = story.body ? renderMarkdown(story.body) : '';
 

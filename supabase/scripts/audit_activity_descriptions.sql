@@ -1,0 +1,35 @@
+-- =====================================================================
+-- audit_activity_descriptions.sql  (READ-ONLY — changes nothing)
+-- Lists every activity whose description is missing or very short, with
+-- the facts needed to write one, plus whether another record with the
+-- same title and date exists (a likely duplicate). Run via:
+--   Actions -> "Apply database migration (one-shot)"
+--   -> sql_path = supabase/scripts/audit_activity_descriptions.sql
+-- The result appears in the workflow log.
+-- =====================================================================
+
+select
+  a.id,
+  a.title,
+  a.date,
+  a.category,
+  a.location,
+  a.beneficiaries,
+  a.lion_members_count,
+  a.service_hours,
+  a.amount_raised,
+  a.approval_status::text                   as approval_status,
+  coalesce(length(btrim(a.description)), 0) as description_length,
+  left(a.description, 120)                  as description_start,
+  (select count(*) from public.activities s
+    where s.id <> a.id
+      and lower(btrim(s.title)) = lower(btrim(a.title))
+      and s.date = a.date)                  as same_title_date_others,
+  (select max(length(btrim(s.description))) from public.activities s
+    where s.id <> a.id
+      and lower(btrim(s.title)) = lower(btrim(a.title))
+      and s.date = a.date)                  as best_other_description_length
+from public.activities a
+where a.description is null
+   or length(btrim(a.description)) < 60
+order by a.date, a.title;

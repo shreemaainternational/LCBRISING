@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_rethrow } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Calendar, Clock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
@@ -33,7 +34,7 @@ export default async function BlogPage() {
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('blog_posts')
         .select(
           'id, title, slug, excerpt, cover_url, published_at, category, is_featured, reading_time, author_name',
@@ -43,9 +44,12 @@ export default async function BlogPage() {
         .order('is_featured', { ascending: false })
         .order('published_at', { ascending: false })
         .limit(40);
+      if (error) console.error('[blog] query failed:', error.message);
       posts = (data ?? []) as BlogPost[];
-    } catch {
+    } catch (err) {
+      unstable_rethrow(err);
       // table may not exist yet — fall through with an empty list
+      console.error('[blog] load failed:', err);
     }
   }
 
@@ -60,7 +64,7 @@ export default async function BlogPage() {
     date: p.published_at ? formatDate(p.published_at) : '',
     image:
       p.cover_url ||
-      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&q=70',
+      'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1600&q=85',
     url: `/blog/${p.slug ?? p.id}`,
     source: 'Baroda Rising Star',
   }));

@@ -54,6 +54,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (isGuardFailure(actor)) return actor;
 
   const supa = memberDb() ?? await createClient();
+
+  // Changing the club is a transfer: it needs the transfer permission, not
+  // just member.update, and the target must be a live club. (History is
+  // recorded by the members trigger from migration 0088.)
+  const clubChanging = parsed.data.club_id !== undefined && (parsed.data.club_id ?? null) !== (before.club_id ?? null);
+  if (clubChanging) {
+    const transferActor = await requirePermission('member.transfer', {
+      club_id: before.club_id ?? null,
+      district_id: before.district_id ?? null,
+    });
+    if (isGuardFailure(transferActor)) return transferActor;
+    if (parsed.data.club_id) {
+      const { data: target } = await supa
+        .from('clubs').select('id, deleted_at').eq('id', parsed.data.club_id).maybeSingle();
+      if (!target || target.deleted_at) {
+        return NextResponse.json({ error: 'The target club does not exist or has been removed.' }, { status: 400 });
+      }
+    }
+  }
   const { data, error } = await supa
     .from('members')
     .update(parsed.data)
