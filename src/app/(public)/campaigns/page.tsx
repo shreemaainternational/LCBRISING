@@ -138,7 +138,9 @@ function UrgentBanner({ campaign, raised }: { campaign: Campaign; raised: number
           <AlertCircle size={14} aria-hidden /> Emergency Appeal
         </span>
         <span className="text-sm flex-1 min-w-[200px]">
-          <strong className="mr-2">{campaign.title}</strong>
+          <Link href={`/campaigns/${campaign.slug}`} className="font-bold mr-2 underline decoration-2 underline-offset-4">
+            {campaign.title}
+          </Link>
           {campaign.tagline ?? campaign.description ?? ''}
         </span>
         <Link
@@ -175,7 +177,9 @@ function FeaturedCampaign({ campaign, raised }: { campaign: Campaign; raised: nu
             Featured Campaign
           </p>
           <h2 className="mt-2 text-3xl md:text-5xl font-bold text-navy-900 leading-tight">
-            {campaign.title}
+            <Link href={`/campaigns/${campaign.slug}`} className="hover:text-brand-600">
+              {campaign.title}
+            </Link>
           </h2>
           {(campaign.tagline ?? campaign.description) && (
             <p className="mt-4 text-lg text-gray-700 leading-relaxed">
@@ -207,6 +211,12 @@ function FeaturedCampaign({ campaign, raised }: { campaign: Campaign; raised: nu
               className="btn-gold inline-flex h-12 px-6 rounded-md items-center"
             >
               <Heart size={16} className="mr-1" aria-hidden /> Donate
+            </Link>
+            <Link
+              href={`/campaigns/${campaign.slug}`}
+              className="btn-navy inline-flex h-12 px-6 rounded-md items-center"
+            >
+              View full campaign
             </Link>
           </div>
         </div>

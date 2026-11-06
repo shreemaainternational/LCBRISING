@@ -21,9 +21,22 @@ export type StoryForm = {
   tags: string[];
   is_published: boolean;
   is_featured: boolean;
+  activity_id: string | null;
+  campaign_id: string | null;
 };
 
-export function StoryEditor({ initial }: { initial: StoryForm }) {
+export type ActivityOption = { id: string; title: string; date: string | null };
+export type CampaignOption = { id: string; title: string };
+
+export function StoryEditor({
+  initial,
+  activities = [],
+  campaigns = [],
+}: {
+  initial: StoryForm;
+  activities?: ActivityOption[];
+  campaigns?: CampaignOption[];
+}) {
   const router = useRouter();
   const [form, setForm] = useState<StoryForm>(initial);
   const [error, setError] = useState<string | null>(null);
@@ -263,6 +276,42 @@ export function StoryEditor({ initial }: { initial: StoryForm }) {
               }
               className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
             />
+          </Field>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 p-5 bg-white space-y-3">
+          <h3 className="font-bold text-navy-800 mb-1">Related content</h3>
+          <p className="text-xs text-gray-500">
+            Optional — connects this story to the real activity/campaign that produced it.
+          </p>
+          <Field label="Related service activity">
+            <select
+              value={form.activity_id ?? ''}
+              onChange={(e) => update('activity_id', e.target.value || null)}
+              className="w-full h-10 px-2 rounded-md border border-gray-300 text-sm bg-white"
+            >
+              <option value="">— None —</option>
+              {activities.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.title}
+                  {a.date ? ` (${a.date})` : ''}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Related campaign">
+            <select
+              value={form.campaign_id ?? ''}
+              onChange={(e) => update('campaign_id', e.target.value || null)}
+              className="w-full h-10 px-2 rounded-md border border-gray-300 text-sm bg-white"
+            >
+              <option value="">— None —</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
           </Field>
         </div>
       </aside>

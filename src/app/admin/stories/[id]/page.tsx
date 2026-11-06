@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
-import { StoryEditor, type StoryForm } from '@/components/admin/StoryEditor';
+import { formatDate } from '@/lib/utils';
+import { StoryEditor, type StoryForm, type ActivityOption, type CampaignOption } from '@/components/admin/StoryEditor';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,25 @@ type Row = {
   tags: string[] | null;
   is_published: boolean;
   is_featured: boolean | null;
+  activity_id: string | null;
+  campaign_id: string | null;
 };
+
+async function loadOptions(): Promise<{ activities: ActivityOption[]; campaigns: CampaignOption[] }> {
+  const supabase = await createClient();
+  const [{ data: activities }, { data: campaigns }] = await Promise.all([
+    supabase.from('activities').select('id, title, date').order('date', { ascending: false }).limit(300),
+    supabase.from('campaigns').select('id, title').order('title'),
+  ]);
+  return {
+    activities: (activities ?? []).map((a) => ({
+      id: a.id as string,
+      title: a.title as string,
+      date: a.date ? formatDate(a.date as string) : null,
+    })),
+    campaigns: (campaigns ?? []) as CampaignOption[],
+  };
+}
 
 export default async function EditStoryPage({
   params,
@@ -32,13 +51,16 @@ export default async function EditStoryPage({
   const { id } = await params;
   if (!isSupabaseConfigured()) notFound();
   const supabase = await createClient();
-  const { data } = await supabase
-    .from('stories')
-    .select(
-      'id, title, slug, subtitle, beneficiary_name, beneficiary_age, location, hero_image, before_image, after_image, body, impact_quote, impact_metric, tags, is_published, is_featured',
-    )
-    .eq('id', id)
-    .maybeSingle();
+  const [{ data }, { activities, campaigns }] = await Promise.all([
+    supabase
+      .from('stories')
+      .select(
+        'id, title, slug, subtitle, beneficiary_name, beneficiary_age, location, hero_image, before_image, after_image, body, impact_quote, impact_metric, tags, is_published, is_featured, activity_id, campaign_id',
+      )
+      .eq('id', id)
+      .maybeSingle(),
+    loadOptions(),
+  ]);
   if (!data) notFound();
   const row = data as Row;
 
@@ -59,13 +81,15 @@ export default async function EditStoryPage({
     tags: row.tags ?? [],
     is_published: row.is_published,
     is_featured: !!row.is_featured,
+    activity_id: row.activity_id,
+    campaign_id: row.campaign_id,
   };
 
   return (
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Edit story</h1>
       <p className="text-gray-600 mb-6">Editing “{row.title}”.</p>
-      <StoryEditor initial={initial} />
+      <StoryEditor initial={initial} activities={activities} campaigns={campaigns} />
     </div>
   );
 }

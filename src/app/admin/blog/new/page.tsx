@@ -1,6 +1,7 @@
 import { getCurrentMember } from '@/lib/auth';
-import { integrations } from '@/lib/env';
-import { BlogEditor, type BlogPostForm } from '@/components/admin/BlogEditor';
+import { createClient } from '@/lib/supabase/server';
+import { integrations, isSupabaseConfigured } from '@/lib/env';
+import { BlogEditor, type BlogPostForm, type StoryOption, type CampaignOption } from '@/components/admin/BlogEditor';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,10 +21,26 @@ const EMPTY: BlogPostForm = {
   is_featured: false,
   seo_title: '',
   seo_description: '',
+  story_id: null,
+  campaign_id: null,
 };
 
+async function loadOptions(): Promise<{ stories: StoryOption[]; campaigns: CampaignOption[] }> {
+  if (!isSupabaseConfigured()) return { stories: [], campaigns: [] };
+  try {
+    const supabase = await createClient();
+    const [{ data: stories }, { data: campaigns }] = await Promise.all([
+      supabase.from('stories').select('id, title').is('deleted_at', null).order('title'),
+      supabase.from('campaigns').select('id, title').order('title'),
+    ]);
+    return { stories: (stories ?? []) as StoryOption[], campaigns: (campaigns ?? []) as CampaignOption[] };
+  } catch {
+    return { stories: [], campaigns: [] };
+  }
+}
+
 export default async function NewBlogPostPage() {
-  const me = await getCurrentMember();
+  const [me, { stories, campaigns }] = await Promise.all([getCurrentMember(), loadOptions()]);
   const initial: BlogPostForm = {
     ...EMPTY,
     author_name: me?.name ?? '',
@@ -35,7 +52,7 @@ export default async function NewBlogPostPage() {
       <p className="text-gray-600 mb-6">
         Write a story, generate a draft with AI, or translate an existing piece.
       </p>
-      <BlogEditor initial={initial} aiAvailable={integrations.openai} />
+      <BlogEditor initial={initial} aiAvailable={integrations.openai} stories={stories} campaigns={campaigns} />
     </div>
   );
 }

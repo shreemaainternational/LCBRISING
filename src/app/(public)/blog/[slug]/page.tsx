@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Calendar, Clock, User, Quote } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, Quote, ExternalLink, Megaphone, HeartHandshake } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, env } from '@/lib/env';
 import { formatDate } from '@/lib/utils';
@@ -32,7 +32,13 @@ type BlogPost = {
   story_type: string | null;
   seo_title: string | null;
   seo_description: string | null;
+  story_id: string | null;
+  campaign_id: string | null;
 };
+
+type RelatedStory = { slug: string; title: string };
+type RelatedCampaign = { slug: string; title: string };
+type RelatedActivity = { id: string; title: string };
 
 async function getPost(slug: string): Promise<BlogPost | null> {
   if (!isSupabaseConfigured()) return null;
@@ -41,7 +47,7 @@ async function getPost(slug: string): Promise<BlogPost | null> {
     const { data } = await supabase
       .from('blog_posts')
       .select(
-        'id, slug, title, excerpt, body, body_html, cover_url, category, tags, language, reading_time, hero_quote, author_name, published_at, is_featured, story_type, seo_title, seo_description',
+        'id, slug, title, excerpt, body, body_html, cover_url, category, tags, language, reading_time, hero_quote, author_name, published_at, is_featured, story_type, seo_title, seo_description, story_id, campaign_id',
       )
       .eq('slug', slug)
       .eq('is_published', true)
@@ -50,6 +56,57 @@ async function getPost(slug: string): Promise<BlogPost | null> {
     return (data ?? null) as BlogPost | null;
   } catch {
     return null;
+  }
+}
+
+async function getRelatedContent(post: BlogPost): Promise<{
+  story: RelatedStory | null;
+  campaign: RelatedCampaign | null;
+  activity: RelatedActivity | null;
+}> {
+  if (!isSupabaseConfigured()) return { story: null, campaign: null, activity: null };
+  try {
+    const supabase = await createClient();
+
+    const [storyRes, campaignRes] = await Promise.all([
+      post.story_id
+        ? supabase.from('stories').select('slug, title, activity_id').eq('id', post.story_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      post.campaign_id
+        ? supabase.from('campaigns').select('slug, title').eq('id', post.campaign_id).eq('is_active', true).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    const story = (storyRes.data as (RelatedStory & { activity_id: string | null }) | null) ?? null;
+    const campaign = (campaignRes.data as RelatedCampaign | null) ?? null;
+
+    // A related Service Activity is reached transitively — via the linked
+    // story's activity, or the first activity linked to the campaign —
+    // rather than duplicated as a third foreign key on blog_posts.
+    let activity: RelatedActivity | null = null;
+    if (story?.activity_id) {
+      const { data } = await supabase.from('activities').select('id, title').eq('id', story.activity_id).maybeSingle();
+      activity = (data ?? null) as RelatedActivity | null;
+    } else if (post.campaign_id) {
+      const { data: link } = await supabase
+        .from('campaign_activities')
+        .select('activity_id')
+        .eq('campaign_id', post.campaign_id)
+        .limit(1)
+        .maybeSingle();
+      if (link?.activity_id) {
+        const { data } = await supabase.from('activities').select('id, title').eq('id', link.activity_id).maybeSingle();
+        activity = (data ?? null) as RelatedActivity | null;
+      }
+    }
+
+    return {
+      story: story ? { slug: story.slug, title: story.title } : null,
+      campaign,
+      activity,
+    };
+  } catch {
+    return { story: null, campaign: null, activity: null };
   }
 }
 
@@ -120,7 +177,7 @@ export default async function BlogDetailPage({
   const post = await getPost(slug);
   if (!post) notFound();
 
-  const related = await getRelated(post);
+  const [related, relatedContent] = await Promise.all([getRelated(post), getRelatedContent(post)]);
   const body = post.body_html || (post.body ? renderMarkdown(post.body) : '');
   const readingMinutes = post.reading_time ?? estimateReadingTime(post.body ?? post.excerpt ?? '');
   const canonical = `${env.NEXT_PUBLIC_SITE_URL}/blog/${post.slug}`;
@@ -258,6 +315,49 @@ export default async function BlogDetailPage({
                     #{t}
                   </span>
                 ))}
+              </div>
+            )}
+
+            {(relatedContent.story || relatedContent.campaign || relatedContent.activity) && (
+              <div className="mt-8 grid sm:grid-cols-2 gap-3">
+                {relatedContent.story && (
+                  <Link
+                    href={`/stories/${relatedContent.story.slug}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-4 hover:border-brand-400 hover:shadow-sm transition-all"
+                  >
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Related Story</p>
+                      <p className="mt-1 font-semibold text-navy-800 text-sm">{relatedContent.story.title}</p>
+                    </div>
+                    <HeartHandshake size={16} className="text-brand-600 flex-shrink-0" aria-hidden />
+                  </Link>
+                )}
+                {relatedContent.campaign && (
+                  <Link
+                    href={`/campaigns/${relatedContent.campaign.slug}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-4 hover:border-brand-400 hover:shadow-sm transition-all"
+                  >
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Related Campaign</p>
+                      <p className="mt-1 font-semibold text-navy-800 text-sm">{relatedContent.campaign.title}</p>
+                    </div>
+                    <Megaphone size={16} className="text-brand-600 flex-shrink-0" aria-hidden />
+                  </Link>
+                )}
+                {relatedContent.activity && (
+                  <Link
+                    href={`/activities/report/${relatedContent.activity.id}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-4 hover:border-brand-400 hover:shadow-sm transition-all"
+                  >
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                        Related Service Activity
+                      </p>
+                      <p className="mt-1 font-semibold text-navy-800 text-sm">{relatedContent.activity.title}</p>
+                    </div>
+                    <ExternalLink size={16} className="text-brand-600 flex-shrink-0" aria-hidden />
+                  </Link>
+                )}
               </div>
             )}
           </div>

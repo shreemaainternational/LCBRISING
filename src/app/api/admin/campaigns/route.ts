@@ -29,6 +29,7 @@ const baseSchema = z.object({
   is_active: z.boolean().default(true),
   is_featured: z.boolean().default(false),
   match_campaign: z.boolean().default(false),
+  activity_ids: z.array(z.string().uuid()).default([]),
 });
 
 const updateSchema = baseSchema.extend({ id: z.string().uuid() });
@@ -70,19 +71,48 @@ type OpResult<T> = { data: T | null; error: { message: string } | null };
 
 async function writeWithFallback<T>(
   op: (client: SupaClient) => PromiseLike<OpResult<T>>,
-): Promise<OpResult<T>> {
+): Promise<{ data: T | null; error: { message: string } | null; client: SupaClient }> {
   const supa = await createClient();
   const first = await op(supa);
-  if (!first.error) return { data: first.data, error: null };
+  if (!first.error) return { data: first.data, error: null, client: supa };
   const msg = first.error.message ?? '';
   const isAuthFail = /invalid api key|jwt/i.test(msg) || /row.level security/i.test(msg);
   if (isAuthFail && env.SUPABASE_SERVICE_ROLE_KEY) {
     const admin = createAdminClient();
     const second = await op(admin);
-    if (!second.error) return { data: second.data, error: null };
-    return { data: null, error: { message: second.error.message } };
+    if (!second.error) return { data: second.data, error: null, client: admin };
+    return { data: null, error: { message: second.error.message }, client: admin };
   }
-  return { data: null, error: { message: msg } };
+  return { data: null, error: { message: msg }, client: supa };
+}
+
+/**
+ * Replace this campaign's linked Service Activities with `activityIds`.
+ * Returns a warning string on failure instead of throwing — the campaign
+ * record itself has already been saved by the time this runs, so a link
+ * failure (e.g. migration 0089 not yet applied) must be surfaced to the
+ * admin rather than silently dropped.
+ */
+async function syncActivityLinks(
+  client: SupaClient,
+  campaignId: string,
+  activityIds: string[],
+): Promise<string | null> {
+  const del = await client.from('campaign_activities').delete().eq('campaign_id', campaignId);
+  if (del.error) return friendlyLinkError(del.error.message);
+  if (activityIds.length === 0) return null;
+  const ins = await client
+    .from('campaign_activities')
+    .insert(activityIds.map((activity_id) => ({ campaign_id: campaignId, activity_id })));
+  if (ins.error) return friendlyLinkError(ins.error.message);
+  return null;
+}
+
+function friendlyLinkError(message: string): string {
+  if (/does not exist/i.test(message)) {
+    return 'Campaign saved, but activity links were NOT saved — the campaign_activities table is missing. Run migration 0089_content_relationships.sql on this Supabase project.';
+  }
+  return `Campaign saved, but activity links were not saved: ${message}`;
 }
 
 async function guard(): Promise<Response | null> {
@@ -102,13 +132,14 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
   }
-  const { data, error } = await writeWithFallback<{ id: string; slug: string }>((c) =>
+  const { data, error, client } = await writeWithFallback<{ id: string; slug: string }>((c) =>
     c.from('campaigns').insert(normalisePayload(parsed.data)).select('id, slug').single(),
   );
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
   }
-  return NextResponse.json({ id: data.id, slug: data.slug }, { status: 201 });
+  const warning = await syncActivityLinks(client, data.id, parsed.data.activity_ids);
+  return NextResponse.json({ id: data.id, slug: data.slug, warning }, { status: 201 });
 }
 
 export async function PUT(req: Request) {
@@ -119,11 +150,12 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
   }
   const { id, ...rest } = parsed.data;
-  const { data, error } = await writeWithFallback<{ id: string; slug: string }>((c) =>
+  const { data, error, client } = await writeWithFallback<{ id: string; slug: string }>((c) =>
     c.from('campaigns').update(normalisePayload(rest)).eq('id', id).select('id, slug').single(),
   );
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
   }
-  return NextResponse.json({ id: data.id, slug: data.slug });
+  const warning = await syncActivityLinks(client, id, rest.activity_ids);
+  return NextResponse.json({ id: data.id, slug: data.slug, warning });
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Search, Calendar, Newspaper, Globe, Tv } from 'lucide-react';
+import { Search, Calendar, Newspaper, Globe, Tv, ExternalLink } from 'lucide-react';
 import { DetailModal, type DetailItem } from '@/components/site/DetailModal';
 
 export type MediaItem = {
@@ -57,8 +57,8 @@ export function MediaExplorer({ items }: { items: MediaItem[] }) {
     <>
       {/* Search */}
       <div className="border-b border-gray-200 bg-white">
-        <div className="container-page py-5">
-          <div className="relative max-w-md">
+        <div className="container-page py-5 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[220px]">
             <Search
               size={16}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -72,6 +72,15 @@ export function MediaExplorer({ items }: { items: MediaItem[] }) {
               className="w-full h-11 pl-9 pr-3 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
             />
           </div>
+          <a
+            href="https://www.lionsclubs.org/en/footer/lions-press-center"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-navy inline-flex items-center gap-2 h-11 px-5 rounded-md text-sm"
+          >
+            <ExternalLink size={15} aria-hidden />
+            Lions Press Center
+          </a>
         </div>
       </div>
 
