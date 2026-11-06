@@ -17,7 +17,7 @@ donor CRM, payment processing, automation engine, and reporting.
 | Donations     | Public form, Razorpay checkout, 80G-style PDF receipts |
 | Activities    | Track service projects, beneficiaries, hours |
 | Events        | RSVP + QR code check-in |
-| Automation    | Lightweight job queue (DB-backed), Vercel Cron driven |
+| Automation    | Lightweight job queue (DB-backed), GitHub Actions cron driven |
 | Communication | Resend email + Twilio WhatsApp |
 | Dashboard     | Live metrics, donation trend, recent activity |
 | Security      | Zod validation, rate limiting, signed Razorpay webhooks, RLS |
@@ -34,7 +34,7 @@ donor CRM, payment processing, automation engine, and reporting.
 * **Resend** — transactional email
 * **Twilio** — WhatsApp messaging
 * **PDFKit** — receipt generation
-* **Vercel** — hosting + cron
+* **Railway** — hosting (GitHub Actions — CI, migrations, cron)
 
 ---
 
@@ -51,7 +51,7 @@ src/
       dues/             #   list + pay
       activities/
       events/           #   list + RSVP + QR check-in
-      cron/automation/  #   Vercel Cron entry point
+      cron/automation/  #   cron entry point (.github/workflows/cron.yml)
       webhooks/razorpay/
     login/              # sign-in / sign-up
   components/
@@ -74,7 +74,8 @@ supabase/
   migrations/0001_initial_schema.sql
   seed.sql
 .env.example
-vercel.json             # cron + security headers
+railway.json            # Railway build/start/healthcheck
+vercel.json             # disables Vercel deployments
 ```
 
 ---
@@ -140,7 +141,7 @@ where email = 'you@example.com';
   `supabase/migrations/0001_initial_schema.sql`.
 * Razorpay webhooks are HMAC-verified (`RAZORPAY_WEBHOOK_SECRET`).
 * Public POST endpoints are rate-limited (`src/lib/rate-limit.ts`).
-* Security headers configured in `vercel.json`.
+* Security headers configured in `next.config.ts`.
 
 ---
 
@@ -156,7 +157,7 @@ register in `src/lib/automation/engine.ts`:
 | `send_donation_receipt`  | After captured donation                  |
 | `send_event_reminder`    | Manual or cron                           |
 
-Vercel Cron runs `/api/cron/automation?schedule=1` every 10 minutes.
+`.github/workflows/cron.yml` runs `/api/cron/automation?schedule=1` daily at 03:00 UTC.
 Authenticated via `Bearer ${CRON_SECRET}`.
 
 ---
@@ -184,7 +185,7 @@ captured / failed events — configure in Razorpay dashboard.
 
 ## 🧱 Deployment
 
-See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for full step-by-step Vercel +
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for full step-by-step Railway +
 Supabase deployment instructions.
 
 ---

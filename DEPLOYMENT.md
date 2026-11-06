@@ -43,7 +43,7 @@ enum creates, additive `alter table`).
 Open **Project Settings → API**:
 https://supabase.com/dashboard/project/mvtqqlfzawyhntnsavbx/settings/api
 
-Copy these into your local `.env.local` and into Vercel env vars:
+Copy these into your local `.env.local` and into Railway variables:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://mvtqqlfzawyhntnsavbx.supabase.co
@@ -65,19 +65,44 @@ SUPABASE_SERVICE_ROLE_KEY=<copy from "Project API keys" → service_role>
 - **Resend**: verify a sending domain, generate API key.
 - **Twilio**: enable WhatsApp sandbox or apply for a production sender.
 
-## 4. Deploy to Vercel
+## 4. Deploy (Railway only)
 
-```bash
-git push origin main
-```
+Production is the Railway service **LCBRISING** (project `LCBRISING`,
+environment `production`), serving `barodarisingstar.com`,
+`www.barodarisingstar.com` and `lcbrising-production.up.railway.app`.
+Vercel is disabled: `vercel.json` sets `git.deploymentEnabled: false`.
 
-1. Import the repo at https://vercel.com/new
-2. Framework: **Next.js** (auto-detected)
-3. Add **Environment Variables** from `.env.example` for both *Production*
-   and *Preview*.
-4. Deploy.
-5. The cron entry in `vercel.json` will automatically register the
-   automation worker (`/api/cron/automation?schedule=1` every 10 min).
+Pipeline on every merge to `main`:
+
+1. **CI** (`.github/workflows/ci.yml`) — lint, typecheck, migration checks,
+   build.
+2. **Migrate** — `scripts/migrations.mjs apply` runs any new
+   `supabase/migrations/NNNN_*.sql` against Supabase, each in a transaction,
+   recorded in `lcb_ops.schema_migrations`. A failure fails CI.
+3. **Deploy** — Railway waits for CI ("Wait for CI") and only deploys a
+   green commit. Build/start/healthcheck come from `railway.json`
+   (`/api/health`).
+4. **Smoke test** — `smoke-test.yml` runs when the deployment reports
+   success, or manually.
+
+Scheduled jobs (formerly Vercel Cron) run from `.github/workflows/cron.yml`
+and call `/api/cron/*` with `Authorization: Bearer $CRON_SECRET`.
+
+Environment variables live in **Railway → LCBRISING → Variables**. Secrets
+never go in the repo.
+
+### Migration rules
+
+- Name files `NNNN_lowercase_name.sql` with the next unused number. CI fails
+  on duplicate or out-of-order numbers.
+- `drop table/column/schema`, `truncate` and `delete from` in a new or edited
+  migration fail CI unless the PR carries the
+  `migration:destructive-approved` label.
+- Editing an already-shipped migration does not re-run it; add a new one.
+- **One-time setup:** production predates migration tracking. Run
+  **Actions → Migrations admin → action=baseline, through=NNNN** with the last
+  migration confirmed live, before any new migration is merged. Until then
+  CI refuses to apply migrations rather than replaying all of them.
 
 ## 5. Bootstrap an admin user
 
@@ -108,11 +133,10 @@ where email = 'admin@lcbrising.org';
 ## Troubleshooting
 
 **`SUPABASE_SERVICE_ROLE_KEY` errors** — service role is required for
-webhooks and cron. Set it in Vercel → Production env.
+webhooks and cron. Set it in Railway → LCBRISING → Variables.
 
-**Cron 401** — `CRON_SECRET` must match the `Authorization: Bearer ...`
-header. Vercel auto-injects this when configured under
-**Project → Settings → Cron Jobs → Authentication**.
+**Cron 401** — the `CRON_SECRET` GitHub secret used by `cron.yml` must match
+the `CRON_SECRET` Railway variable (or the `cron_settings` row in the DB).
 
 **RLS denials** — when calling from a route handler that uses
 `createClient()`, the call runs as the authenticated user. For trusted
@@ -122,7 +146,7 @@ server flows use `createAdminClient()` (service role).
 
 ### Lions OIDC / SSO
 
-Add these to Vercel env (both Production and Preview), then the
+Add these to Railway variables, then the
 `/api/auth/oidc/*` routes go live:
 
 ```

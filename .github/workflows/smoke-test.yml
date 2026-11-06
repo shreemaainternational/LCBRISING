@@ -1,25 +1,24 @@
 name: Production smoke test
 
-# Runs scripts/smoke-test.mjs against a deployed URL. Use this:
+# Runs scripts/smoke-test.mjs against production:
+#   - automatically when a GitHub deployment reports success (Railway)
 #   - manually after a release to spot regressions
-#   - as a scheduled probe (cron block below; enable to start hourly checks)
 
 on:
+  deployment_status:
   workflow_dispatch:
     inputs:
       base_url:
         description: 'Site to test. Defaults to production.'
         required: true
         default: 'https://barodarisingstar.com'
-  # Uncomment to run hourly:
-  # schedule:
-  #   - cron: '0 * * * *'
 
 permissions:
   contents: read
 
 jobs:
   smoke:
+    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -28,5 +27,5 @@ jobs:
         with: { node-version: '20' }
       - name: Run smoke test
         env:
-          BASE_URL: ${{ github.event.inputs.base_url || 'https://barodarisingstar.com' }}
+          BASE_URL: ${{ inputs.base_url || vars.PRODUCTION_URL || 'https://barodarisingstar.com' }}
         run: node scripts/smoke-test.mjs
