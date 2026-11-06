@@ -11,28 +11,28 @@ const TAGS = [
 ];
 
 const COLLAGE = [
-  // Top-left (large) — children sitting
+  // Top-left (large) — club volunteers distributing care kits
   {
-    src: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=900&q=80&auto=format&fit=crop',
-    alt: 'Children sitting together at a community programme',
+    src: '/uploads/activity-report-2024-25/image10.jpeg',
+    alt: 'Lions Club volunteers distributing care kits to the community',
     cls: 'aspect-[4/3]',
   },
-  // Top-right — group at sunset
+  // Top-right — club members visiting an elder-care home
   {
-    src: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=900&q=80&auto=format&fit=crop',
-    alt: 'Volunteers watching the sunset together',
+    src: '/uploads/activity-report-2024-25/image20.jpeg',
+    alt: 'Lions members spending time with elders in the community',
     cls: 'aspect-[4/3]',
   },
   // Bottom-left — child portrait
   {
-    src: 'https://images.unsplash.com/photo-1519340241574-2cec6aef0c01?w=900&q=80&auto=format&fit=crop',
+    src: 'https://images.unsplash.com/photo-1519340241574-2cec6aef0c01?w=1600&q=85&auto=format&fit=crop',
     alt: 'Child smiling at the camera',
     cls: 'aspect-[4/3]',
   },
-  // Bottom-right — hands together with paint
+  // Bottom-right — community outreach drive
   {
-    src: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=900&q=80&auto=format&fit=crop',
-    alt: 'Hands joined together in solidarity',
+    src: '/uploads/activity-report-2024-25/image16.jpeg',
+    alt: 'Lions members and volunteers united at a community outreach drive',
     cls: 'aspect-[4/3]',
   },
 ];

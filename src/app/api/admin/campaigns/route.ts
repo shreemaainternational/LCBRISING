@@ -8,46 +8,49 @@ import { slugify } from '@/lib/ai/blog';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const dateStr = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .optional()
+  .or(z.literal(''));
+
 const baseSchema = z.object({
   title: z.string().min(3).max(200),
   slug: z.string().max(120).optional().or(z.literal('')),
-  description: z.string().max(2000).optional().or(z.literal('')),
   tagline: z.string().max(300).optional().or(z.literal('')),
-  goal_amount: z.number().positive(),
-  hero_image: z.string().url().optional().or(z.literal('')),
+  description: z.string().max(4000).optional().or(z.literal('')),
   category: z.string().max(60).optional().or(z.literal('')),
-  urgency: z.enum(['', 'normal', 'urgent', 'emergency']).optional(),
+  goal_amount: z.number().nonnegative().max(1_000_000_000),
+  hero_image: z.string().url().optional().or(z.literal('')),
   impact_metric: z.string().max(160).optional().or(z.literal('')),
-  starts_at: z.string().optional().or(z.literal('')),
-  ends_at: z.string().optional().or(z.literal('')),
+  urgency: z.enum(['', 'normal', 'urgent', 'emergency']).default(''),
+  starts_at: dateStr,
+  ends_at: dateStr,
   is_active: z.boolean().default(true),
   is_featured: z.boolean().default(false),
   match_campaign: z.boolean().default(false),
   activity_ids: z.array(z.string().uuid()).default([]),
 });
 
-const createSchema = baseSchema;
 const updateSchema = baseSchema.extend({ id: z.string().uuid() });
 
 function normalisePayload(p: z.infer<typeof baseSchema>) {
-  const slug = (p.slug && p.slug.trim()) || slugify(p.title);
-  const out: Record<string, unknown> = {
+  return {
     title: p.title.trim(),
-    slug,
-    description: p.description || null,
+    slug: (p.slug && slugify(p.slug)) || slugify(p.title),
     tagline: p.tagline || null,
+    description: p.description || null,
+    category: p.category || null,
     goal_amount: p.goal_amount,
     hero_image: p.hero_image || null,
-    category: p.category || null,
-    urgency: p.urgency || null,
     impact_metric: p.impact_metric || null,
+    urgency: p.urgency || null,
     starts_at: p.starts_at || null,
     ends_at: p.ends_at || null,
     is_active: p.is_active,
     is_featured: p.is_featured,
     match_campaign: p.match_campaign,
   };
-  return out;
 }
 
 function friendlyError(message: string): string {
@@ -55,7 +58,7 @@ function friendlyError(message: string): string {
     return 'Slug already used by another campaign — change the slug or leave it blank to regenerate.';
   }
   if (/row.level security/i.test(message)) {
-    return 'Row-level security blocked the write. Make sure your account has admin/officer role.';
+    return 'Row-level security blocked the write. Make sure your account has admin/treasurer role.';
   }
   return message;
 }
@@ -87,9 +90,8 @@ async function writeWithFallback<T>(
  * Replace this campaign's linked Service Activities with `activityIds`.
  * Returns a warning string on failure instead of throwing — the campaign
  * record itself has already been saved by the time this runs, so a link
- * failure (e.g. migration 0080 not yet applied) must be surfaced to the
- * admin rather than silently dropped, which would otherwise look like the
- * public campaign page's statistics are "stuck" with nothing linked.
+ * failure (e.g. migration 0089 not yet applied) must be surfaced to the
+ * admin rather than silently dropped.
  */
 async function syncActivityLinks(
   client: SupaClient,
@@ -108,73 +110,52 @@ async function syncActivityLinks(
 
 function friendlyLinkError(message: string): string {
   if (/does not exist/i.test(message)) {
-    return 'Campaign saved, but activity links were NOT saved — the campaign_activities table is missing. Run migration 0080_content_relationships.sql on this Supabase project.';
+    return 'Campaign saved, but activity links were NOT saved — the campaign_activities table is missing. Run migration 0089_content_relationships.sql on this Supabase project.';
   }
   return `Campaign saved, but activity links were not saved: ${message}`;
 }
 
-export async function POST(req: Request) {
+async function guard(): Promise<Response | null> {
   try {
     await requireAdmin();
+    return null;
   } catch (err) {
     if (err instanceof Response) return err;
+    return NextResponse.json({ error: 'auth check failed' }, { status: 500 });
   }
-  const body = await req.json().catch(() => null);
-  const parsed = createSchema.safeParse(body);
+}
+
+export async function POST(req: Request) {
+  const denied = await guard();
+  if (denied) return denied;
+  const parsed = baseSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
   }
-  const payload = normalisePayload(parsed.data);
-
   const { data, error, client } = await writeWithFallback<{ id: string; slug: string }>((c) =>
-    c.from('campaigns').insert(payload).select('id, slug').single(),
+    c.from('campaigns').insert(normalisePayload(parsed.data)).select('id, slug').single(),
   );
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
   }
-  const linkWarning = await syncActivityLinks(client, data.id, parsed.data.activity_ids);
-  return NextResponse.json({ id: data.id, slug: data.slug, warning: linkWarning }, { status: 201 });
+  const warning = await syncActivityLinks(client, data.id, parsed.data.activity_ids);
+  return NextResponse.json({ id: data.id, slug: data.slug, warning }, { status: 201 });
 }
 
 export async function PUT(req: Request) {
-  try {
-    await requireAdmin();
-  } catch (err) {
-    if (err instanceof Response) return err;
-  }
-  const body = await req.json().catch(() => null);
-  const parsed = updateSchema.safeParse(body);
+  const denied = await guard();
+  if (denied) return denied;
+  const parsed = updateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
   }
-  const { id, activity_ids, ...rest } = parsed.data;
-  const payload = normalisePayload({ ...rest, activity_ids });
-
+  const { id, ...rest } = parsed.data;
   const { data, error, client } = await writeWithFallback<{ id: string; slug: string }>((c) =>
-    c.from('campaigns').update(payload).eq('id', id).select('id, slug').single(),
+    c.from('campaigns').update(normalisePayload(rest)).eq('id', id).select('id, slug').single(),
   );
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
   }
-  const linkWarning = await syncActivityLinks(client, id, activity_ids);
-  return NextResponse.json({ id: data.id, slug: data.slug, warning: linkWarning });
-}
-
-export async function DELETE(req: Request) {
-  try {
-    await requireAdmin();
-  } catch (err) {
-    if (err instanceof Response) return err;
-  }
-  const url = new URL(req.url);
-  const id = url.searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-
-  const { error } = await writeWithFallback<{ id: string }>((c) =>
-    c.from('campaigns').update({ is_active: false }).eq('id', id).select('id').single(),
-  );
-  if (error) {
-    return NextResponse.json({ error: friendlyError(error.message) }, { status: 500 });
-  }
-  return NextResponse.json({ ok: true });
+  const warning = await syncActivityLinks(client, id, rest.activity_ids);
+  return NextResponse.json({ id: data.id, slug: data.slug, warning });
 }

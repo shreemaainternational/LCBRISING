@@ -2,19 +2,19 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
-import { Save, Send, ExternalLink, Search } from 'lucide-react';
+import { Save, ExternalLink, Search } from 'lucide-react';
 
 export type CampaignForm = {
   id?: string;
   title: string;
   slug: string;
-  description: string;
   tagline: string;
+  description: string;
+  category: string;
   goal_amount: number;
   hero_image: string;
-  category: string;
-  urgency: '' | 'normal' | 'urgent' | 'emergency';
   impact_metric: string;
+  urgency: '' | 'normal' | 'urgent' | 'emergency';
   starts_at: string;
   ends_at: string;
   is_active: boolean;
@@ -25,25 +25,33 @@ export type CampaignForm = {
 
 export type ActivityOption = { id: string; title: string; date: string | null; category: string | null };
 
+const CATEGORIES = [
+  'Vision', 'Hunger Relief', 'Environment', 'Childhood Cancer', 'Diabetes',
+  'Disaster Relief', 'Youth', 'Education', 'Humanitarian',
+];
+
 export function CampaignEditor({
   initial,
-  activities,
+  activities = [],
 }: {
   initial: CampaignForm;
-  activities: ActivityOption[];
+  activities?: ActivityOption[];
 }) {
   const router = useRouter();
   const [form, setForm] = useState<CampaignForm>(initial);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const [activityQuery, setActivityQuery] = useState('');
   const [pending, startTransition] = useTransition();
 
   function update<K extends keyof CampaignForm>(key: K, value: CampaignForm[K]) {
+    setSaved(false);
     setForm((f) => ({ ...f, [key]: value }));
   }
 
   function toggleActivity(id: string) {
+    setSaved(false);
     setForm((f) => ({
       ...f,
       activity_ids: f.activity_ids.includes(id)
@@ -58,57 +66,52 @@ export function CampaignEditor({
     return activities.filter((a) => a.title.toLowerCase().includes(q));
   }, [activities, activityQuery]);
 
-  async function save(publish: boolean) {
+  async function save() {
     setError(null);
     setWarning(null);
-    const payload = { ...form, is_active: publish || form.is_active };
     const res = await fetch('/api/admin/campaigns', {
       method: form.id ? 'PUT' : 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(form),
     });
-    const json = await res.json();
+    const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(json.error ?? 'Save failed');
       return;
     }
-    if (json.warning) {
-      // Don't navigate away on a fresh save with a warning (activity links
-      // didn't persist) — the admin needs to see it, not lose it to a
-      // route change. On an existing campaign the route stays the same,
-      // so router.refresh() below keeps this message on screen too.
-      setWarning(json.warning as string);
-    }
+    setSaved(true);
+    if (json.warning) setWarning(json.warning as string);
     const wasNew = !form.id;
     if (wasNew && json.id) update('id', json.id as string);
     startTransition(() => {
       if (wasNew && json.id) {
+        // Don't navigate away when a warning needs to stay visible — the
+        // route change would unmount this component and lose it.
         if (!json.warning) router.replace(`/admin/campaigns/${json.id}`);
       } else {
+        if (json.slug) setForm((f) => ({ ...f, slug: json.slug }));
         router.refresh();
       }
     });
   }
 
+  const slugChanged = !!initial.id && form.slug !== initial.slug;
+
   return (
-    <div className="grid lg:grid-cols-[1fr_360px] gap-6">
-      {/* Main editor */}
+    <div className="grid lg:grid-cols-[1fr_320px] gap-6">
       <div className="space-y-5">
-        <div>
-          <label className="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">
-            Campaign name
-          </label>
+        <Field label="Title">
           <input
             type="text"
             value={form.title}
             onChange={(e) => update('title', e.target.value)}
-            placeholder="e.g. District 3232 F1 Vision Mission"
+            placeholder="e.g. Free cataract surgeries — Karelibaug camp"
             className="w-full h-12 px-3 rounded-md border border-gray-300 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-brand-400"
           />
-        </div>
+        </Field>
 
         <div className="grid md:grid-cols-2 gap-4">
-          <Field label="Slug">
+          <Field label="Slug (used to tag donations)">
             <input
               type="text"
               value={form.slug}
@@ -116,6 +119,12 @@ export function CampaignEditor({
               placeholder="auto-generated-from-title"
               className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm font-mono"
             />
+            {slugChanged && (
+              <p className="mt-1 text-xs text-amber-700">
+                Donations already made are tagged with the old slug and will stop counting toward this
+                campaign if you change it.
+              </p>
+            )}
           </Field>
           <Field label="Hero image URL">
             <input
@@ -128,12 +137,11 @@ export function CampaignEditor({
           </Field>
         </div>
 
-        <Field label="Tagline (short, shown on cards)">
+        <Field label="Tagline (one line shown on cards)">
           <input
             type="text"
             value={form.tagline}
             onChange={(e) => update('tagline', e.target.value)}
-            placeholder="Every ₹500 funds one full screening + spectacles."
             className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
           />
         </Field>
@@ -143,17 +151,17 @@ export function CampaignEditor({
             value={form.description}
             onChange={(e) => update('description', e.target.value)}
             rows={6}
-            placeholder="Describe the cause, objective, and who benefits."
-            className="w-full px-3 py-3 rounded-md border border-gray-300 text-sm leading-relaxed"
+            placeholder="What the money funds, who benefits, and how progress will be reported."
+            className="w-full px-3 py-2 rounded-md border border-gray-300 text-sm"
           />
         </Field>
 
-        <Field label="Impact metric (optional, real figures only)">
+        <Field label="Impact metric (optional, real target)">
           <input
             type="text"
             value={form.impact_metric}
             onChange={(e) => update('impact_metric', e.target.value)}
-            placeholder="e.g. 1,240 screenings completed so far"
+            placeholder="e.g. ₹2,000 funds one cataract surgery"
             className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
           />
         </Field>
@@ -198,67 +206,87 @@ export function CampaignEditor({
         </div>
       </div>
 
-      {/* Sidebar */}
       <aside className="space-y-5">
+        <div className="rounded-xl border border-gray-200 p-5 bg-white space-y-3">
+          <h3 className="font-bold text-navy-800 mb-1">Goal &amp; dates</h3>
+          <Field label="Goal amount (₹)">
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={form.goal_amount}
+              onChange={(e) => update('goal_amount', Number(e.target.value) || 0)}
+              className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Starts">
+              <input
+                type="date"
+                value={form.starts_at}
+                onChange={(e) => update('starts_at', e.target.value)}
+                className="w-full h-10 px-2 rounded-md border border-gray-300 text-sm"
+              />
+            </Field>
+            <Field label="Ends">
+              <input
+                type="date"
+                value={form.ends_at}
+                onChange={(e) => update('ends_at', e.target.value)}
+                className="w-full h-10 px-2 rounded-md border border-gray-300 text-sm"
+              />
+            </Field>
+          </div>
+          <Field label="Category">
+            <select
+              value={form.category}
+              onChange={(e) => update('category', e.target.value)}
+              className="w-full h-10 px-2 rounded-md border border-gray-300 text-sm bg-white"
+            >
+              <option value="">—</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Urgency">
+            <select
+              value={form.urgency}
+              onChange={(e) => update('urgency', e.target.value as CampaignForm['urgency'])}
+              className="w-full h-10 px-2 rounded-md border border-gray-300 text-sm bg-white"
+            >
+              <option value="">Normal</option>
+              <option value="urgent">Urgent (red banner on /campaigns)</option>
+              <option value="emergency">Emergency (red banner on /campaigns)</option>
+            </select>
+          </Field>
+        </div>
+
         <div className="rounded-xl border border-gray-200 p-5 bg-white">
-          <h3 className="font-bold text-navy-800 mb-3">Publish</h3>
-
-          <div className="flex items-center gap-2 mb-3">
-            <input
-              id="active"
-              type="checkbox"
-              checked={form.is_active}
-              onChange={(e) => update('is_active', e.target.checked)}
-              className="h-4 w-4"
-            />
-            <label htmlFor="active" className="text-sm">Active (shown on /campaigns)</label>
-          </div>
-          <div className="flex items-center gap-2 mb-3">
-            <input
-              id="featured"
-              type="checkbox"
-              checked={form.is_featured}
-              onChange={(e) => update('is_featured', e.target.checked)}
-              className="h-4 w-4"
-            />
-            <label htmlFor="featured" className="text-sm">Featured (hero banner)</label>
-          </div>
-          <div className="flex items-center gap-2 mb-4">
-            <input
-              id="matched"
-              type="checkbox"
-              checked={form.match_campaign}
-              onChange={(e) => update('match_campaign', e.target.checked)}
-              className="h-4 w-4"
-            />
-            <label htmlFor="matched" className="text-sm">Donation matched badge</label>
-          </div>
+          <h3 className="font-bold text-navy-800 mb-3">Visibility</h3>
+          <Check id="active" label="Active (shown on /campaigns)" checked={form.is_active} onChange={(v) => update('is_active', v)} />
+          <Check id="featured" label="Featured (top of /campaigns + homepage thermometer)" checked={form.is_featured} onChange={(v) => update('is_featured', v)} />
+          <Check id="match" label="Matching-gift campaign" checked={form.match_campaign} onChange={(v) => update('match_campaign', v)} />
 
           <button
             type="button"
-            onClick={() => save(false)}
+            onClick={save}
             disabled={pending}
-            className="btn-navy inline-flex w-full h-10 rounded-md items-center justify-center gap-2 mb-2"
+            className="mt-2 btn-gold inline-flex w-full h-10 rounded-md items-center justify-center gap-2"
           >
-            <Save size={14} aria-hidden /> Save
-          </button>
-          <button
-            type="button"
-            onClick={() => save(true)}
-            disabled={pending}
-            className="btn-gold inline-flex w-full h-10 rounded-md items-center justify-center gap-2"
-          >
-            <Send size={14} aria-hidden /> Save &amp; activate
+            <Save size={14} aria-hidden /> {form.id ? 'Save changes' : 'Create campaign'}
           </button>
 
-          {form.id && form.slug && (
+          {saved && !error && <p className="mt-3 text-xs text-emerald-700">Saved.</p>}
+
+          {form.id && form.is_active && (
             <a
-              href={`/campaigns/${form.slug}`}
+              href={`/donate?campaign=${form.slug}`}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-3 text-xs text-navy-700 hover:text-brand-600 inline-flex items-center gap-1.5"
             >
-              <ExternalLink size={11} /> View live page
+              <ExternalLink size={11} /> Open donate link
             </a>
           )}
 
@@ -273,77 +301,39 @@ export function CampaignEditor({
             </p>
           )}
         </div>
-
-        <div className="rounded-xl border border-gray-200 p-5 bg-white space-y-3">
-          <h3 className="font-bold text-navy-800 mb-1">Goal &amp; timing</h3>
-          <Field label="Goal amount (INR)">
-            <input
-              type="number"
-              min={1}
-              value={form.goal_amount || ''}
-              onChange={(e) => update('goal_amount', Number(e.target.value) || 0)}
-              className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
-            />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Starts">
-              <input
-                type="date"
-                value={form.starts_at ? form.starts_at.slice(0, 10) : ''}
-                onChange={(e) => update('starts_at', e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
-              />
-            </Field>
-            <Field label="Ends">
-              <input
-                type="date"
-                value={form.ends_at ? form.ends_at.slice(0, 10) : ''}
-                onChange={(e) => update('ends_at', e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
-              />
-            </Field>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-gray-200 p-5 bg-white space-y-3">
-          <h3 className="font-bold text-navy-800 mb-1">Classification</h3>
-          <Field label="Category / cause">
-            <input
-              type="text"
-              value={form.category}
-              onChange={(e) => update('category', e.target.value)}
-              placeholder="e.g. Vision, Hunger Relief"
-              className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
-            />
-          </Field>
-          <Field label="Urgency">
-            <select
-              value={form.urgency}
-              onChange={(e) => update('urgency', e.target.value as CampaignForm['urgency'])}
-              className="w-full h-10 px-2 rounded-md border border-gray-300 text-sm bg-white"
-            >
-              <option value="">Normal</option>
-              <option value="urgent">Urgent</option>
-              <option value="emergency">Emergency appeal</option>
-            </select>
-          </Field>
-        </div>
       </aside>
     </div>
   );
 }
 
-function Field({
+function Check({
+  id,
   label,
-  children,
-  className = '',
+  checked,
+  onChange,
 }: {
+  id: string;
   label: string;
-  children: React.ReactNode;
-  className?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
 }) {
   return (
-    <div className={className}>
+    <div className="flex items-start gap-2 mb-3">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 mt-0.5"
+      />
+      <label htmlFor={id} className="text-sm">{label}</label>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
       <label className="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">
         {label}
       </label>

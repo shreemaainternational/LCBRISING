@@ -436,7 +436,7 @@ const handlers: Record<string, JobHandler> = {
     const supabase = createAdminClient();
     const { data: officer } = await supabase
       .from('officers')
-      .select('id, role, term_start, term_end, scope_kind, members(name, email, whatsapp, phone)')
+      .select('id, role, term_start, term_end, scope_kind, members:members!officers_member_id_fkey(name, email, whatsapp, phone)')
       .eq('id', officerId)
       .maybeSingle();
     if (!officer) return;
@@ -635,7 +635,11 @@ export async function processJobs(limit = 25) {
       results.push({ id: job.id, ok: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      const failed = job.attempts + 1 >= 5;
+      // A missing integration (e.g. "RESEND_API_KEY not configured") won't
+      // resolve itself on retry — fail fast instead of burning 5 attempts
+      // and ~30 minutes of backoff on something only an env var fix can solve.
+      const unconfigured = /not configured/i.test(msg);
+      const failed = unconfigured || job.attempts + 1 >= 5;
       await supabase.from('automation_jobs').update({
         status: failed ? 'failed' : 'pending',
         last_error: msg,

@@ -1,14 +1,15 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requireAdminPage } from '@/lib/auth';
 import { formatINR } from '@/lib/utils';
-import { Users, Banknote, HeartHandshake, Activity as ActivityIcon } from 'lucide-react';
+import { Users, Banknote, HeartHandshake, Activity as ActivityIcon, Calendar } from 'lucide-react';
 import {
   DonationTrendChart,
   MembershipPieChart,
   ActivitiesByCategoryChart,
 } from './DashboardCharts';
 import { QuickActionsBar } from '@/components/admin/QuickActionsBar';
+import { KpiCard, WorkflowPipeline, ActionQueue, type PipelineStage } from '@/components/admin/crm/widgets';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,11 @@ async function getDashboardData() {
   // why "Total Members" showed 0 while Activities — a public-read table —
   // counted fine). Bypassing RLS here reports the true counts.
   const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const countActivities = (status: string) =>
+    supabase.from('activities').select('*', { count: 'exact', head: true }).eq('approval_status', status);
+
   const [
     { count: totalMembers },
     { count: activeMembers },
@@ -30,6 +36,12 @@ async function getDashboardData() {
     { data: pendingDues },
     { data: recentDonations },
     { data: activityRows },
+    { count: actPending },
+    { count: actChanges },
+    { count: actApproved },
+    { count: actRejected },
+    { count: upcomingEvents },
+    { count: beneficiaryRecords },
   ] = await Promise.all([
     supabase.from('members').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('members').select('*', { count: 'exact', head: true }).is('deleted_at', null).eq('status', 'active'),
@@ -39,7 +51,13 @@ async function getDashboardData() {
     supabase.from('activities').select('*', { count: 'exact', head: true }),
     supabase.from('dues').select('amount').eq('status', 'pending'),
     supabase.from('donations').select('id, donor_name, amount, created_at').order('created_at', { ascending: false }).limit(5),
-    supabase.from('activities').select('category, beneficiaries'),
+    supabase.from('activities').select('category, beneficiaries, service_hours'),
+    countActivities('pending'),
+    countActivities('changes_requested'),
+    countActivities('approved'),
+    countActivities('rejected'),
+    supabase.from('events').select('*', { count: 'exact', head: true }).gte('date', today),
+    supabase.from('beneficiaries').select('*', { count: 'exact', head: true }).is('deleted_at', null),
   ]);
 
   const totalDonations = (donations ?? []).reduce((s, d) => s + Number(d.amount), 0);
@@ -57,14 +75,17 @@ async function getDashboardData() {
     if (trend.has(key)) trend.set(key, (trend.get(key) ?? 0) + Number(d.amount));
   }
 
+  type Row = { category: string | null; beneficiaries: number | null; service_hours: number | string | null };
   const cats = new Map<string, { count: number; beneficiaries: number }>();
-  for (const a of (activityRows ?? []) as { category: string | null; beneficiaries: number | null }[]) {
+  let peopleServed = 0;
+  let serviceHours = 0;
+  for (const a of (activityRows ?? []) as Row[]) {
     const c = (a.category ?? 'other').toLowerCase();
     const cur = cats.get(c) ?? { count: 0, beneficiaries: 0 };
-    cats.set(c, {
-      count: cur.count + 1,
-      beneficiaries: cur.beneficiaries + Number(a.beneficiaries ?? 0),
-    });
+    const b = Number(a.beneficiaries ?? 0);
+    peopleServed += b;
+    serviceHours += Number(a.service_hours ?? 0);
+    cats.set(c, { count: cur.count + 1, beneficiaries: cur.beneficiaries + b });
   }
   const catChart = Array.from(cats.entries())
     .map(([category, v]) => ({ category, ...v }))
@@ -78,10 +99,21 @@ async function getDashboardData() {
     pendingMembers: pendingMembers ?? 0,
     totalDonations,
     pendingDuesAmt,
+    pendingDuesCount: pendingDues?.length ?? 0,
     activities: activities ?? 0,
     recentDonations: recentDonations ?? [],
     trend: Array.from(trend.entries()).map(([month, amount]) => ({ month, amount })),
     catChart,
+    peopleServed,
+    serviceHours,
+    upcomingEvents: upcomingEvents ?? 0,
+    beneficiaryRecords: beneficiaryRecords ?? 0,
+    pipeline: {
+      pending: actPending ?? 0,
+      changes: actChanges ?? 0,
+      approved: actApproved ?? 0,
+      rejected: actRejected ?? 0,
+    },
   };
 }
 
@@ -89,92 +121,109 @@ export default async function AdminDashboard() {
   await requireAdminPage();
   const d = await getDashboardData();
 
+  const stages: PipelineStage[] = [
+    { key: 'pending',  label: 'Submitted',         count: d.pipeline.pending,  tone: 'amber',  href: '/admin/activities?status=pending', hint: 'awaiting review' },
+    { key: 'changes',  label: 'Changes requested', count: d.pipeline.changes,  tone: 'orange', href: '/admin/activities?status=changes_requested', hint: 'back with club' },
+    { key: 'approved', label: 'Approved',          count: d.pipeline.approved, tone: 'green',  href: '/admin/activities?status=approved', hint: 'counted in reports' },
+    { key: 'rejected', label: 'Rejected',          count: d.pipeline.rejected, tone: 'red',    href: '/admin/activities?status=rejected' },
+  ];
+
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-navy-800 mb-1">Dashboard</h1>
-      <p className="text-gray-600 mb-6">Overview of club operations.</p>
-
-      <div className="mb-6">
-        <QuickActionsBar />
+    <div className="space-y-6 max-w-[1400px]">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+        <div>
+          <div className="crm-eyebrow mb-1">Rising Star CRM</div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+        </div>
+        <p className="text-sm text-[var(--crm-muted)]">
+          {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Stat icon={<Users />} label="Total Members" value={String(d.totalMembers)} sub={`${d.activeMembers} active`} />
-        <Stat icon={<HeartHandshake />} label="Donations" value={formatINR(d.totalDonations)} sub="lifetime" />
-        <Stat icon={<Banknote />} label="Pending Dues" value={formatINR(d.pendingDuesAmt)} sub="outstanding" />
-        <Stat icon={<ActivityIcon />} label="Activities" value={String(d.activities)} sub="all time" />
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <KpiCard icon={Users} label="Members" value={String(d.totalMembers)} sub={`${d.activeMembers} active · ${d.lapsedMembers} lapsed`} href="/admin/members" />
+        <KpiCard icon={HeartHandshake} label="Donations" value={formatINR(d.totalDonations)} sub="lifetime" tone="gold" href="/admin/donations" />
+        <KpiCard icon={Banknote} label="Pending dues" value={formatINR(d.pendingDuesAmt)} sub={`${d.pendingDuesCount} invoices outstanding`} tone="rose" href="/admin/dues" />
+        <KpiCard icon={ActivityIcon} label="Service activities" value={String(d.activities)} sub={`${d.serviceHours.toLocaleString('en-IN')} service hours`} tone="green" href="/admin/activities" />
+        <KpiCard icon={Calendar} label="Upcoming events" value={String(d.upcomingEvents)} sub="from today" href="/admin/events" />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6 mb-6">
-        <Card className="lg:col-span-2">
-          <CardHeader><CardTitle>Donation trend (last 12 months)</CardTitle></CardHeader>
-          <CardContent>
-            <DonationTrendChart data={d.trend} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Membership status</CardTitle></CardHeader>
-          <CardContent>
-            <MembershipPieChart
-              active={d.activeMembers}
-              lapsed={d.lapsedMembers}
-              pending={d.pendingMembers}
-            />
-          </CardContent>
-        </Card>
+      {/* NGO workflow: activity lifecycle + human queue */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <WorkflowPipeline
+            title="Service activity pipeline"
+            stages={stages}
+            footer={
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <div className="crm-eyebrow">People served (reported)</div>
+                  <div className="text-lg font-bold crm-num">{d.peopleServed.toLocaleString('en-IN')}</div>
+                </div>
+                <Link href="/admin/beneficiaries" className="rounded-lg bg-slate-50 p-3 hover:bg-slate-100">
+                  <div className="crm-eyebrow">Beneficiary records</div>
+                  <div className="text-lg font-bold crm-num">{d.beneficiaryRecords.toLocaleString('en-IN')}</div>
+                </Link>
+              </div>
+            }
+          />
+        </div>
+        <ActionQueue
+          items={[
+            { label: 'Activities awaiting approval', count: d.pipeline.pending, href: '/admin/activities?status=pending', detail: 'Review and approve club submissions' },
+            { label: 'Activities sent back for changes', count: d.pipeline.changes, href: '/admin/activities?status=changes_requested' },
+            { label: 'Membership applications', count: d.pendingMembers, href: '/admin/members', detail: 'Pending member status' },
+            { label: 'Unpaid dues', count: d.pendingDuesCount, href: '/admin/dues', detail: formatINR(d.pendingDuesAmt) },
+          ]}
+        />
       </div>
 
-      <Card className="mb-6">
-        <CardHeader><CardTitle>Activities by category</CardTitle></CardHeader>
-        <CardContent>
+      <QuickActionsBar />
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <section className="crm-panel p-5 lg:col-span-2">
+          <h2 className="font-semibold mb-4">Donation trend · last 12 months</h2>
+          <DonationTrendChart data={d.trend} />
+        </section>
+        <section className="crm-panel p-5">
+          <h2 className="font-semibold mb-4">Membership status</h2>
+          <MembershipPieChart active={d.activeMembers} lapsed={d.lapsedMembers} pending={d.pendingMembers} />
+        </section>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <section className="crm-panel p-5 lg:col-span-2">
+          <h2 className="font-semibold mb-4">Activities by cause</h2>
           {d.catChart.length === 0 ? (
-            <p className="text-center text-sm text-gray-500 py-8">No activities recorded yet.</p>
+            <p className="text-center text-sm text-[var(--crm-muted)] py-8">No activities recorded yet.</p>
           ) : (
             <ActivitiesByCategoryChart data={d.catChart} />
           )}
-        </CardContent>
-      </Card>
+        </section>
 
-      <Card>
-        <CardHeader><CardTitle>Recent donations</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left p-3">Donor</th>
-                <th className="text-right p-3">Amount</th>
-                <th className="text-right p-3">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {d.recentDonations.length === 0 ? (
-                <tr><td colSpan={3} className="p-6 text-center text-gray-500">No donations yet</td></tr>
-              ) : d.recentDonations.map((r) => (
-                <tr key={r.id} className="border-t">
-                  <td className="p-3">{r.donor_name}</td>
-                  <td className="p-3 text-right">{formatINR(Number(r.amount))}</td>
-                  <td className="p-3 text-right text-gray-500">{new Date(r.created_at).toLocaleDateString('en-IN')}</td>
-                </tr>
+        <section className="crm-panel overflow-hidden">
+          <div className="flex items-baseline justify-between p-5 pb-3">
+            <h2 className="font-semibold">Recent donations</h2>
+            <Link href="/admin/donations" className="text-xs font-medium text-navy-700 hover:underline">View all</Link>
+          </div>
+          {d.recentDonations.length === 0 ? (
+            <p className="px-5 pb-6 text-sm text-[var(--crm-muted)]">No donations yet.</p>
+          ) : (
+            <ul className="divide-y divide-[var(--crm-border)]">
+              {d.recentDonations.map((r) => (
+                <li key={r.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{r.donor_name}</div>
+                    <div className="text-xs text-[var(--crm-muted)]">{new Date(r.created_at).toLocaleDateString('en-IN')}</div>
+                  </div>
+                  <div className="font-semibold crm-num">{formatINR(Number(r.amount))}</div>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
-  );
-}
-
-function Stat({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
-  return (
-    <Card>
-      <CardContent className="p-4 flex items-center gap-3">
-        <div className="text-brand-500">{icon}</div>
-        <div>
-          <div className="text-xs uppercase text-gray-500 tracking-wide">{label}</div>
-          <div className="text-xl font-bold text-navy-800">{value}</div>
-          {sub && <div className="text-xs text-gray-400">{sub}</div>}
-        </div>
-      </CardContent>
-    </Card>
   );
 }

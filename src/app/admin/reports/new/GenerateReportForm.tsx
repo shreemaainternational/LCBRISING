@@ -2,7 +2,19 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ReportCatalogEntry } from '@/lib/reports';
-import { FileText, Presentation, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { FileText, Presentation, Loader2, CheckCircle2, AlertCircle, Download } from 'lucide-react';
+
+/** Triggers a same-tab browser download for a generated report — the
+ *  route already sends Content-Disposition: attachment, so this just
+ *  needs to navigate an anchor rather than open a new tab. */
+function downloadReport(id: string) {
+  const a = document.createElement('a');
+  a.href = `/api/reports/${id}/download`;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
 
 type Scope = 'month' | 'quarter' | 'half' | 'year';
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -24,7 +36,11 @@ export function GenerateReportForm({ catalog, initialType }: Props) {
   const [language, setLanguage] = useState<'en'|'gu'|'bilingual'>('en');
   const [tone, setTone] = useState('lions_district');
   const [pending, start] = useTransition();
-  const [result, setResult] = useState<{ ok: boolean; message: string; ids?: string[] } | null>(null);
+  const [result, setResult] = useState<{
+    ok: boolean;
+    message: string;
+    artifacts?: { id: string; format: string }[];
+  } | null>(null);
 
   const groups = useMemo(() => {
     const m = new Map<string, ReportCatalogEntry[]>();
@@ -59,7 +75,11 @@ export function GenerateReportForm({ catalog, initialType }: Props) {
         setResult({ ok: false, message: j.error ?? 'Generation failed.' });
         return;
       }
-      setResult({ ok: true, message: `Generated ${j.count} artifact(s).`, ids: j.ids });
+      const artifacts: { id: string; format: string }[] = j.artifacts ?? [];
+      setResult({ ok: true, message: `Generated ${j.count} artifact(s).`, artifacts });
+      // Auto-download each file. A short stagger keeps browsers from
+      // treating a burst of same-tick downloads as one to block.
+      artifacts.forEach((a, i) => setTimeout(() => downloadReport(a.id), i * 400));
       router.refresh();
     });
   }
@@ -228,7 +248,7 @@ export function GenerateReportForm({ catalog, initialType }: Props) {
         )}
       </div>
 
-      <div className="flex items-center gap-3 pt-4 border-t">
+      <div className="flex flex-wrap items-center gap-3 pt-4 border-t">
         <button
           type="button"
           onClick={submit}
@@ -244,7 +264,24 @@ export function GenerateReportForm({ catalog, initialType }: Props) {
             {result.message}
           </span>
         )}
+        {result?.artifacts?.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            onClick={() => downloadReport(a.id)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-amber-300 bg-amber-50 text-amber-800 text-xs font-semibold hover:bg-amber-100"
+          >
+            <Download size={13} /> Download {a.format.toUpperCase()}
+          </button>
+        ))}
       </div>
+      {!!result?.artifacts?.length && (
+        <p className="text-xs text-gray-500">
+          Downloads start automatically (A4 portrait PDF). If your browser blocked
+          it, use the button{result.artifacts.length > 1 ? 's' : ''} above — the files
+          are also saved under Reports → Recent Reports.
+        </p>
+      )}
     </div>
   );
 }

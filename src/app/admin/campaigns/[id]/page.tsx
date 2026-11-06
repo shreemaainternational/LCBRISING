@@ -8,21 +8,23 @@ export const dynamic = 'force-dynamic';
 
 type Row = {
   id: string;
+  slug: string;
   title: string;
-  slug: string | null;
-  description: string | null;
   tagline: string | null;
+  description: string | null;
+  category: string | null;
   goal_amount: number;
   hero_image: string | null;
-  category: string | null;
-  urgency: string | null;
   impact_metric: string | null;
+  urgency: string | null;
   starts_at: string | null;
   ends_at: string | null;
   is_active: boolean;
   is_featured: boolean | null;
-  match_campaign: boolean;
+  match_campaign: boolean | null;
 };
+
+const URGENCY = new Set(['normal', 'urgent', 'emergency']);
 
 async function loadActivities(): Promise<ActivityOption[]> {
   const supabase = await createClient();
@@ -51,7 +53,7 @@ export default async function EditCampaignPage({
     supabase
       .from('campaigns')
       .select(
-        'id, title, slug, description, tagline, goal_amount, hero_image, category, urgency, impact_metric, starts_at, ends_at, is_active, is_featured, match_campaign',
+        'id, slug, title, tagline, description, category, goal_amount, hero_image, impact_metric, urgency, starts_at, ends_at, is_active, is_featured, match_campaign',
       )
       .eq('id', id)
       .maybeSingle(),
@@ -66,14 +68,14 @@ export default async function EditCampaignPage({
   const initial: CampaignForm = {
     id: row.id,
     title: row.title,
-    slug: row.slug ?? '',
-    description: row.description ?? '',
+    slug: row.slug,
     tagline: row.tagline ?? '',
-    goal_amount: Number(row.goal_amount),
-    hero_image: row.hero_image ?? '',
+    description: row.description ?? '',
     category: row.category ?? '',
-    urgency: (row.urgency as CampaignForm['urgency']) ?? '',
+    goal_amount: Number(row.goal_amount ?? 0),
+    hero_image: row.hero_image ?? '',
     impact_metric: row.impact_metric ?? '',
+    urgency: row.urgency && URGENCY.has(row.urgency) ? (row.urgency as CampaignForm['urgency']) : '',
     starts_at: row.starts_at ?? '',
     ends_at: row.ends_at ?? '',
     is_active: row.is_active,
@@ -85,11 +87,11 @@ export default async function EditCampaignPage({
   return (
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Edit campaign</h1>
-      <p className="text-gray-600 mb-6">Editing “{row.title}”.</p>
+      <p className="text-gray-600 mb-6">Editing “{row.title}”. Untick Active to archive it.</p>
       {linksTableMissing && (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <strong>Activity linking is unavailable.</strong> The <code>campaign_activities</code> table
-          doesn&apos;t exist yet — run migration <code>0080_content_relationships.sql</code> on this
+          doesn&apos;t exist yet — run migration <code>0089_content_relationships.sql</code> on this
           Supabase project. Until then, activities you select below won&apos;t be saved and the public
           campaign statistics will stay empty.
         </div>

@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
+import { unstable_rethrow } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle, ArrowRight, Heart, Target } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 import { formatINR, formatINRShort } from '@/lib/utils';
+import { loadCampaignTotals } from '@/lib/campaign-totals';
 import { CampaignsGrid } from './CampaignsGrid';
 
 export const metadata: Metadata = {
@@ -34,10 +36,7 @@ type Campaign = {
   match_campaign: boolean;
 };
 
-type Donation = { campaign_id: string | null; amount: number };
-
-const FALLBACK_HERO =
-  'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=70';
+const FALLBACK_HERO = '/uploads/activity-report-2024-25/image22.jpeg';
 
 async function loadCampaigns(): Promise<{
   campaigns: Campaign[];
@@ -46,7 +45,7 @@ async function loadCampaigns(): Promise<{
   if (!isSupabaseConfigured()) return { campaigns: [], raised: new Map() };
   try {
     const supabase = await createClient();
-    const [{ data: campaigns }, { data: donations }] = await Promise.all([
+    const [{ data: campaigns, error }, totals] = await Promise.all([
       supabase
         .from('campaigns')
         .select(
@@ -55,15 +54,17 @@ async function loadCampaigns(): Promise<{
         .eq('is_active', true)
         .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false }),
-      supabase.from('donations').select('campaign_id, amount').not('campaign_id', 'is', null),
+      loadCampaignTotals(supabase),
     ]);
+    if (error) console.error('[campaigns] query failed:', error.message);
+    const list = (campaigns ?? []) as Campaign[];
+    // Keyed by campaign id for the render code; donations are tagged by slug.
     const raised = new Map<string, number>();
-    for (const d of ((donations ?? []) as Donation[])) {
-      if (!d.campaign_id) continue;
-      raised.set(d.campaign_id, (raised.get(d.campaign_id) ?? 0) + Number(d.amount ?? 0));
-    }
-    return { campaigns: (campaigns ?? []) as Campaign[], raised };
-  } catch {
+    for (const c of list) raised.set(c.id, totals.get(c.slug)?.raised ?? 0);
+    return { campaigns: list, raised };
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error('[campaigns] load failed:', err);
     return { campaigns: [], raised: new Map() };
   }
 }
@@ -226,14 +227,16 @@ function FeaturedCampaign({ campaign, raised }: { campaign: Campaign; raised: nu
 
 function EmptyCampaigns() {
   return (
-    <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
-      <Heart size={32} className="mx-auto text-gray-400 mb-3" aria-hidden />
-      <p className="text-gray-600">No active campaigns right now. Check back shortly.</p>
+    <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
+      <p className="text-gray-600">
+        No campaigns are running right now. New causes will be announced here — in the meantime,
+        a general donation goes where it&apos;s needed most.
+      </p>
       <Link
         href="/donate"
-        className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-navy-800 hover:text-brand-600"
+        className="mt-5 btn-gold inline-flex h-11 px-6 rounded-md items-center gap-2"
       >
-        Make a general donation <ArrowRight size={14} />
+        <Heart size={16} aria-hidden /> Make a general donation
       </Link>
     </div>
   );
