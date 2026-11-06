@@ -135,7 +135,7 @@ export async function PUT(req: Request) {
   }
   const { id, activity_ids, ...rest } = parsed.data;
   const { data, error } = await writeWithFallback<{ id: string; slug: string }>((c) =>
-    c.from('campaigns').update(normalisePayload(rest)).eq('id', id).select('id, slug').single(),
+    c.from('campaigns').update(normalisePayload({ ...rest, activity_ids })).eq('id', id).select('id, slug').single(),
   );
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
