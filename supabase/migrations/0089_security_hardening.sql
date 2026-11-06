@@ -1,4 +1,4 @@
--- 0083_security_hardening.sql
+-- 0089_security_hardening.sql (renumbered from 0083, which clashed with 0083_site_menu_items.sql)
 -- Explicitly document deny-by-default on internal RLS tables.
 -- These tables had RLS enabled and no policies; no client role had row access.
 DO $$
