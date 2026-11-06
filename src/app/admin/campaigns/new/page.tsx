@@ -1,25 +1,28 @@
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
-import { CampaignEditor, type CampaignForm, type ActivityOption } from '@/components/admin/CampaignEditor';
+import {
+  CampaignEditor,
+  type CampaignForm,
+  type ActivityOption,
+} from '@/components/admin/CampaignEditor';
 
 export const dynamic = 'force-dynamic';
 
 const EMPTY: CampaignForm = {
   title: '',
   slug: '',
-  description: '',
   tagline: '',
+  description: '',
+  category: '',
   goal_amount: 0,
-  currency: 'INR',
+  hero_image: '',
+  impact_metric: '',
+  urgency: '',
   starts_at: '',
   ends_at: '',
-  hero_image: '',
-  urgency: '',
-  impact_metric: '',
-  category: '',
-  match_campaign: false,
   is_active: true,
   is_featured: false,
+  match_campaign: false,
   activity_ids: [],
 };
 
@@ -40,7 +43,7 @@ export default async function NewCampaignPage() {
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">New campaign</h1>
       <p className="text-gray-600 mb-6">
-        Add a real, time-bound fundraising campaign for the public /campaigns page.
+        Set a real, time-bound fundraising goal. It appears on /campaigns as soon as it&apos;s active.
       </p>
       <CampaignEditor initial={EMPTY} activityOptions={activityOptions} />
     </div>

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_rethrow } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Calendar, Clock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
@@ -8,16 +9,16 @@ import { formatDate } from '@/lib/utils';
 import { PageHero, PAGE_HERO_BG } from '@/components/site/PageHero';
 
 export const metadata: Metadata = {
-  title: 'Newsroom & Stories',
+  title: 'Blog & Stories',
   description:
     'Stories of service, impact, and community from Lions Clubs International and Baroda Rising Star — including activity reports, campaigns, and human spotlights.',
   alternates: { canonical: '/blog' },
 };
 export const revalidate = 300;
 
-// Curated Lions International stories — shown alongside any local
-// blog_posts so the newsroom always has rich content even on a fresh
-// install.
+// Pointers to the Lions International newsroom — shown only while no
+// local/imported blog_posts are published, so a fresh install isn't
+// blank. They carry no dates because they are not specific articles.
 const CURATED: BlogStory[] = [
   {
     id: 'li-measles',
@@ -25,8 +26,8 @@ const CURATED: BlogStory[] = [
     excerpt:
       'Lions Clubs International Foundation and UNICEF have been working together to protect children from measles through vaccination campaigns across the globe.',
     category: 'Humanitarian',
-    date: '15 Mar 2025',
-    image: 'https://images.unsplash.com/photo-1632053002928-1919f2f2dc1e?auto=format&fit=crop&w=900&q=70',
+    date: '',
+    image: 'https://images.unsplash.com/photo-1632053002928-1919f2f2dc1e?auto=format&fit=crop&w=1600&q=85',
     url: 'https://www.lionsclubs.org/en/blog',
     source: 'Lions International',
   },
@@ -36,8 +37,8 @@ const CURATED: BlogStory[] = [
     excerpt:
       'On World Sight Day, Lions Clubs around the world organize free eye screening camps, distribute eyeglasses, and raise awareness about preventable blindness.',
     category: 'Vision',
-    date: '12 Oct 2025',
-    image: 'https://images.unsplash.com/photo-1577401239170-897942555fb3?auto=format&fit=crop&w=900&q=70',
+    date: '',
+    image: 'https://images.unsplash.com/photo-1577401239170-897942555fb3?auto=format&fit=crop&w=1600&q=85',
     url: 'https://www.lionsclubs.org/en/blog',
     source: 'Lions International',
   },
@@ -47,8 +48,8 @@ const CURATED: BlogStory[] = [
     excerpt:
       'Through the Lions Feed the World initiative, clubs globally have served millions of meals to families facing food insecurity.',
     category: 'Hunger Relief',
-    date: '20 Jun 2025',
-    image: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&q=70',
+    date: '',
+    image: '/uploads/activity-report-2024-25/image28.jpeg',
     url: 'https://www.lionsclubs.org/en/blog',
     source: 'Lions International',
   },
@@ -58,8 +59,8 @@ const CURATED: BlogStory[] = [
     excerpt:
       'Lions environmental projects have planted millions of trees worldwide, restoring habitats and helping communities fight climate change.',
     category: 'Environment',
-    date: '05 Apr 2025',
-    image: 'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=900&q=70',
+    date: '',
+    image: '/uploads/activity-report-2024-25/image7.jpeg',
     url: 'https://www.lionsclubs.org/en/blog',
     source: 'Lions International',
   },
@@ -69,8 +70,8 @@ const CURATED: BlogStory[] = [
     excerpt:
       'Leo Clubs give young people the chance to lead service projects, build confidence, and become the changemakers of tomorrow.',
     category: 'Youth',
-    date: '18 Feb 2025',
-    image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=900&q=70',
+    date: '',
+    image: '/uploads/activity-report-2024-25/image25.jpeg',
     url: 'https://www.lionsclubs.org/en/blog',
     source: 'Lions International',
   },
@@ -80,8 +81,19 @@ const CURATED: BlogStory[] = [
     excerpt:
       'When disaster strikes, Lions are among the first to respond — providing emergency supplies, shelter, and long-term rebuilding support.',
     category: 'Disaster Relief',
-    date: '28 Jan 2025',
-    image: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=900&q=70',
+    date: '',
+    image: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=1600&q=85',
+    url: 'https://www.lionsclubs.org/en/blog',
+    source: 'Lions International',
+  },
+  {
+    id: 'li-travel-news',
+    title: 'Lions Travel the World: Convention & District Exchange News',
+    excerpt:
+      'From the Lions Clubs International Convention to multi-district exchange visits, Lions from Baroda Rising Star and clubs worldwide travel to learn, network, and bring new service ideas home.',
+    category: 'Travel News',
+    date: '',
+    image: '/uploads/activity-report-2024-25/image6.jpeg',
     url: 'https://www.lionsclubs.org/en/blog',
     source: 'Lions International',
   },
@@ -105,7 +117,7 @@ export default async function BlogPage() {
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('blog_posts')
         .select(
           'id, title, slug, excerpt, cover_url, published_at, category, is_featured, reading_time, author_name',
@@ -115,9 +127,12 @@ export default async function BlogPage() {
         .order('is_featured', { ascending: false })
         .order('published_at', { ascending: false })
         .limit(40);
+      if (error) console.error('[blog] query failed:', error.message);
       posts = (data ?? []) as BlogPost[];
-    } catch {
+    } catch (err) {
+      unstable_rethrow(err);
       // table may not exist yet — curated stories still render
+      console.error('[blog] load failed:', err);
     }
   }
 
@@ -132,16 +147,16 @@ export default async function BlogPage() {
     date: p.published_at ? formatDate(p.published_at) : '',
     image:
       p.cover_url ||
-      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&q=70',
+      'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1600&q=85',
     url: `/blog/${p.slug ?? p.id}`,
     source: 'Baroda Rising Star',
   }));
-  const stories = [...local, ...CURATED];
+  const stories = posts.length > 0 ? local : CURATED;
 
   return (
     <>
       <PageHero
-        pillText="LIONS NEWSROOM"
+        pillText="LIONS BLOG"
         headline="Stories of Service & Impact"
         subtitle="The work of Lions, told in the voices of the people we serve. Read the latest from Baroda Rising Star and Lions Clubs International."
         backgroundImage={PAGE_HERO_BG.blog}

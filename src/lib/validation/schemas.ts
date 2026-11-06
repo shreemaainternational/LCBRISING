@@ -88,9 +88,22 @@ export const attendanceSchema = z.object({
 
 export const transferSchema = z.object({
   to_club_id: z.string().uuid(),
+  // Accepted for older callers but ignored: the district is derived from
+  // the target club so it can never disagree with the hierarchy.
   to_district_id: z.string().uuid().optional().nullable(),
-  effective_on: z.string().optional(),
+  effective_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   reason: z.string().max(500).optional().nullable(),
+  preview: z.boolean().optional(),
+  request_id: z.string().min(8).max(100).optional(),
+});
+
+export const bulkTransferSchema = z.object({
+  member_ids: z.array(z.string().uuid()).min(1).max(200),
+  to_club_id: z.string().uuid(),
+  effective_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  reason: z.string().max(500).optional().nullable(),
+  preview: z.boolean().optional(),
+  batch_id: z.string().min(8).max(80).optional(),
 });
 
 export const duesSchema = z.object({

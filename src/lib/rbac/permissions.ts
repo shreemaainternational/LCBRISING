@@ -46,6 +46,13 @@ export const PERMISSIONS = [
   'award.read',
   'award.grant',
 
+  // Service activities
+  'activity.read',
+  'activity.create',
+  'activity.copy',
+  'activity.media.manage',
+  'activity.lions.submit',
+
   // Communications
   'communication.send',
   'announcement.publish',
@@ -81,6 +88,7 @@ const MATRIX: Record<Permission, LionsRole> = {
   'training.read': 'member',
   'award.read': 'member',
   'report.read': 'club_officer',
+  'activity.read': 'guest_viewer',
 
   // Club-level writes
   'member.create': 'club_secretary',
@@ -91,6 +99,12 @@ const MATRIX: Record<Permission, LionsRole> = {
   'announcement.publish': 'club_president',
   'communication.send': 'club_secretary',
   'report.export': 'club_secretary',
+  'activity.create': 'club_officer',
+  'activity.copy': 'club_officer',
+  'activity.media.manage': 'club_officer',
+  // "Authorized user" for the Lions Portal step: the officer who actually
+  // files the club's official report (President or Secretary).
+  'activity.lions.submit': 'club_secretary',
 
   // Mid-tier
   'event.delete': 'club_president',

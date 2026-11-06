@@ -10,7 +10,8 @@ const CONTENT_W = PAGE_W - MARGIN * 2;
 
 export async function renderPdf(doc: ReportDoc): Promise<RenderedReport> {
   return new Promise((resolve, reject) => {
-    const pdf = new PDFDocument({ size: 'A4', margin: MARGIN, bufferPages: true });
+    // Always A4 portrait — the fixed PAGE_W/PAGE_H layout math above assumes it.
+    const pdf = new PDFDocument({ size: 'A4', layout: 'portrait', margin: MARGIN, bufferPages: true });
     const chunks: Buffer[] = [];
     pdf.on('data', (c) => chunks.push(c as Buffer));
     pdf.on('error', reject);

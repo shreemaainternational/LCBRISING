@@ -41,7 +41,7 @@ export default async function MyClub() {
   ] = await Promise.all([
     db.from('clubs').select('name, city, state, charter_date').eq('id', member.club_id).maybeSingle(),
     db.from('members').select('*', { count: 'exact', head: true }).eq('club_id', member.club_id).is('deleted_at', null),
-    db.from('officers').select('role, member:members(name, avatar_url)').eq('scope_kind', 'club').eq('scope_id', member.club_id).eq('status', 'active'),
+    db.from('officers').select('role, member:members!officers_member_id_fkey(name, avatar_url)').eq('scope_kind', 'club').eq('scope_id', member.club_id).eq('status', 'active'),
     db.from('members').select('id, name, avatar_url, lions_role').eq('club_id', member.club_id).is('deleted_at', null).order('name').limit(20),
   ]);
 

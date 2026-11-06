@@ -11,7 +11,9 @@ declare global {
 
 const PRESETS = [500, 1000, 2500, 5000, 10000, 25000];
 
-export function DonateForm() {
+export type DonateCampaign = { slug: string; title: string };
+
+export function DonateForm({ campaign = null }: { campaign?: DonateCampaign | null }) {
   const [frequency, setFrequency] = useState<'one-time' | 'monthly'>('one-time');
   const [method, setMethod] = useState<'razorpay' | 'phonepe'>('razorpay');
   const [amount, setAmount] = useState(2500);
@@ -56,7 +58,7 @@ export function DonateForm() {
           donor_name: name,
           donor_email: email || null,
           amount,
-          campaign: 'general',
+          campaign: campaign?.slug ?? 'general',
           message: frequency === 'monthly' ? 'Monthly giving requested' : '',
           method,
         }),
@@ -140,6 +142,12 @@ export function DonateForm() {
       onSubmit={handleDonate}
       className="bg-gray-50 border border-gray-100 rounded-2xl p-8"
     >
+      {campaign && (
+        <p className="mb-6 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-navy-800">
+          Donating to <strong>{campaign.title}</strong>
+        </p>
+      )}
+
       {/* Frequency toggle */}
       <div className="grid grid-cols-2 gap-2 bg-white rounded-lg p-1 border border-gray-200 mb-8">
         <button
