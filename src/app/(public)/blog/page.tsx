@@ -16,89 +16,6 @@ export const metadata: Metadata = {
 };
 export const revalidate = 300;
 
-// Pointers to the Lions International newsroom — shown only while no
-// local/imported blog_posts are published, so a fresh install isn't
-// blank. They carry no dates because they are not specific articles.
-const CURATED: BlogStory[] = [
-  {
-    id: 'li-measles',
-    title: 'Lions and UNICEF: Partners in Measles Prevention',
-    excerpt:
-      'Lions Clubs International Foundation and UNICEF have been working together to protect children from measles through vaccination campaigns across the globe.',
-    category: 'Humanitarian',
-    date: '',
-    image: 'https://images.unsplash.com/photo-1632053002928-1919f2f2dc1e?auto=format&fit=crop&w=1600&q=85',
-    url: 'https://www.lionsclubs.org/en/blog',
-    source: 'Lions International',
-  },
-  {
-    id: 'li-sight-day',
-    title: 'World Sight Day: Lions Leading the Way in Vision Care',
-    excerpt:
-      'On World Sight Day, Lions Clubs around the world organize free eye screening camps, distribute eyeglasses, and raise awareness about preventable blindness.',
-    category: 'Vision',
-    date: '',
-    image: 'https://images.unsplash.com/photo-1577401239170-897942555fb3?auto=format&fit=crop&w=1600&q=85',
-    url: 'https://www.lionsclubs.org/en/blog',
-    source: 'Lions International',
-  },
-  {
-    id: 'li-feed-world',
-    title: 'Fighting Hunger: Lions Feed the World Campaign',
-    excerpt:
-      'Through the Lions Feed the World initiative, clubs globally have served millions of meals to families facing food insecurity.',
-    category: 'Hunger Relief',
-    date: '',
-    image: '/uploads/activity-report-2024-25/image28.jpeg',
-    url: 'https://www.lionsclubs.org/en/blog',
-    source: 'Lions International',
-  },
-  {
-    id: 'li-environment',
-    title: 'Restoring Forests, One Sapling at a Time',
-    excerpt:
-      'Lions environmental projects have planted millions of trees worldwide, restoring habitats and helping communities fight climate change.',
-    category: 'Environment',
-    date: '',
-    image: '/uploads/activity-report-2024-25/image7.jpeg',
-    url: 'https://www.lionsclubs.org/en/blog',
-    source: 'Lions International',
-  },
-  {
-    id: 'li-youth',
-    title: 'Empowering Youth Through Leo Clubs',
-    excerpt:
-      'Leo Clubs give young people the chance to lead service projects, build confidence, and become the changemakers of tomorrow.',
-    category: 'Youth',
-    date: '',
-    image: '/uploads/activity-report-2024-25/image25.jpeg',
-    url: 'https://www.lionsclubs.org/en/blog',
-    source: 'Lions International',
-  },
-  {
-    id: 'li-disaster',
-    title: 'Rapid Response: Lions Disaster Relief in Action',
-    excerpt:
-      'When disaster strikes, Lions are among the first to respond — providing emergency supplies, shelter, and long-term rebuilding support.',
-    category: 'Disaster Relief',
-    date: '',
-    image: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=1600&q=85',
-    url: 'https://www.lionsclubs.org/en/blog',
-    source: 'Lions International',
-  },
-  {
-    id: 'li-travel-news',
-    title: 'Lions Travel the World: Convention & District Exchange News',
-    excerpt:
-      'From the Lions Clubs International Convention to multi-district exchange visits, Lions from Baroda Rising Star and clubs worldwide travel to learn, network, and bring new service ideas home.',
-    category: 'Travel News',
-    date: '',
-    image: '/uploads/activity-report-2024-25/image6.jpeg',
-    url: 'https://www.lionsclubs.org/en/blog',
-    source: 'Lions International',
-  },
-];
-
 type BlogPost = {
   id: string;
   title: string;
@@ -131,7 +48,7 @@ export default async function BlogPage() {
       posts = (data ?? []) as BlogPost[];
     } catch (err) {
       unstable_rethrow(err);
-      // table may not exist yet — curated stories still render
+      // table may not exist yet — fall through with an empty list
       console.error('[blog] load failed:', err);
     }
   }
@@ -151,7 +68,7 @@ export default async function BlogPage() {
     url: `/blog/${p.slug ?? p.id}`,
     source: 'Baroda Rising Star',
   }));
-  const stories = posts.length > 0 ? local : CURATED;
+  const stories = local;
 
   return (
     <>
