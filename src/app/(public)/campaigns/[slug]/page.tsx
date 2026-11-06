@@ -6,6 +6,7 @@ import { ArrowLeft, Heart, Target, Users, Clock, HandCoins, HeartHandshake } fro
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, env } from '@/lib/env';
 import { formatINR, formatDate } from '@/lib/utils';
+import { loadCampaignTotals } from '@/lib/campaign-totals';
 import { ShareBar } from '@/components/site/ShareBar';
 
 export const revalidate = 120;
@@ -63,12 +64,16 @@ async function getCampaign(slug: string): Promise<Campaign | null> {
   }
 }
 
-async function getRaised(campaignId: string): Promise<number> {
+// Donations are tagged by campaign slug (donations.campaign), not a
+// foreign key, and donations is admin-only under RLS — so "raised" is
+// read via the public campaign_totals() RPC (migration 0081), same as
+// /campaigns and the homepage thermometer.
+async function getRaised(slug: string): Promise<number> {
   if (!isSupabaseConfigured()) return 0;
   try {
     const supabase = await createClient();
-    const { data } = await supabase.from('donations').select('amount').eq('campaign_id', campaignId);
-    return (data ?? []).reduce((sum, d) => sum + Number(d.amount ?? 0), 0);
+    const totals = await loadCampaignTotals(supabase);
+    return totals.get(slug)?.raised ?? 0;
   } catch {
     return 0;
   }
@@ -146,7 +151,7 @@ export default async function CampaignDetailPage({
   if (!campaign) notFound();
 
   const [raised, activities, relatedStories] = await Promise.all([
-    getRaised(campaign.id),
+    getRaised(campaign.slug),
     getLinkedActivities(campaign.id),
     getRelatedStories(campaign.id),
   ]);
