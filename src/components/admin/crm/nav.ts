@@ -100,6 +100,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/admin/diagnostics',  label: 'Diagnostics',  icon: Stethoscope },
       { href: '/admin/audit',        label: 'Audit log',    icon: ScrollText },
       { href: '/admin/profile',      label: 'My Profile',   icon: KeyRound },
+      { href: '/admin/settings/mfa', label: 'Two-factor (MFA)', icon: ShieldCheck },
       { href: '/m',                  label: 'Mobile App',   icon: Smartphone },
     ],
   },

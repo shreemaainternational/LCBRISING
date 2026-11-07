@@ -1,10 +1,11 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, LogIn, User } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { describeSupabaseError } from '@/lib/supabase/errors';
+import { MfaChallenge } from '@/components/auth/MfaChallenge';
 
 export default function LoginForm() {
   return (
@@ -26,6 +27,33 @@ function LoginInner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Second step: the account has Google Authenticator (TOTP) enrolled and
+  // this session hasn't entered a code yet. Also shown when the proxy sends
+  // an aal1 session back here with ?step=mfa.
+  const [mfaEmail, setMfaEmail] = useState<string | null>(null);
+  const [needsMfa, setNeedsMfa] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (cancelled || !data) return;
+        if (data.nextLevel === 'aal2' && data.currentLevel !== 'aal2') {
+          const { data: s } = await supabase.auth.getSession();
+          if (cancelled) return;
+          setMfaEmail(s.session?.user.email ?? null);
+          setNeedsMfa(true);
+        }
+      } catch {
+        // No session / Supabase not configured — plain sign-in form.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +71,16 @@ function LoginInner() {
           setLoading(false);
           return;
         }
+        // Password accepted. If the account has an authenticator enrolled,
+        // the session is only aal1 — ask for the 6-digit code before /admin.
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
+          setMfaEmail(email);
+          setNeedsMfa(true);
+          setLoading(false);
+          return;
+        }
+
         // Sign-in succeeded and the browser now holds the session cookie.
         // Before navigating, confirm the SERVER can see that session and
         // resolve a member — otherwise /admin would bounce back here with
@@ -106,6 +144,10 @@ function LoginInner() {
   const inputClass =
     'w-full h-12 pl-10 pr-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400';
   const labelClass = 'block text-sm font-semibold text-navy-800 mb-1.5';
+
+  if (needsMfa) {
+    return <MfaChallenge redirectTo={redirectTo || '/admin'} email={mfaEmail} />;
+  }
 
   return (
     <>

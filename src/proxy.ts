@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { isSupabaseConfigured, isDevAuthBypass, env } from '@/lib/env';
+import { computeMfaState, MFA_SETTINGS_PATH } from '@/lib/mfa';
 
 const ADMIN_PREFIX = '/admin';
 const LOGIN_PATH = '/login';
@@ -131,6 +132,37 @@ export async function proxy(request: NextRequest) {
     url.pathname = LOGIN_PATH;
     url.searchParams.set('redirectTo', path);
     return redirectWithCookies(url, response);
+  }
+
+  // Two-factor (Google Authenticator / any TOTP app) on /admin/*:
+  //   - enrolled but this session hasn't entered a code yet → /login, which
+  //     shows the 6-digit code prompt (login never redirects, so no loop);
+  //   - MFA required and not enrolled yet → the setup page, which is the one
+  //     /admin route reachable without a second factor.
+  if (isAdminPath && user) {
+    let accessToken: string | null = null;
+    try {
+      accessToken = (await supabase.auth.getSession()).data.session?.access_token ?? null;
+    } catch {
+      accessToken = null;
+    }
+    const mfa = computeMfaState(user, accessToken);
+    if (mfa.needsChallenge) {
+      const url = request.nextUrl.clone();
+      url.pathname = LOGIN_PATH;
+      url.search = '';
+      url.searchParams.set('step', 'mfa');
+      url.searchParams.set('redirectTo', path);
+      return redirectWithCookies(url, response);
+    }
+    if (mfa.needsEnrollment && !path.startsWith(MFA_SETTINGS_PATH)) {
+      const url = request.nextUrl.clone();
+      url.pathname = MFA_SETTINGS_PATH;
+      url.search = '';
+      url.searchParams.set('required', '1');
+      url.searchParams.set('redirectTo', path);
+      return redirectWithCookies(url, response);
+    }
   }
 
   return response;
