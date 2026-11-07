@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { Member, MemberRole } from '@/lib/supabase/database.types';
 import { isDevAuthBypass } from '@/lib/env';
+import { computeMfaState } from '@/lib/mfa';
 
 const ADMIN_ROLES: MemberRole[] = ['admin', 'president', 'secretary', 'treasurer'];
 
@@ -99,6 +100,10 @@ export async function getCurrentMember(): Promise<Member | null> {
 
   const supabase = await createClient();
   let { data: { user } } = await supabase.auth.getUser();
+  let accessToken: string | null = null;
+  if (user) {
+    accessToken = (await supabase.auth.getSession()).data.session?.access_token ?? null;
+  }
 
   // Fallback: a Bearer access token in the Authorization header. The
   // browser holds a valid Supabase session (it can upload straight to
@@ -115,6 +120,7 @@ export async function getCurrentMember(): Promise<Member | null> {
       if (token) {
         const { data } = await supabase.auth.getUser(token);
         user = data.user;
+        if (user) accessToken = token;
       }
     } catch {
       // headers() unavailable outside a request scope — ignore.
@@ -122,6 +128,13 @@ export async function getCurrentMember(): Promise<Member | null> {
   }
 
   if (!user) return null;
+
+  // Two-factor gate. An enrolled user whose session hasn't passed the
+  // authenticator-code step (aal1) is NOT signed in as far as the app is
+  // concerned — this closes every page and API that resolves a member, not
+  // just the /admin pages the proxy redirects. (Mandatory enrolment for
+  // users with no authenticator yet is enforced by the proxy on /admin.)
+  if (computeMfaState(user, accessToken).needsChallenge) return null;
 
   const member = await resolveMemberForUser(supabase, user);
 

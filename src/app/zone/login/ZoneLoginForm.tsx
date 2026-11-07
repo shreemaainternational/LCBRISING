@@ -1,7 +1,8 @@
 'use client';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
+import { MfaChallenge } from '@/components/auth/MfaChallenge';
 import { Loader2, LogIn, AlertCircle } from 'lucide-react';
 
 export function ZoneLoginForm({ redirectTo = '/zone' }: { redirectTo?: string } = {}) {
@@ -10,17 +11,24 @@ export function ZoneLoginForm({ redirectTo = '/zone' }: { redirectTo?: string } 
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [needsMfa, setNeedsMfa] = useState(false);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     start(async () => {
       try {
-        const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-        const supa = createClient(url, key);
+        // Cookie-backed browser client so the server sees the session.
+        const supa = createClient();
         const { error: signErr } = await supa.auth.signInWithPassword({ email, password });
         if (signErr) { setError(signErr.message); return; }
+
+        // Account has an authenticator enrolled → ask for the 6-digit code.
+        const { data: aal } = await supa.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
+          setNeedsMfa(true);
+          return;
+        }
 
         // Persist the session cookie via a server action then redirect.
         const res = await fetch('/api/auth/session/sync', {
@@ -37,6 +45,8 @@ export function ZoneLoginForm({ redirectTo = '/zone' }: { redirectTo?: string } 
       }
     });
   }
+
+  if (needsMfa) return <MfaChallenge redirectTo={redirectTo} email={email} />;
 
   return (
     <form onSubmit={submit} className="space-y-3">

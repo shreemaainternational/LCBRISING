@@ -44,6 +44,19 @@ export default async function ProfilePage() {
         </dl>
       </section>
 
+      {/* Two-factor authentication */}
+      <section className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="font-bold text-navy-800 mb-1">Two-factor authentication</h2>
+          <p className="text-sm text-gray-500">
+            Require a 6-digit code from Google Authenticator at every sign-in.
+          </p>
+        </div>
+        <a href="/admin/settings/mfa" className="btn-navy rounded-lg px-4 py-2 text-sm whitespace-nowrap">
+          Manage MFA
+        </a>
+      </section>
+
       {/* Change password */}
       <section className="bg-white border border-gray-200 rounded-2xl p-6">
         <h2 className="font-bold text-navy-800 mb-1">Change Password</h2>
