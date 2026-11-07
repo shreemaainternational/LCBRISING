@@ -1,0 +1,53 @@
+name: Migrations admin
+
+# Manual controls for the tracked migration runner (scripts/migrations.mjs).
+#   status   — list each migration as baseline / applied / PENDING.
+#   baseline — ONE-TIME: record migrations up to `through` as already applied
+#              without running them. Use the last migration you have confirmed
+#              is live in production; later ones are applied by CI on merge.
+#
+# Required secret: SUPABASE_ACCESS_TOKEN (sbp_… PAT for the LCBRISING org).
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'status or baseline'
+        required: true
+        type: choice
+        options: [status, baseline]
+        default: status
+      through:
+        description: 'baseline only: last migration number already live (e.g. 0089)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-production-migrations
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          ACTION: ${{ inputs.action }}
+          THROUGH: ${{ inputs.through }}
+        run: |
+          set -euo pipefail
+          if [ "$ACTION" = "baseline" ]; then
+            node scripts/migrations.mjs baseline --through "$THROUGH"
+          fi
+          node scripts/migrations.mjs status

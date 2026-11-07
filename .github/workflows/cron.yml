@@ -1,0 +1,88 @@
+name: Scheduled jobs
+
+# Production cron, replacing the Vercel cron entries. Calls each job on the
+# Railway-hosted site with the shared CRON_SECRET (src/lib/cron-auth.ts).
+# Times are UTC, same as the old vercel.json. GitHub may start a scheduled
+# run a few minutes late, and pauses schedules after 60 days with no repo
+# activity.
+#
+# Secret:   CRON_SECRET (same value as the CRON_SECRET Railway variable)
+# Variable: PRODUCTION_URL (optional, defaults to https://barodarisingstar.com)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'          # automation
+    - cron: '0 4 1 * *'          # reports monthly
+    - cron: '0 5 1 1,4,7,10 *'   # reports quarterly
+    - cron: '0 6 1 1,7 *'        # reports half-yearly
+    - cron: '0 7 1 7 *'          # reports yearly
+    - cron: '0 8 * * *'          # action items
+    - cron: '0 9 1-7 4 *'        # donor pack
+    - cron: '0 10 * * *'         # sync worker
+    - cron: '0 1 * * *'          # lions sync
+    - cron: '0 2 * * *'          # blog sync
+    - cron: '30 2 * * *'         # stories sync
+    - cron: '0 0 * * *'          # enterprise deep
+    - cron: '0 6,12,18 * * *'    # enterprise
+  workflow_dispatch:
+    inputs:
+      path:
+        description: 'Job path to run now, e.g. /api/cron/blog-sync'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Resolve job
+        id: job
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          MANUAL_PATH: ${{ inputs.path }}
+        run: |
+          case "$SCHEDULE" in
+            '0 3 * * *')        p='/api/cron/automation?schedule=1' ;;
+            '0 4 1 * *')        p='/api/cron/reports?type=monthly' ;;
+            '0 5 1 1,4,7,10 *') p='/api/cron/reports?type=quarterly' ;;
+            '0 6 1 1,7 *')      p='/api/cron/reports?type=half_yearly' ;;
+            '0 7 1 7 *')        p='/api/cron/reports?type=yearly' ;;
+            '0 8 * * *')        p='/api/cron/action-items' ;;
+            '0 9 1-7 4 *')      p='/api/cron/donor-pack' ;;
+            '0 10 * * *')       p='/api/cron/sync-worker' ;;
+            '0 1 * * *')        p='/api/cron/lions-sync' ;;
+            '0 2 * * *')        p='/api/cron/blog-sync' ;;
+            '30 2 * * *')       p='/api/cron/stories-sync' ;;
+            '0 0 * * *')        p='/api/cron/enterprise?deep=1' ;;
+            '0 6,12,18 * * *')  p='/api/cron/enterprise' ;;
+            '')                 p="$MANUAL_PATH" ;;
+            *) echo "::error::No job mapped to schedule '$SCHEDULE'"; exit 1 ;;
+          esac
+          case "$p" in
+            /api/cron/*) ;;
+            *) echo "::error::Path must start with /api/cron/ (got '$p')"; exit 1 ;;
+          esac
+          echo "path=$p" >> "$GITHUB_OUTPUT"
+
+      - name: Call job
+        env:
+          BASE_URL: ${{ vars.PRODUCTION_URL || 'https://barodarisingstar.com' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          JOB_PATH: ${{ steps.job.outputs.path }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::warning::CRON_SECRET is not set; calling without auth."
+          fi
+          echo "GET $BASE_URL$JOB_PATH"
+          code=$(curl -sS -o /tmp/out -w '%{http_code}' --max-time 600 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$BASE_URL$JOB_PATH")
+          head -c 2000 /tmp/out; echo
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "::error::$JOB_PATH returned HTTP $code"
+            exit 1
+          fi

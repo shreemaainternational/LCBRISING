@@ -15,9 +15,9 @@ talks to. It mirrors the **canonical registry** in
 > to-do list. A machine-readable version is at `GET /api/integrations/status`
 > (admin-only).
 
-All variables go into **Vercel → Project → Settings → Environment Variables**
-for both **Production** and **Preview**, and into `.env.local` for local dev.
-After changing env vars in Vercel you must **redeploy** for them to take effect.
+All variables go into **Railway → LCBRISING → Variables** (production), and
+into `.env.local` for local dev. Railway redeploys automatically when variables
+change; `NEXT_PUBLIC_*` values are inlined at build time.
 `opt` = optional, `req` = required for that integration to go live.
 
 ---
@@ -36,7 +36,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 # (Optional — falls back to SUPABASE_SERVICE_ROLE_KEY if unset.)
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
-# CRON_SECRET — Bearer token the Vercel scheduler presents to /api/cron/*.
+# CRON_SECRET — Bearer token .github/workflows/cron.yml presents to /api/cron/*.
 # (Optional — auto-provisioned in the DB if unset, but pin it for production.)
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
@@ -270,11 +270,12 @@ LIONS_WEBHOOK_SECRET=<shared HMAC secret>         # req for webhook ingestion
 
 ## 8. Platform
 
-### Vercel Cron
-- **Powers:** daily automation engine + scheduled report generation.
-- Auto-provisions a DB secret if `CRON_SECRET` is unset (shows 🟠). Pin it for
-  production and set it under **Vercel → Settings → Cron Jobs → Authentication**.
-  See §0 to generate.
+### Scheduled jobs (GitHub Actions)
+- **Powers:** daily automation engine + scheduled report generation, via
+  `.github/workflows/cron.yml` calling the Railway site.
+- Auto-provisions a DB secret if `CRON_SECRET` is unset (shows 🟠). The DB row
+  (`cron_settings`) wins over the env var, so the `CRON_SECRET` **GitHub repo
+  secret** must equal whichever value is active. See §0 to generate.
 
 ### PWA shell
 - Always on — baked into the build. Drop `icon-192.png`, `icon-512.png`,
