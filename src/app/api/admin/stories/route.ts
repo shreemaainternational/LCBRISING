@@ -22,6 +22,8 @@ const baseSchema = z.object({
   impact_quote: z.string().max(500).optional().or(z.literal('')),
   impact_metric: z.string().max(160).optional().or(z.literal('')),
   tags: z.array(z.string()).default([]),
+  campaign_id: z.string().uuid().optional().or(z.literal('')),
+  activity_id: z.string().uuid().optional().or(z.literal('')),
   is_published: z.boolean().default(false),
   is_featured: z.boolean().default(false),
 });
@@ -45,6 +47,8 @@ function normalisePayload(p: z.infer<typeof baseSchema>) {
     impact_quote: p.impact_quote || null,
     impact_metric: p.impact_metric || null,
     tags: p.tags,
+    campaign_id: p.campaign_id || null,
+    activity_id: p.activity_id || null,
     is_published: p.is_published,
     is_featured: p.is_featured,
   };

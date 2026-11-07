@@ -29,6 +29,7 @@ const baseSchema = z.object({
   is_active: z.boolean().default(true),
   is_featured: z.boolean().default(false),
   match_campaign: z.boolean().default(false),
+  activity_ids: z.array(z.string().uuid()).default([]),
 });
 
 const updateSchema = baseSchema.extend({ id: z.string().uuid() });
@@ -95,6 +96,19 @@ async function guard(): Promise<Response | null> {
   }
 }
 
+/** Replace the campaign_activities rows for a campaign with the given set. */
+async function syncActivities(campaignId: string, activityIds: string[]) {
+  const client: SupaClient = env.SUPABASE_SERVICE_ROLE_KEY
+    ? createAdminClient()
+    : await createClient();
+  await client.from('campaign_activities').delete().eq('campaign_id', campaignId);
+  if (activityIds.length > 0) {
+    await client
+      .from('campaign_activities')
+      .insert(activityIds.map((activity_id) => ({ campaign_id: campaignId, activity_id })));
+  }
+}
+
 export async function POST(req: Request) {
   const denied = await guard();
   if (denied) return denied;
@@ -108,6 +122,7 @@ export async function POST(req: Request) {
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
   }
+  await syncActivities(data.id, parsed.data.activity_ids);
   return NextResponse.json({ id: data.id, slug: data.slug }, { status: 201 });
 }
 
@@ -118,12 +133,13 @@ export async function PUT(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
   }
-  const { id, ...rest } = parsed.data;
+  const { id, activity_ids, ...rest } = parsed.data;
   const { data, error } = await writeWithFallback<{ id: string; slug: string }>((c) =>
-    c.from('campaigns').update(normalisePayload(rest)).eq('id', id).select('id, slug').single(),
+    c.from('campaigns').update(normalisePayload({ ...rest, activity_ids })).eq('id', id).select('id, slug').single(),
   );
   if (error || !data) {
     return NextResponse.json({ error: friendlyError(error?.message ?? 'unknown') }, { status: 500 });
   }
+  await syncActivities(id, activity_ids);
   return NextResponse.json({ id: data.id, slug: data.slug });
 }

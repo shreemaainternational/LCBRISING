@@ -20,14 +20,23 @@ export type CampaignForm = {
   is_active: boolean;
   is_featured: boolean;
   match_campaign: boolean;
+  activity_ids: string[];
 };
+
+export type ActivityOption = { id: string; title: string; date: string; category: string | null };
 
 const CATEGORIES = [
   'Vision', 'Hunger Relief', 'Environment', 'Childhood Cancer', 'Diabetes',
   'Disaster Relief', 'Youth', 'Education', 'Humanitarian',
 ];
 
-export function CampaignEditor({ initial }: { initial: CampaignForm }) {
+export function CampaignEditor({
+  initial,
+  activityOptions = [],
+}: {
+  initial: CampaignForm;
+  activityOptions?: ActivityOption[];
+}) {
   const router = useRouter();
   const [form, setForm] = useState<CampaignForm>(initial);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +46,16 @@ export function CampaignEditor({ initial }: { initial: CampaignForm }) {
   function update<K extends keyof CampaignForm>(key: K, value: CampaignForm[K]) {
     setSaved(false);
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function toggleActivity(id: string) {
+    setSaved(false);
+    setForm((f) => ({
+      ...f,
+      activity_ids: f.activity_ids.includes(id)
+        ? f.activity_ids.filter((a) => a !== id)
+        : [...f.activity_ids, id],
+    }));
   }
 
   async function save() {
@@ -132,6 +151,35 @@ export function CampaignEditor({ initial }: { initial: CampaignForm }) {
             className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
           />
         </Field>
+
+        <div className="rounded-xl border border-gray-200 p-5 bg-white">
+          <h3 className="font-bold text-navy-800 mb-1">Related service activities</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Link the real activities that report progress against this campaign. Statistics on the
+            public campaign page are computed only from what you select here.
+          </p>
+          {activityOptions.length === 0 ? (
+            <p className="text-sm text-gray-500">No activities recorded yet.</p>
+          ) : (
+            <div className="max-h-64 overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-md">
+              {activityOptions.map((a) => (
+                <label
+                  key={a.id}
+                  className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={form.activity_ids.includes(a.id)}
+                    onChange={() => toggleActivity(a.id)}
+                    className="h-4 w-4"
+                  />
+                  <span className="flex-1">{a.title}</span>
+                  <span className="text-xs text-gray-400">{a.date}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <aside className="space-y-5">

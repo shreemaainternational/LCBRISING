@@ -2,10 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound, redirect, unstable_rethrow } from 'next/navigation';
-import { ArrowLeft, MapPin, Quote } from 'lucide-react';
+import { ArrowLeft, ArrowRight, MapPin, Quote } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, env } from '@/lib/env';
 import { renderMarkdown } from '@/lib/markdown';
+import { causeForCategory } from '@/lib/causes';
 import { ReadingProgress } from '@/components/site/ReadingProgress';
 import { ShareBar } from '@/components/site/ShareBar';
 
@@ -27,12 +28,17 @@ type Story = {
   impact_metric: string | null;
   tags: string[] | null;
   published_at: string | null;
+  campaign_id: string | null;
+  activity_id: string | null;
   external_source?: string | null;
   source_url?: string | null;
 };
 
+type RelatedCampaign = { title: string; slug: string };
+type RelatedActivity = { title: string; category: string | null };
+
 const BASE_COLUMNS =
-  'id, slug, title, subtitle, beneficiary_name, beneficiary_age, location, hero_image, before_image, after_image, body, impact_quote, impact_metric, tags, published_at';
+  'id, slug, title, subtitle, beneficiary_name, beneficiary_age, location, hero_image, before_image, after_image, body, impact_quote, impact_metric, tags, published_at, campaign_id, activity_id';
 
 async function getStory(slug: string): Promise<Story | null> {
   if (!isSupabaseConfigured()) return null;
@@ -56,6 +62,37 @@ async function getStory(slug: string): Promise<Story | null> {
   } catch (err) {
     unstable_rethrow(err);
     console.error('[stories/slug] load failed:', err);
+    return null;
+  }
+}
+
+async function getRelatedCampaign(campaignId: string | null): Promise<RelatedCampaign | null> {
+  if (!campaignId || !isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('campaigns')
+      .select('title, slug')
+      .eq('id', campaignId)
+      .eq('is_active', true)
+      .maybeSingle();
+    return (data ?? null) as RelatedCampaign | null;
+  } catch {
+    return null;
+  }
+}
+
+async function getRelatedActivity(activityId: string | null): Promise<RelatedActivity | null> {
+  if (!activityId || !isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('activities')
+      .select('title, category')
+      .eq('id', activityId)
+      .maybeSingle();
+    return (data ?? null) as RelatedActivity | null;
+  } catch {
     return null;
   }
 }
@@ -95,6 +132,10 @@ export default async function StoryDetailPage({
   if (story.external_source && story.source_url) redirect(story.source_url);
   const canonical = `${env.NEXT_PUBLIC_SITE_URL}/stories/${story.slug}`;
   const body = story.body ? renderMarkdown(story.body) : '';
+  const [relatedCampaign, relatedActivity] = await Promise.all([
+    getRelatedCampaign(story.campaign_id),
+    getRelatedActivity(story.activity_id),
+  ]);
 
   return (
     <>
@@ -197,6 +238,39 @@ export default async function StoryDetailPage({
                 Programme Impact
               </p>
               <p className="mt-2 text-2xl font-bold text-navy-900">{story.impact_metric}</p>
+            </div>
+          )}
+
+          {(relatedCampaign || relatedActivity) && (
+            <div className="mt-8 grid sm:grid-cols-2 gap-4">
+              {relatedCampaign && (
+                <Link
+                  href={`/campaigns/${relatedCampaign.slug}`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-4 hover:border-brand-400 hover:bg-brand-50/40 transition-colors"
+                >
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">
+                      Related Campaign
+                    </p>
+                    <p className="font-semibold text-navy-800 mt-1">{relatedCampaign.title}</p>
+                  </div>
+                  <ArrowRight size={16} className="text-brand-600 flex-shrink-0" aria-hidden />
+                </Link>
+              )}
+              {relatedActivity && (
+                <Link
+                  href={`/activities/${causeForCategory(relatedActivity.category).slug}`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-4 hover:border-brand-400 hover:bg-brand-50/40 transition-colors"
+                >
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">
+                      Related Service Activity
+                    </p>
+                    <p className="font-semibold text-navy-800 mt-1">{relatedActivity.title}</p>
+                  </div>
+                  <ArrowRight size={16} className="text-brand-600 flex-shrink-0" aria-hidden />
+                </Link>
+              )}
             </div>
           )}
 

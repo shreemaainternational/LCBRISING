@@ -143,6 +143,8 @@ export async function Footer() {
             <li><Link href="/" className="hover:text-brand-300">Home</Link></li>
             <li><Link href="/activities" className="hover:text-brand-300">Our Services</Link></li>
             <li><Link href="/donate" className="hover:text-brand-300">Donate</Link></li>
+            <li><Link href="/campaigns" className="hover:text-brand-300">Campaigns</Link></li>
+            <li><Link href="/stories" className="hover:text-brand-300">Stories</Link></li>
             <li><Link href="/about" className="hover:text-brand-300">About Us</Link></li>
             <li><Link href="/blog" className="hover:text-brand-300">Blog</Link></li>
             <li><Link href="/media" className="hover:text-brand-300">Media</Link></li>

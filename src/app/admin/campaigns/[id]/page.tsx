@@ -1,7 +1,11 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
-import { CampaignEditor, type CampaignForm } from '@/components/admin/CampaignEditor';
+import {
+  CampaignEditor,
+  type CampaignForm,
+  type ActivityOption,
+} from '@/components/admin/CampaignEditor';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +29,25 @@ type Row = {
 
 const URGENCY = new Set(['normal', 'urgent', 'emergency']);
 
+async function loadActivityOptions(): Promise<ActivityOption[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('activities')
+    .select('id, title, date, category')
+    .order('date', { ascending: false })
+    .limit(300);
+  return (data ?? []) as ActivityOption[];
+}
+
+async function loadLinkedActivityIds(campaignId: string): Promise<string[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('campaign_activities')
+    .select('activity_id')
+    .eq('campaign_id', campaignId);
+  return (data ?? []).map((r) => (r as { activity_id: string }).activity_id);
+}
+
 export default async function EditCampaignPage({
   params,
 }: {
@@ -43,6 +66,11 @@ export default async function EditCampaignPage({
   if (!data) notFound();
   const row = data as Row;
 
+  const [activityOptions, activityIds] = await Promise.all([
+    loadActivityOptions(),
+    loadLinkedActivityIds(row.id),
+  ]);
+
   const initial: CampaignForm = {
     id: row.id,
     title: row.title,
@@ -59,13 +87,14 @@ export default async function EditCampaignPage({
     is_active: row.is_active,
     is_featured: !!row.is_featured,
     match_campaign: !!row.match_campaign,
+    activity_ids: activityIds,
   };
 
   return (
     <div>
       <h1 className="text-3xl font-bold text-navy-800 mb-1">Edit campaign</h1>
       <p className="text-gray-600 mb-6">Editing “{row.title}”. Untick Active to archive it.</p>
-      <CampaignEditor initial={initial} />
+      <CampaignEditor initial={initial} activityOptions={activityOptions} />
     </div>
   );
 }
